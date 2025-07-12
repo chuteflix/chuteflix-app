@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowRightLeft,
   Flag,
@@ -18,7 +19,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -47,6 +47,8 @@ const AdminPage = () => {
   const [isBolaoModalOpen, setIsBolaoModalOpen] = useState(false);
   const [currentSettings, setCurrentSettings] = useState<Settings>(settings);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const activeTab = useMemo(() => searchParams.get('tab') || 'dashboard', [searchParams]);
 
   const totalArrecadado = transactions.reduce((acc, t) => t.status === 'Confirmado' ? acc + t.amount : acc, 0);
   const openBoloesCount = boloes.filter(b => b.status === 'Aberto').length;
@@ -65,28 +67,10 @@ const AdminPage = () => {
     });
   };
 
-  return (
-    <>
-    <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Painel do Administrador</h1>
-        <Button onClick={() => setIsBolaoModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-          <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Bolão
-        </Button>
-      </div>
-
-      <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-7">
-          <TabsTrigger value="dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</TabsTrigger>
-          <TabsTrigger value="boloes"><Shield className="mr-2 h-4 w-4" />Bolões</TabsTrigger>
-          <TabsTrigger value="campeonatos"><Trophy className="mr-2 h-4 w-4" />Campeonatos</TabsTrigger>
-          <TabsTrigger value="times"><Flag className="mr-2 h-4 w-4" />Times</TabsTrigger>
-          <TabsTrigger value="usuarios"><UsersIcon className="mr-2 h-4 w-4" />Usuários</TabsTrigger>
-          <TabsTrigger value="transacoes"><ArrowRightLeft className="mr-2 h-4 w-4" />Transações</TabsTrigger>
-          <TabsTrigger value="configuracoes"><SettingsIcon className="mr-2 h-4 w-4" />Configurações</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="dashboard" className="mt-6">
+  const renderContent = () => {
+    switch(activeTab) {
+      case 'dashboard':
+        return (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -129,9 +113,9 @@ const AdminPage = () => {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="boloes" className="mt-6">
+        );
+      case 'boloes':
+        return (
           <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
               <TableHeader>
@@ -161,9 +145,9 @@ const AdminPage = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="campeonatos" className="mt-6">
+        );
+      case 'campeonatos':
+         return (
            <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
               <TableHeader>
@@ -191,9 +175,9 @@ const AdminPage = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="times" className="mt-6">
+        );
+      case 'times':
+        return (
          <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
               <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>ID</TableHead><TableHead  className="text-right">Ações</TableHead></TableRow></TableHeader>
@@ -209,9 +193,9 @@ const AdminPage = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="usuarios" className="mt-6">
+        );
+      case 'usuarios':
+        return (
           <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
               <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>Desde</TableHead><TableHead  className="text-right">Ações</TableHead></TableRow></TableHeader>
@@ -227,9 +211,9 @@ const AdminPage = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-
-        <TabsContent value="transacoes" className="mt-6">
+        );
+      case 'transacoes':
+        return (
           <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
               <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Usuário</TableHead><TableHead>Bolão</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
@@ -246,9 +230,9 @@ const AdminPage = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="configuracoes" className="mt-6">
+        );
+      case 'configuracoes':
+        return (
             <Card>
               <CardHeader>
                 <CardTitle>Configurações de Pagamento</CardTitle>
@@ -276,13 +260,37 @@ const AdminPage = () => {
                 </CardFooter>
               </form>
             </Card>
-        </TabsContent>
-        
-      </Tabs>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+    <div className="container mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-primary">Painel do Administrador</h1>
+        <Button onClick={() => setIsBolaoModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Bolão
+        </Button>
+      </div>
+      
+      <div className="mt-6">
+        {renderContent()}
+      </div>
+
     </div>
     <BolaoFormModal isOpen={isBolaoModalOpen} onClose={() => setIsBolaoModalOpen(false)} />
     </>
   );
 };
 
-export default AdminPage;
+// Wrap with a Suspense boundary because useSearchParams can suspend
+const AdminPageWithSuspense = () => (
+  <React.Suspense fallback={<div>Loading...</div>}>
+    <AdminPage />
+  </React.Suspense>
+);
+
+export default AdminPageWithSuspense;

@@ -7,9 +7,15 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
-  Settings,
+  Settings as SettingsIcon,
   Bell,
   Menu,
+  Shield,
+  Trophy,
+  Flag,
+  Users as UsersIcon,
+  ArrowRightLeft,
+  LayoutGrid
 } from 'lucide-react';
 
 import {
@@ -39,12 +45,41 @@ import { Logo } from '@/components/icons';
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  const menuItems = [
+  const userMenuItems = [
     { href: '/', label: 'Início', icon: Home },
     { href: '/dashboard', label: 'Meus Chutes', icon: LayoutDashboard },
   ];
+
+  const adminMenuItems = [
+    { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
+    { href: '/admin?tab=boloes', label: 'Bolões', icon: Shield },
+    { href: '/admin?tab=campeonatos', label: 'Campeonatos', icon: Trophy },
+    { href: '/admin?tab=times', label: 'Times', icon: Flag },
+    { href: '/admin?tab=usuarios', label: 'Usuários', icon: UsersIcon },
+    { href: '/admin?tab=transacoes', label: 'Transações', icon: ArrowRightLeft },
+    { href: '/admin?tab=configuracoes', label: 'Configurações', icon: SettingsIcon },
+  ];
   
-  const isActive = (href: string) => pathname === href;
+  const isAdminPage = pathname.startsWith('/admin');
+  const menuItems = isAdminPage ? adminMenuItems : userMenuItems;
+
+  const isActive = (href: string) => {
+     if (href.includes('?tab=')) {
+        // This is a rough check. For a more robust solution, you might need to parse query params.
+        // For now, it will highlight the main /admin link and the specific tab link.
+        return pathname === href.split('?')[0] && window.location.search.includes(href.split('?')[1]);
+     }
+     return pathname === href;
+  };
+  
+  const getHeaderTitle = () => {
+    if (isAdminPage) {
+      // Logic to find title for admin pages with tabs might be needed here
+      return "Painel do Administrador";
+    }
+    return menuItems.find(item => item.href === pathname)?.label || 'ChuteFlix';
+  }
+
 
   return (
     <SidebarProvider>
@@ -70,9 +105,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Configurações">
-                  <Link href="#">
-                    <Settings />
-                    <span>Configurações</span>
+                  <Link href="/admin?tab=configuracoes">
+                    <SettingsIcon />
+                    <span>Admin</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -86,7 +121,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <Menu />
             </SidebarTrigger>
             <h2 className="text-xl font-semibold hidden sm:block">
-              {menuItems.find(item => item.href === pathname)?.label || 'ChuteFlix'}
+              {getHeaderTitle()}
             </h2>
           </div>
           <div className="flex items-center gap-4">
