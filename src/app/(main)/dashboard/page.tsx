@@ -47,7 +47,7 @@ export default function DashboardPage() {
                     {history.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.teamA.name} vs {item.teamB.name}</TableCell>
-                            <TableCell>{format(item.matchDate, "dd/MM/yyyy", { locale: ptBR })}</TableCell>
+                            <TableCell>{format(item.matchStartDate, "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                             <TableCell>{item.userGuess?.teamA} x {item.userGuess?.teamB}</TableCell>
                             <TableCell className="font-bold">{item.result.teamA} x {item.result.teamB}</TableCell>
                             <TableCell className="text-right">
