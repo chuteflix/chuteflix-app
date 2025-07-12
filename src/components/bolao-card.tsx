@@ -27,8 +27,8 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
     setIsClient(true);
   }, []);
 
-  const isClosed = new Date() > bolao.matchDate || bolao.status !== 'Aberto';
-  const matchDateTime = isClient ? format(bolao.matchDate, "eeee, dd/MM 'às' HH:mm'h'", { locale: ptBR }) : "";
+  const isClosed = new Date() > bolao.matchStartDate || bolao.status !== 'Aberto';
+  const matchDateTime = isClient ? format(bolao.matchStartDate, "eeee, dd/MM 'às' HH:mm'h'", { locale: ptBR }) : "";
 
   const handleButtonClick = () => {
     if (isAuthenticated) {
