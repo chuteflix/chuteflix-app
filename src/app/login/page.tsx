@@ -17,6 +17,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/icons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -40,19 +41,24 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",
-        description: error.message,
+        description: "Verifique seu e-mail e senha e tente novamente.",
         variant: "destructive",
       });
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
-      <Card className="mx-auto max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Insira seu e-mail abaixo para fazer login em sua conta
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
+       <div className="mb-8">
+        <Link href="/" aria-label="Voltar para a página inicial">
+            <Logo />
+        </Link>
+      </div>
+      <Card className="mx-auto w-full max-w-md bg-gray-950 border-gray-800 text-gray-50">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold">Entrar</CardTitle>
+          <CardDescription className="text-gray-400 pt-2">
+            Bem-vindo(a) de volta! Faça login para continuar.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -62,25 +68,36 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="seunome@email.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="bg-gray-900 border-gray-700 focus:ring-green-500"
               />
             </div>
             <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">Senha</Label>
-              </div>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Label htmlFor="password">Senha</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Sua senha"
+                className="bg-gray-900 border-gray-700 focus:ring-green-500"
+              />
             </div>
-            <Button type="submit" className="w-full">
-              Login
+            <Button 
+              type="submit" 
+              className="w-full mt-4 bg-green-500 text-black font-bold hover:bg-green-600"
+              style={{'--neon-glow-color': '#39FF14'} as React.CSSProperties}
+            >
+              Entrar
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
-            Não tem uma conta?{" "}
-            <Link href="/register" className="underline">
+          <div className="mt-6 text-center text-sm">
+            <span className="text-gray-400">Não tem uma conta? </span>
+            <Link href="/register" className="underline text-green-400 hover:text-green-300">
               Cadastre-se
             </Link>
           </div>
