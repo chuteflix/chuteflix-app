@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { IMaskInput } from 'react-imask';
 import { Logo } from "@/components/icons";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -58,19 +59,19 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClasses = "bg-gray-900 border-gray-700 focus:ring-green-500 flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  const inputClasses = "bg-background border-border focus:ring-primary flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
       <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
             <Logo />
         </Link>
       </div>
-      <Card className="mx-auto w-full max-w-lg bg-gray-950 border-gray-800 text-gray-50">
+      <Card className="mx-auto w-full max-w-lg bg-card border-border text-card-foreground">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold">Criar Conta</CardTitle>
-          <CardDescription className="text-gray-400 pt-2">
+          <CardDescription className="text-muted-foreground pt-2">
             Junte-se à maior plataforma de bolões da América Latina.
           </CardDescription>
         </CardHeader>
@@ -79,7 +80,7 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="first-name">Nome</Label>
-                <Input id="first-name" placeholder="Seu nome" required value={firstName} onChange={(e) => setFirstName(e.start.value)} className={inputClasses} />
+                <Input id="first-name" placeholder="Seu nome" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClasses} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="last-name">Sobrenome</Label>
@@ -122,9 +123,8 @@ export default function RegisterPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
-              <Input 
+              <PasswordInput 
                 id="password" 
-                type="password" 
                 required 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -134,15 +134,14 @@ export default function RegisterPage() {
             </div>
             <Button 
               type="submit" 
-              className="w-full mt-4 bg-green-500 text-black font-bold hover:bg-green-600"
-              style={{'--neon-glow-color': '#39FF14'} as React.CSSProperties}
+              className="w-full mt-4 bg-primary text-primary-foreground font-bold hover:bg-primary/90"
             >
               Finalizar Cadastro
             </Button>
           </form>
           <div className="mt-6 text-center text-sm">
-             <span className="text-gray-400">Já tem uma conta? </span>
-            <Link href="/login" className="underline text-green-400 hover:text-green-300">
+             <span className="text-muted-foreground">Já tem uma conta? </span>
+            <Link href="/login" className="underline text-primary hover:text-primary/90">
               Entrar
             </Link>
           </div>

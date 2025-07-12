@@ -18,9 +18,6 @@ A paleta principal é escura, com cores neon para criar contraste e destacar pon
 - **Cor Secundária / Alerta (Vermelho Neon):**
   - **Hex:** `#FF073A`
   - **Uso:** Ações destrutivas, alertas, erros, status "Fechado" e notificações importantes.
-- **Cor de Destaque / Call-to-Action (Laranja):**
-  - **Hex:** `#FF8C00`
-  - **Uso:** Reservado para o botão de chamada para ação (CTA) mais importante da aplicação (ex: "Quero começar" na homepage) para criar um ponto focal claro e único.
 
 ## 3. Tipografia
 
@@ -37,6 +34,6 @@ A paleta principal é escura, com cores neon para criar contraste e destacar pon
 
 ## 5. Componentes e Interatividade
 
-- **Botões:** Devem ter feedback visual claro. Usar a cor primária (Verde Neon) para ações principais e a cor de destaque (Laranja) para o CTA principal. Botões secundários podem ter fundo transparente com borda sutil.
+- **Botões:** Devem ter feedback visual claro. Usar a cor primária (Verde Neon) para ações principais. Botões secundários podem ter fundo transparente com borda sutil.
 - **Cards:** Devem ter uma hierarquia clara. Usar `hover` para indicar interatividade, como uma leve sombra ou mudança na borda.
 - **Transições:** Animações sutis e rápidas ao passar o mouse ou clicar, para tornar a interface mais fluida e responsiva.

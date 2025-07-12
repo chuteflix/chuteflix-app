@@ -18,6 +18,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/icons";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -48,16 +49,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
        <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
             <Logo />
         </Link>
       </div>
-      <Card className="mx-auto w-full max-w-md bg-gray-950 border-gray-800 text-gray-50">
+      <Card className="mx-auto w-full max-w-md bg-card border-border text-card-foreground">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold">Entrar</CardTitle>
-          <CardDescription className="text-gray-400 pt-2">
+          <CardDescription className="text-muted-foreground pt-2">
             Bem-vindo(a) de volta! Faça login para continuar.
           </CardDescription>
         </CardHeader>
@@ -72,32 +73,30 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-900 border-gray-700 focus:ring-green-500"
+                className="bg-background border-border focus:ring-primary"
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
+              <PasswordInput
+                id="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Sua senha"
-                className="bg-gray-900 border-gray-700 focus:ring-green-500"
+                className="bg-background border-border focus:ring-primary"
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full mt-4 bg-green-500 text-black font-bold hover:bg-green-600"
-              style={{'--neon-glow-color': '#39FF14'} as React.CSSProperties}
+              className="w-full mt-4 bg-primary text-primary-foreground font-bold hover:bg-primary/90"
             >
               Entrar
             </Button>
           </form>
           <div className="mt-6 text-center text-sm">
-            <span className="text-gray-400">Não tem uma conta? </span>
-            <Link href="/register" className="underline text-green-400 hover:text-green-300">
+            <span className="text-muted-foreground">Não tem uma conta? </span>
+            <Link href="/register" className="underline text-primary hover:text-primary/90">
               Cadastre-se
             </Link>
           </div>
