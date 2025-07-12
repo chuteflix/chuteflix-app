@@ -42,10 +42,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { boloes, championships, teams, users, transactions, settings, updateSettings } from "@/lib/data";
 import { BolaoFormModal } from "@/components/bolao-form-modal";
+import { ChampionshipFormModal } from "@/components/championship-form-modal";
+import { TeamFormModal } from "@/components/team-form-modal";
 import type { Settings } from "@/types";
 
 const AdminPage = () => {
   const [isBolaoModalOpen, setIsBolaoModalOpen] = useState(false);
+  const [isChampionshipModalOpen, setIsChampionshipModalOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [currentSettings, setCurrentSettings] = useState<Settings>(settings);
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -67,6 +71,31 @@ const AdminPage = () => {
       description: "As configurações de pagamento foram atualizadas.",
     });
   };
+
+  const renderHeaderButton = () => {
+    switch(activeTab) {
+      case 'boloes':
+        return (
+          <Button onClick={() => setIsBolaoModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Bolão
+          </Button>
+        );
+      case 'campeonatos':
+         return (
+          <Button onClick={() => setIsChampionshipModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <PlusCircle className="mr-2 h-4 w-4" /> Criar Campeonato
+          </Button>
+        );
+      case 'times':
+        return (
+          <Button onClick={() => setIsTeamModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <PlusCircle className="mr-2 h-4 w-4" /> Criar Time
+          </Button>
+        );
+      default:
+        return null;
+    }
+  }
 
   const renderContent = () => {
     switch(activeTab) {
@@ -123,7 +152,8 @@ const AdminPage = () => {
                 <TableRow>
                   <TableHead>Partida</TableHead>
                   <TableHead>Campeonato</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead>Início</TableHead>
+                  <TableHead>Fim</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -133,7 +163,8 @@ const AdminPage = () => {
                   <TableRow key={bolao.id}>
                     <TableCell>{bolao.teamA.name} vs {bolao.teamB.name}</TableCell>
                     <TableCell>{bolao.championship}</TableCell>
-                    <TableCell>{format(bolao.matchDate, "dd/MM/yy HH:mm", { locale: ptBR })}</TableCell>
+                    <TableCell>{format(bolao.matchStartDate, "dd/MM/yy HH:mm", { locale: ptBR })}</TableCell>
+                    <TableCell>{format(bolao.matchEndDate, "dd/MM/yy HH:mm", { locale: ptBR })}</TableCell>
                     <TableCell>
                       <Badge variant={bolao.status === "Aberto" ? "success" : "destructive"}>{bolao.status}</Badge>
                     </TableCell>
@@ -154,9 +185,8 @@ const AdminPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Escopo</TableHead>
                   <TableHead>Local</TableHead>
-                  <TableHead>Nível</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -164,7 +194,6 @@ const AdminPage = () => {
                 {championships.map((champ) => (
                   <TableRow key={champ.id}>
                     <TableCell>{champ.name}</TableCell>
-                    <TableCell>{champ.scope}</TableCell>
                     <TableCell>{champ.location}</TableCell>
                     <TableCell><Badge variant={champ.level === "Profissional" ? "default" : "secondary"}>{champ.level}</Badge></TableCell>
                     <TableCell className="flex gap-2 justify-end">
@@ -181,11 +210,23 @@ const AdminPage = () => {
         return (
          <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
-              <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>ID</TableHead><TableHead  className="text-right">Ações</TableHead></TableRow></TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Nível</TableHead>
+                  <TableHead>Local</TableHead>
+                  <TableHead>Projeção</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {teams.map(team => (
-                  <TableRow key={team.id}><TableCell>{team.name}</TableCell><TableCell>{team.id}</TableCell>
-                  <TableCell className="flex gap-2 justify-end">
+                  <TableRow key={team.id}>
+                    <TableCell>{team.name}</TableCell>
+                    <TableCell><Badge variant={team.level === "Profissional" ? "default" : "secondary"}>{team.level}</Badge></TableCell>
+                    <TableCell>{team.location}</TableCell>
+                    <TableCell>{team.scope}</TableCell>
+                    <TableCell className="flex gap-2 justify-end">
                         <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </TableCell>
@@ -269,20 +310,20 @@ const AdminPage = () => {
 
   return (
     <>
-    <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Painel do Administrador</h1>
-        <Button onClick={() => setIsBolaoModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-          <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Bolão
-        </Button>
-      </div>
-      
-      <div className="mt-6">
-        {renderContent()}
-      </div>
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-primary">Painel do Administrador</h1>
+          {renderHeaderButton()}
+        </div>
+        
+        <div className="mt-6">
+          {renderContent()}
+        </div>
 
-    </div>
-    <BolaoFormModal isOpen={isBolaoModalOpen} onClose={() => setIsBolaoModalOpen(false)} />
+      </div>
+      <BolaoFormModal isOpen={isBolaoModalOpen} onClose={() => setIsBolaoModalOpen(false)} />
+      <ChampionshipFormModal isOpen={isChampionshipModalOpen} onClose={() => setIsChampionshipModalOpen(false)} />
+      <TeamFormModal isOpen={isTeamModalOpen} onClose={() => setIsTeamModalOpen(false)} />
     </>
   );
 };

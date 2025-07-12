@@ -1,19 +1,20 @@
 import type { Bolao, Team, User, Transaction, Championship, Settings } from "@/types";
 
 export const teams: Team[] = [
-  { id: '1', name: 'Flamengo', logoUrl: 'https://placehold.co/64x64/FF0000/FFFFFF.png?text=FLA' },
-  { id: '2', name: 'Palmeiras', logoUrl: 'https://placehold.co/64x64/008000/FFFFFF.png?text=PAL' },
-  { id: '3', name: 'Corinthians', logoUrl: 'https://placehold.co/64x64/000000/FFFFFF.png?text=COR' },
-  { id: '4', name: 'São Paulo', logoUrl: 'https://placehold.co/64x64/FF0000/FFFFFF.png?text=SAO' },
-  { id: '5', name: 'Vasco da Gama', logoUrl: 'https://placehold.co/64x64/000000/FFFFFF.png?text=VAS' },
-  { id: '6', name: 'Grêmio', logoUrl: 'https://placehold.co/64x64/0000FF/FFFFFF.png?text=GRE' },
+  { id: '1', name: 'Flamengo', logoUrl: 'https://placehold.co/64x64/FF0000/FFFFFF.png?text=FLA', level: 'Profissional', location: 'Rio de Janeiro/RJ', scope: 'Nacional' },
+  { id: '2', name: 'Palmeiras', logoUrl: 'https://placehold.co/64x64/008000/FFFFFF.png?text=PAL', level: 'Profissional', location: 'São Paulo/SP', scope: 'Nacional' },
+  { id: '3', name: 'Corinthians', logoUrl: 'https://placehold.co/64x64/000000/FFFFFF.png?text=COR', level: 'Profissional', location: 'São Paulo/SP', scope: 'Nacional' },
+  { id: '4', name: 'São Paulo', logoUrl: 'https://placehold.co/64x64/FF0000/FFFFFF.png?text=SAO', level: 'Profissional', location: 'São Paulo/SP', scope: 'Nacional' },
+  { id: '5', name: 'Vasco da Gama', logoUrl: 'https://placehold.co/64x64/000000/FFFFFF.png?text=VAS', level: 'Profissional', location: 'Rio de Janeiro/RJ', scope: 'Nacional' },
+  { id: '6', name: 'Grêmio', logoUrl: 'https://placehold.co/64x64/0000FF/FFFFFF.png?text=GRE', level: 'Profissional', location: 'Porto Alegre/RS', scope: 'Nacional' },
+  { id: '7', name: 'Real Madruga', logoUrl: 'https://placehold.co/64x64/808080/FFFFFF.png?text=RM', level: 'Amador/Várzea', location: 'São Paulo/SP', scope: 'Municipal' },
 ];
 
 export const championships: Championship[] = [
-  { id: 'c1', name: 'Brasileirão Série A', scope: 'Nacional', location: 'Brasil', level: 'Profissional' },
-  { id: 'c2', name: 'Copa do Brasil', scope: 'Nacional', location: 'Brasil', level: 'Profissional' },
-  { id: 'c3', name: 'Libertadores', scope: 'Regional', location: 'América do Sul', level: 'Profissional' },
-  { id: 'c4', name: 'Copa da Várzea SP', scope: 'Estadual', location: 'São Paulo', level: 'Amador/Várzea' },
+  { id: 'c1', name: 'Brasileirão Série A', location: 'Brasil', level: 'Profissional' },
+  { id: 'c2', name: 'Copa do Brasil', location: 'Brasil', level: 'Profissional' },
+  { id: 'c3', name: 'Libertadores', location: 'América do Sul', level: 'Profissional' },
+  { id: 'c4', name: 'Copa da Várzea SP', location: 'São Paulo', level: 'Amador/Várzea' },
 ];
 
 export const boloes: Bolao[] = [
@@ -23,7 +24,8 @@ export const boloes: Bolao[] = [
     championship: 'Brasileirão Série A',
     teamA: teams[0],
     teamB: teams[1],
-    matchDate: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+    matchStartDate: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000), 
+    matchEndDate: new Date(new Date().getTime() + (2 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000)),
     betAmount: 20.00,
     status: 'Aberto',
   },
@@ -33,7 +35,8 @@ export const boloes: Bolao[] = [
     championship: 'Copa do Brasil',
     teamA: teams[2],
     teamB: teams[3],
-    matchDate: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+    matchStartDate: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000),
+    matchEndDate: new Date(new Date().getTime() + (3 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000)),
     betAmount: 15.00,
     status: 'Aberto',
   },
@@ -43,7 +46,8 @@ export const boloes: Bolao[] = [
     championship: 'Libertadores',
     teamA: teams[4],
     teamB: teams[5],
-    matchDate: new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+    matchStartDate: new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000),
+    matchEndDate: new Date(new Date().getTime() - (1 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000)),
     betAmount: 25.00,
     status: 'Fechado',
   },
@@ -53,7 +57,8 @@ export const boloes: Bolao[] = [
     championship: 'Brasileirão Série A',
     teamA: teams[1],
     teamB: teams[3],
-    matchDate: new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000),
+    matchStartDate: new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000),
+    matchEndDate: new Date(new Date().getTime() + (5 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000)),
     betAmount: 20.00,
     status: 'Aberto',
   },
@@ -71,7 +76,8 @@ export const history: (Bolao & { result: { teamA: number, teamB: number }, prize
     userGuess: { teamA: 1, teamB: 1 },
     result: { teamA: 2, teamB: 0 },
     prize: 0,
-    matchDate: new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000),
+    matchStartDate: new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000),
+    matchEndDate: new Date(new Date().getTime() - (2 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000)),
   },
   {
     id: 'b5',
@@ -79,7 +85,8 @@ export const history: (Bolao & { result: { teamA: number, teamB: number }, prize
     championship: 'Brasileirão Série A',
     teamA: teams[0],
     teamB: teams[4],
-    matchDate: new Date(new Date().getTime() - 5 * 24 * 60 * 60 * 1000),
+    matchStartDate: new Date(new Date().getTime() - 5 * 24 * 60 * 60 * 1000),
+    matchEndDate: new Date(new Date().getTime() - (5 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000)),
     betAmount: 10.00,
     status: 'Finalizado',
     userGuess: { teamA: 3, teamB: 1 },

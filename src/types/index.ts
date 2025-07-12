@@ -2,13 +2,15 @@ export interface Team {
   id: string;
   name: string;
   logoUrl: string;
+  level: 'Profissional' | 'Amador/Várzea';
+  location: string; // Estado/Cidade
+  scope: 'Nacional' | 'Estadual' | 'Municipal';
 }
 
 export interface Championship {
   id: string;
   name: string;
-  scope: 'Nacional' | 'Regional' | 'Estadual';
-  location: string;
+  location: string; // Estado/Cidade
   level: 'Profissional' | 'Amador/Várzea';
 }
 
@@ -18,7 +20,8 @@ export interface Bolao {
   championship: string;
   teamA: Team;
   teamB: Team;
-  matchDate: Date;
+  matchStartDate: Date;
+  matchEndDate: Date;
   betAmount: number;
   status: 'Aberto' | 'Fechado' | 'Finalizado';
   userGuess?: {

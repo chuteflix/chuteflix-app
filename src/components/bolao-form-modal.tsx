@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -55,11 +54,15 @@ const formSchema = z.object({
   championshipId: z.string({ required_error: "Selecione um campeonato." }),
   teamAId: z.string({ required_error: "Selecione o time A." }),
   teamBId: z.string({ required_error: "Selecione o time B." }),
-  matchDate: z.date({ required_error: "Selecione a data da partida." }),
+  matchStartDate: z.date({ required_error: "Selecione a data de início da partida." }),
+  matchEndDate: z.date({ required_error: "Selecione a data de término da partida." }),
   betAmount: z.coerce.number().min(1, "O valor da aposta deve ser maior que zero."),
 }).refine(data => data.teamAId !== data.teamBId, {
   message: "Os times A e B não podem ser iguais.",
   path: ["teamBId"],
+}).refine(data => data.matchEndDate > data.matchStartDate, {
+  message: "A data final deve ser posterior à data inicial.",
+  path: ["matchEndDate"],
 });
 
 
@@ -72,7 +75,8 @@ export function BolaoFormModal({ bolao, isOpen, onClose }: BolaoFormModalProps) 
       championshipId: bolao?.championshipId || "",
       teamAId: bolao?.teamA.id || "",
       teamBId: bolao?.teamB.id || "",
-      matchDate: bolao?.matchDate || undefined,
+      matchStartDate: bolao?.matchStartDate || undefined,
+      matchEndDate: bolao?.matchEndDate || undefined,
       betAmount: bolao?.betAmount || 10,
     },
   })
@@ -155,47 +159,90 @@ export function BolaoFormModal({ bolao, isOpen, onClose }: BolaoFormModalProps) 
                 />
             </div>
 
-            <FormField
-              control={form.control}
-              name="matchDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Data e Hora da Partida</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP, HH:mm", { locale: ptBR })
-                          ) : (
-                            <span>Escolha uma data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setHours(0,0,0,0))
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="matchStartDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Início da Partida</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PP, HH:mm", { locale: ptBR })
+                            ) : (
+                              <span>Escolha uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0,0,0,0))
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="matchEndDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Fim da Partida</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PP, HH:mm", { locale: ptBR })
+                            ) : (
+                              <span>Escolha uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0,0,0,0))
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
