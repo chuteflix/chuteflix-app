@@ -95,10 +95,10 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
           </div>
           <Button 
             onClick={handleButtonClick}
-            disabled={!isClient || isClosed}
+            disabled={!isClient || isClosed || !!bolao.userGuess}
             className="bg-accent hover:bg-accent/80 text-accent-foreground font-bold"
           >
-            {bolao.userGuess ? 'Alterar Chute' : 'Chutar Placar'}
+            Chutar Placar
           </Button>
         </CardFooter>
       </Card>
