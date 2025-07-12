@@ -22,7 +22,7 @@ export default function DashboardPage() {
             {myGuesses.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {myGuesses.map((bolao) => (
-                        <BolaoCard key={bolao.id} bolao={bolao} />
+                        <BolaoCard key={bolao.id} bolao={bolao} isAuthenticated={true} />
                     ))}
                 </div>
             ) : (

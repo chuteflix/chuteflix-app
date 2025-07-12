@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Calendar, DollarSign, Swords, Info } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,13 +15,23 @@ import { PalpiteModal } from "@/components/palpite-modal";
 
 interface BolaoCardProps {
   bolao: Bolao;
+  isAuthenticated: boolean;
 }
 
-export function BolaoCard({ bolao }: BolaoCardProps) {
+export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
   const isClosed = new Date() > bolao.matchDate || bolao.status !== 'Aberto';
   const matchDateTime = format(bolao.matchDate, "eeee, dd/MM 'às' HH:mm'h'", { locale: ptBR });
+
+  const handleButtonClick = () => {
+    if (isAuthenticated) {
+      setIsModalOpen(true);
+    } else {
+      router.push('/dashboard');
+    }
+  };
 
   return (
     <>
@@ -76,11 +87,11 @@ export function BolaoCard({ bolao }: BolaoCardProps) {
             <p className="font-bold text-lg text-primary">R$ {bolao.betAmount.toFixed(2)}</p>
           </div>
           <Button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleButtonClick}
             disabled={isClosed}
             className="bg-accent hover:bg-accent/80 text-accent-foreground font-bold"
           >
-            {bolao.userGuess ? 'Alterar Palpite' : 'Fazer Palpite'}
+            {bolao.userGuess ? 'Alterar Chute' : 'Chutar Placar'}
           </Button>
         </CardFooter>
       </Card>

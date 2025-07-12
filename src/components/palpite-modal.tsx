@@ -55,7 +55,7 @@ export function PalpiteModal({ bolao, isOpen, onClose }: PalpiteModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="text-primary text-center text-2xl font-bold">Faça seu Palpite</DialogTitle>
+          <DialogTitle className="text-primary text-center text-2xl font-bold">Chutar Placar</DialogTitle>
           <DialogDescription className="text-center text-muted-foreground">
             {bolao.teamA.name} vs {bolao.teamB.name}
             <br />
