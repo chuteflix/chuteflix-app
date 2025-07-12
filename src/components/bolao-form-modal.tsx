@@ -14,13 +14,23 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { addBolao, Bolao } from "@/services/boloes"
 
-export function BolaoFormModal({ children }: { children: React.ReactNode }) {
+interface BolaoFormModalProps {
+  onBolaoAdded: (newBolao: Bolao) => void
+  children: React.ReactNode
+}
+
+export function BolaoFormModal({
+  onBolaoAdded,
+  children,
+}: BolaoFormModalProps) {
   const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    name: "Bolão Brasileirão",
-    prize: "R$ 10.000,00",
-    fee: "R$ 20,00",
+    name: "",
+    prize: "",
+    fee: "",
     endDate: "",
   })
 
@@ -29,10 +39,30 @@ export function BolaoFormModal({ children }: { children: React.ReactNode }) {
     setFormData(prev => ({ ...prev, [id]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Dados do Bolão:", formData)
-    setOpen(false) // Fecha o modal após a submissão
+    setError(null)
+
+    const { name, prize, fee, endDate } = formData
+    if (!name || !prize || !fee || !endDate) {
+      setError("Todos os campos são obrigatórios.")
+      return
+    }
+
+    try {
+      const newBolao = await addBolao({
+        name,
+        prize: parseFloat(prize),
+        fee: parseFloat(fee),
+        endDate,
+      })
+      onBolaoAdded(newBolao) // Atualiza a lista na página principal
+      setFormData({ name: "", prize: "", fee: "", endDate: "" }) // Limpa o formulário
+      setOpen(false) // Fecha o modal
+    } catch (err) {
+      setError("Falha ao criar o bolão. Tente novamente.")
+      console.error(err)
+    }
   }
 
   return (
@@ -48,53 +78,25 @@ export function BolaoFormModal({ children }: { children: React.ReactNode }) {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="col-span-3"
-              />
+              <Label htmlFor="name" className="text-right">Nome</Label>
+              <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="prize" className="text-right">
-                Prêmio
-              </Label>
-              <Input
-                id="prize"
-                value={formData.prize}
-                onChange={handleChange}
-                className="col-span-3"
-              />
+              <Label htmlFor="prize" className="text-right">Prêmio (R$)</Label>
+              <Input id="prize" type="number" value={formData.prize} onChange={handleChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="fee" className="text-right">
-                Taxa
-              </Label>
-              <Input
-                id="fee"
-                value={formData.fee}
-                onChange={handleChange}
-                className="col-span-3"
-              />
+              <Label htmlFor="fee" className="text-right">Taxa (R$)</Label>
+              <Input id="fee" type="number" value={formData.fee} onChange={handleChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="endDate" className="text-right">
-                Encerramento
-              </Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={formData.endDate}
-                onChange={handleChange}
-                className="col-span-3"
-              />
+              <Label htmlFor="endDate" className="text-right">Encerramento</Label>
+              <Input id="endDate" type="date" value={formData.endDate} onChange={handleChange} className="col-span-3" />
             </div>
+            {error && <p className="col-span-4 text-red-500 text-sm text-center">{error}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit">Salvar Bolão</Button>
           </DialogFooter>
         </form>
       </DialogContent>

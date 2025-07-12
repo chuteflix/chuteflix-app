@@ -1,25 +1,19 @@
+
 "use client"
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -27,112 +21,181 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast"
-import type { Championship } from "@/types";
+import { Championship } from "@/services/championships"
+import { getStates, getCitiesByState, IBGEState, IBGECity } from "@/services/ibge"
 
 interface ChampionshipFormModalProps {
-  championship?: Championship;
-  isOpen: boolean;
-  onClose: () => void;
+  championship?: Championship | null
+  onSave: (data: Omit<Championship, "id">) => void
+  children: React.ReactNode
 }
 
-const formSchema = z.object({
-  name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-  level: z.enum(['Profissional', 'Amador/Várzea'], { required_error: "Selecione o tipo." }),
-  location: z.string().min(2, "A localização é obrigatória."),
-});
+const initialFormData: Omit<Championship, "id"> = {
+  name: "",
+  type: "amateur",
+}
 
-export function ChampionshipFormModal({ championship, isOpen, onClose }: ChampionshipFormModalProps) {
-  const { toast } = useToast();
+export function ChampionshipFormModal({
+  championship,
+  onSave,
+  children,
+}: ChampionshipFormModalProps) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState<Omit<Championship, "id">>(initialFormData)
+  const [states, setStates] = useState<IBGEState[]>([])
+  const [cities, setCities] = useState<IBGECity[]>([])
+  const [loadingCities, setLoadingCities] = useState(false)
+
+  const isEditing = !!championship
+
+  useEffect(() => {
+    if (open) {
+      const loadStates = async () => {
+        const ibgeStates = await getStates()
+        setStates(ibgeStates)
+      }
+      loadStates()
+      
+      if (isEditing && championship) {
+        setFormData({
+            name: championship.name,
+            type: championship.type,
+            scope: championship.scope,
+            series: championship.series,
+            state: championship.state,
+            city: championship.city,
+        })
+      } else {
+        setFormData(initialFormData)
+      }
+    }
+  }, [open, isEditing, championship])
+
+  useEffect(() => {
+    if (formData.state) {
+      const loadCities = async () => {
+        setLoadingCities(true)
+        const ibgeCities = await getCitiesByState(formData.state!)
+        setCities(ibgeCities)
+        setLoadingCities(false)
+      }
+      loadCities()
+    } else {
+      setCities([])
+    }
+  }, [formData.state])
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: championship?.name || "",
-      level: championship?.level || undefined,
-      location: championship?.location || "",
-    },
-  })
+  const handleChange = (id: string, value: string) => {
+    const newFormData: any = { ...formData, [id]: value }
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("Form submitted:", values);
-    toast({
-      title: "Campeonato Salvo!",
-      description: `O campeonato ${values.name} foi salvo com sucesso.`,
-    });
-    onClose();
-    form.reset();
+    if (id === "type") {
+      // Reset fields that depend on type
+      delete newFormData.scope
+      delete newFormData.series
+      if(value === 'professional') {
+        delete newFormData.state
+        delete newFormData.city
+      }
+    }
+    if (id === "scope") {
+        // Reset fields that depend on scope
+        delete newFormData.state
+        delete newFormData.city
+    }
+    if (id === "state") {
+        // Reset city when state changes
+        delete newFormData.city
+    }
+
+    setFormData(newFormData)
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg bg-card border-border">
-        <DialogHeader>
-          <DialogTitle className="text-primary text-2xl">{championship ? "Editar Campeonato" : "Criar Novo Campeonato"}</DialogTitle>
-          <DialogDescription>
-            Preencha os detalhes abaixo para configurar o campeonato.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-             <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Campeonato</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Brasileirão Série A" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="level"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Profissional">Profissional</SelectItem>
-                      <SelectItem value="Amador/Várzea">Amador/Várzea</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estado/Cidade</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: São Paulo/SP" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+    setOpen(false)
+  }
+  
+  const showProfessionalFields = formData.type === 'professional';
+  const showStateField = formData.type === 'amateur' || (showProfessionalFields && (formData.scope === 'state' || formData.scope === 'municipal'));
+  const showCityField = formData.type === 'amateur' || (showProfessionalFields && formData.scope === 'municipal');
 
-             <DialogFooter className="pt-4">
-              <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                {championship ? "Salvar Alterações" : "Criar Campeonato"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Editar Campeonato" : "Adicionar Campeonato"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label>Nome</Label>
+            <Input value={formData.name} onChange={e => handleChange("name", e.target.value)} />
+
+            <Label>Tipo</Label>
+            <Select onValueChange={value => handleChange("type", value)} value={formData.type}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="professional">Profissional</SelectItem>
+                <SelectItem value="amateur">Amador/Várzea</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {showProfessionalFields && (
+              <>
+                <Label>Projeção</Label>
+                <Select onValueChange={value => handleChange("scope", value)} value={formData.scope}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a projeção"/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="national">Nacional</SelectItem>
+                    <SelectItem value="state">Estadual</SelectItem>
+                    <SelectItem value="municipal">Municipal</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Label>Série</Label>
+                <Select onValueChange={value => handleChange("series", value)} value={formData.series}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a série"/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Série A</SelectItem>
+                    <SelectItem value="B">Série B</SelectItem>
+                    <SelectItem value="C">Série C</SelectItem>
+                    <SelectItem value="D">Série D</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+
+            {showStateField && (
+                <>
+                    <Label>Estado</Label>
+                    <Select onValueChange={value => handleChange("state", value)} value={formData.state}>
+                        <SelectTrigger><SelectValue placeholder="Selecione um estado" /></SelectTrigger>
+                        <SelectContent>
+                            {states.map(s => <SelectItem key={s.id} value={s.sigla}>{s.nome}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </>
+            )}
+
+            {showCityField && (
+                <>
+                    <Label>Cidade</Label>
+                    <Select onValueChange={value => handleChange("city", value)} value={formData.city} disabled={!formData.state || loadingCities}>
+                    <SelectTrigger><SelectValue placeholder={loadingCities ? "Carregando..." : "Selecione uma cidade"} /></SelectTrigger>
+                    <SelectContent>
+                        {cities.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+                </>
+            )}
+
+          </div>
+          <DialogFooter>
+            <Button type="submit">Salvar</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

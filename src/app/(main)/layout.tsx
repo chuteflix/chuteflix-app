@@ -1,10 +1,10 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home,
   LayoutDashboard,
   LogOut,
   Settings as SettingsIcon,
@@ -45,7 +45,6 @@ import { Logo } from '@/components/icons';
 import { ToastProvider } from '@/components/toast-provider';
 import { useAuth } from '@/context/auth-context';
 import { auth } from '@/lib/firebase';
-import { Skeleton } from '@/components/ui/skeleton';
 import { WelcomeBanner } from '@/components/welcome-banner';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -72,23 +71,42 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   ];
 
   const adminMenuItems = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
-    { href: '/admin?tab=boloes', label: 'Bolões', icon: Shield },
-    { href: '/admin?tab=campeonatos', label: 'Campeonatos', icon: Trophy },
-    { href: '/admin?tab=times', label: 'Times', icon: Flag },
-    { href: '/admin?tab=usuarios', label: 'Usuários', icon: UsersIcon },
-    { href: '/admin?tab=transacoes', label: 'Transações', icon: ArrowRightLeft },
-    { href: '/admin?tab=configuracoes', label: 'Configurações', icon: SettingsIcon },
+    { href: '/admin', label: 'Dashboard', icon: LayoutGrid, exact: true },
+    { href: '/admin/boloes', label: 'Bolões', icon: Shield },
+    { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy },
+    { href: '/admin/times', label: 'Times', icon: Flag },
+    { href: '/admin/usuarios', label: 'Usuários', icon: UsersIcon },
+    { href: '/admin/transacoes', label: 'Transações', icon: ArrowRightLeft },
+    { href: '/admin/notificacoes', label: 'Notificações', icon: Bell },
+    { href: '/admin/configuracoes', label: 'Configurações', icon: SettingsIcon },
   ];
   
   const isAdminPage = pathname.startsWith('/admin');
   const menuItems = isAdminPage ? adminMenuItems : userMenuItems;
 
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string, exact = false) => {
+    if (exact) {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
   
   const getHeaderTitle = () => {
-    if (isAdminPage) return "Painel do Administrador";
-    return menuItems.find(item => item.href === pathname)?.label || 'ChuteFlix';
+    if (!isAdminPage) {
+        return menuItems.find(item => isActive(item.href))?.label || 'ChuteFlix';
+    }
+
+    // Prioritize exact match for dashboard
+    if (pathname === '/admin') {
+        return 'Dashboard';
+    }
+
+    // Find the most specific match for other admin pages
+    const matchingItem = [...adminMenuItems]
+        .sort((a, b) => b.href.length - a.href.length) // Sort by length to find most specific
+        .find(item => !item.exact && pathname.startsWith(item.href));
+    
+    return matchingItem?.label || 'Painel do Administrador';
   }
 
   if (loading || !user) {
@@ -113,7 +131,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton 
                       asChild 
-                      isActive={isActive(item.href)} 
+                      isActive={isActive(item.href, item.exact)} 
                       tooltip={item.label}
                       className="data-[active=true]:bg-primary/10 data-[active=true]:text-primary hover:bg-muted"
                     >
