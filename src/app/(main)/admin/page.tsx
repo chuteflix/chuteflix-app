@@ -105,7 +105,8 @@ const AdminPage = () => {
   }, [transactions, transactionFilter]);
 
   const renderHeaderButton = () => {
-    switch(activeTab) {
+    const tab = searchParams.get('tab');
+    switch(tab) {
       case 'boloes':
         return (
           <Button onClick={() => setIsBolaoModalOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -130,7 +131,8 @@ const AdminPage = () => {
   }
 
   const renderContent = () => {
-    switch(activeTab) {
+    const tab = searchParams.get('tab') || 'dashboard';
+    switch(tab) {
       case 'dashboard':
         return (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -288,7 +290,7 @@ const AdminPage = () => {
         );
       case 'transacoes':
         return (
-          <Tabs defaultValue="Todas" onValueChange={(value) => setTransactionFilter(value as TransactionStatusFilter)}>
+          <Tabs value={transactionFilter} onValueChange={(value) => setTransactionFilter(value as TransactionStatusFilter)}>
             <TabsList className="grid w-full grid-cols-4 mb-4">
               <TabsTrigger value="Todas">Todas</TabsTrigger>
               <TabsTrigger value="Confirmado">Aprovadas</TabsTrigger>
@@ -388,5 +390,3 @@ const AdminPageWithSuspense = () => (
 );
 
 export default AdminPageWithSuspense;
-
-    
