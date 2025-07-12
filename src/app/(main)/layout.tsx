@@ -6,12 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   LayoutDashboard,
-  ShieldCheck,
-  Users,
-  Trophy,
-  Flag,
-  ArrowRightLeft,
-  History,
   LogOut,
   Settings,
   Bell,
@@ -47,8 +41,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const menuItems = [
     { href: '/', label: 'Início', icon: Home },
-    { href: '/dashboard', label: 'Meu Painel', icon: LayoutDashboard },
-    { href: '/admin', label: 'Painel Admin', icon: ShieldCheck },
+    { href: '/dashboard', label: 'Meus Chutes', icon: LayoutDashboard },
   ];
   
   const isActive = (href: string) => pathname === href;
@@ -63,7 +56,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                 <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
                   <Link href={item.href}>
                     <item.icon />
                     <span>{item.label}</span>
@@ -104,7 +97,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="https://placehold.co/100x100.png" alt="@user" />
+                    <AvatarImage src="https://placehold.co/100x100.png" alt="@user" data-ai-hint="male person" />
                     <AvatarFallback>AU</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -112,9 +105,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Admin User</p>
+                    <p className="text-sm font-medium leading-none">Usuário</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      admin@chuteflix.com
+                      usuario@chuteflix.com
                     </p>
                   </div>
                 </DropdownMenuLabel>
