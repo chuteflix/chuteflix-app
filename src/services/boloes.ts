@@ -18,13 +18,14 @@ export interface Bolao {
   championshipId: string
   teamAId: string
   teamBId: string
-  matchDate: Timestamp
-  fee: number
-  prize: number
+  matchDate: string // YYYY-MM-DD
+  startTime: string // HH:MM
+  endTime: string // HH:MM
+  fee: number // Valor da aposta
   status: "Ativo" | "Em breve" | "Finalizado"
 }
 
-// Função para converter dados do Firestore para o tipo Bolao
+// Função para converter dados do Firestore
 const fromFirestore = (doc: DocumentData): Bolao => {
   const data = doc.data()
   return {
@@ -34,31 +35,27 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     teamAId: data.teamAId,
     teamBId: data.teamBId,
     matchDate: data.matchDate,
+    startTime: data.startTime,
+    endTime: data.endTime,
     fee: data.fee,
-    prize: data.prize,
     status: data.status,
   }
 }
 
 export const addBolao = async (
-  data: Omit<Bolao, "id" | "status" | "matchDate"> & { matchDate: string }
+  data: Omit<Bolao, "id" | "status">
 ): Promise<Bolao> => {
   try {
     const docRef = await addDoc(collection(db, "boloes"), {
       ...data,
-      matchDate: Timestamp.fromDate(new Date(data.matchDate)),
-      status: "Em breve", // Todo novo bolão começa como 'Em breve'
+      status: "Em breve",
       createdAt: serverTimestamp(),
     })
-
-    const newBolaoData = {
-      ...data,
+    return {
       id: docRef.id,
-      status: "Em breve" as const,
-      matchDate: Timestamp.fromDate(new Date(data.matchDate)),
+      ...data,
+      status: "Em breve",
     }
-
-    return newBolaoData
   } catch (error) {
     console.error("Erro ao adicionar bolão: ", error)
     throw new Error("Não foi possível adicionar o bolão.")
@@ -81,11 +78,7 @@ export const updateBolao = async (
 ): Promise<void> => {
   try {
     const bolaoRef = doc(db, "boloes", id)
-    const updateData: any = { ...data }
-    if (data.matchDate && typeof data.matchDate === "string") {
-      updateData.matchDate = Timestamp.fromDate(new Date(data.matchDate))
-    }
-    await updateDoc(bolaoRef, updateData)
+    await updateDoc(bolaoRef, data)
   } catch (error) {
     console.error("Erro ao atualizar bolão: ", error)
     throw new Error("Não foi possível atualizar o bolão.")
