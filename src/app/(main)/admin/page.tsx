@@ -38,6 +38,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,12 +49,15 @@ import { ChampionshipFormModal } from "@/components/championship-form-modal";
 import { TeamFormModal } from "@/components/team-form-modal";
 import type { Settings, Transaction } from "@/types";
 
+type TransactionStatusFilter = 'Todas' | 'Confirmado' | 'Pendente' | 'Falhou';
+
 const AdminPage = () => {
   const [isBolaoModalOpen, setIsBolaoModalOpen] = useState(false);
   const [isChampionshipModalOpen, setIsChampionshipModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [currentSettings, setCurrentSettings] = useState<Settings>(settings);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [transactionFilter, setTransactionFilter] = useState<TransactionStatusFilter>('Todas');
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const activeTab = useMemo(() => searchParams.get('tab') || 'dashboard', [searchParams]);
@@ -92,6 +96,13 @@ const AdminPage = () => {
       default: return 'secondary';
     }
   }
+
+  const filteredTransactions = useMemo(() => {
+    if (transactionFilter === 'Todas') {
+      return transactions;
+    }
+    return transactions.filter(t => t.status === transactionFilter);
+  }, [transactions, transactionFilter]);
 
   const renderHeaderButton = () => {
     switch(activeTab) {
@@ -277,34 +288,42 @@ const AdminPage = () => {
         );
       case 'transacoes':
         return (
-          <div className="bg-card rounded-lg overflow-hidden border">
-            <Table>
-              <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Usuário</TableHead><TableHead>Bolão</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {transactions.map(t => (
-                  <TableRow key={t.id} className={t.status !== 'Pendente' ? 'opacity-60' : ''}>
-                    <TableCell className="truncate max-w-[50px]">{t.id}</TableCell>
-                    <TableCell>{users.find(u => u.id === t.userId)?.name}</TableCell>
-                    <TableCell className="truncate max-w-[50px]">{t.bolaoId}</TableCell>
-                    <TableCell>R$ {t.amount.toFixed(2)}</TableCell>
-                    <TableCell><Badge variant={getTransactionStatusVariant(t.status)}>{t.status}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      {t.status === 'Pendente' && (
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="ghost" size="icon" title="Aprovar" onClick={() => handleTransactionStatusChange(t.id, 'Confirmado')}>
-                            <CheckCircle className="h-4 w-4 text-success" />
-                          </Button>
-                          <Button variant="ghost" size="icon" title="Recusar" onClick={() => handleTransactionStatusChange(t.id, 'Falhou')}>
-                            <XCircle className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <Tabs defaultValue="Todas" onValueChange={(value) => setTransactionFilter(value as TransactionStatusFilter)}>
+            <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsTrigger value="Todas">Todas</TabsTrigger>
+              <TabsTrigger value="Confirmado">Aprovadas</TabsTrigger>
+              <TabsTrigger value="Pendente">Pendentes</TabsTrigger>
+              <TabsTrigger value="Falhou">Recusadas</TabsTrigger>
+            </TabsList>
+             <div className="bg-card rounded-lg overflow-hidden border">
+              <Table>
+                <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Usuário</TableHead><TableHead>Bolão</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {filteredTransactions.map(t => (
+                    <TableRow key={t.id} className={t.status !== 'Pendente' ? 'opacity-60' : ''}>
+                      <TableCell className="truncate max-w-[50px]">{t.id}</TableCell>
+                      <TableCell>{users.find(u => u.id === t.userId)?.name}</TableCell>
+                      <TableCell className="truncate max-w-[50px]">{t.bolaoId}</TableCell>
+                      <TableCell>R$ {t.amount.toFixed(2)}</TableCell>
+                      <TableCell><Badge variant={getTransactionStatusVariant(t.status)}>{t.status}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        {t.status === 'Pendente' && (
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="ghost" size="icon" title="Aprovar" onClick={() => handleTransactionStatusChange(t.id, 'Confirmado')}>
+                              <CheckCircle className="h-4 w-4 text-success" />
+                            </Button>
+                            <Button variant="ghost" size="icon" title="Recusar" onClick={() => handleTransactionStatusChange(t.id, 'Falhou')}>
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Tabs>
         );
       case 'configuracoes':
         return (
@@ -369,3 +388,5 @@ const AdminPageWithSuspense = () => (
 );
 
 export default AdminPageWithSuspense;
+
+    
