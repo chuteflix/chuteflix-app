@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Calendar, DollarSign, Swords, Info } from "lucide-react";
+import { Calendar, DollarSign, Swords, Info, CircleDot } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -34,7 +34,7 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
     if (isAuthenticated) {
       setIsModalOpen(true);
     } else {
-      router.push('/dashboard');
+      router.push('/login');
     }
   };
 
@@ -45,7 +45,7 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
           <div className="flex justify-between items-start">
             <CardTitle className="text-sm font-normal text-muted-foreground flex-1 pr-2">{bolao.championship}</CardTitle>
             {isClient && (
-              <Badge variant={isClosed ? "destructive" : "success"} className="whitespace-nowrap">
+              <Badge variant={isClosed ? "destructive" : "success"} className="whitespace-rap">
                 {isClosed ? 'Fechado' : 'Aberto'}
               </Badge>
             )}
@@ -81,6 +81,10 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
             <Calendar className="h-4 w-4 text-primary" />
             <span>{matchDateTime}</span>
           </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <DollarSign className="h-4 w-4 text-primary" />
+            <span>Aposta de R$ {bolao.betAmount.toFixed(2)}</span>
+          </div>
           {bolao.userGuess && (
              <div className="flex items-center gap-2 text-sm text-accent font-bold p-2 bg-accent/10 rounded-md">
                 <Info className="h-4 w-4 text-accent" />
@@ -88,17 +92,14 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
             </div>
           )}
         </CardContent>
-        <CardFooter className="p-4 bg-muted/30 flex justify-between items-center">
-          <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground">Aposta</span>
-            <p className="font-bold text-lg text-primary">R$ {bolao.betAmount.toFixed(2)}</p>
-          </div>
+        <CardFooter className="p-4 bg-muted/30">
           <Button 
             onClick={handleButtonClick}
-            disabled={!isClient || isClosed || !!bolao.userGuess}
-            className="bg-accent hover:bg-accent/80 text-accent-foreground font-bold"
+            disabled={!isClient || isClosed || (isAuthenticated && !!bolao.userGuess)}
+            className="w-full font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            Chutar Placar
+            <CircleDot className="mr-2 h-5 w-5" />
+            {isAuthenticated ? 'Chutar Placar' : 'Faça Login para Chutar'}
           </Button>
         </CardFooter>
       </Card>

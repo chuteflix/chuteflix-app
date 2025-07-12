@@ -1,18 +1,12 @@
-"use client"
-
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/auth-context";
 
-// Metadata cannot be exported from a client component.
-// We can keep it here, but it won't be used by Next.js.
-// For metadata in client components, you would typically handle it
-// in a parent server component or using the `use-metadata` hook if needed.
-// export const metadata: Metadata = {
-//   title: "ChuteFlix Bolão App",
-//   description: "Apostas e diversão no mundo do futebol.",
-// };
+export const metadata: Metadata = {
+  title: "ChuteFlix Bolão App",
+  description: "Apostas e diversão no mundo do futebol.",
+};
 
 export default function RootLayout({
   children,
