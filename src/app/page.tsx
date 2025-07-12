@@ -19,10 +19,10 @@ export default function HomePage() {
           </div>
           <div className="flex flex-1 items-center justify-end space-x-2">
              <Button asChild>
-                <Link href="/dashboard">Login</Link>
+                <Link href="/login">Login</Link>
             </Button>
-            <Button variant="outline">
-                Cadastro
+            <Button asChild variant="outline">
+                <Link href="/register">Cadastro</Link>
             </Button>
           </div>
         </div>

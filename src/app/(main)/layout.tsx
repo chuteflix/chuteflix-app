@@ -15,7 +15,9 @@ import {
   Flag,
   Users as UsersIcon,
   ArrowRightLeft,
-  LayoutGrid
+  LayoutGrid,
+  History,
+  User as UserIcon
 } from 'lucide-react';
 
 import {
@@ -45,6 +47,7 @@ import { ToastProvider } from '@/components/toast-provider';
 import { useAuth } from '@/context/auth-context';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WelcomeBanner } from '@/components/welcome-banner';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -59,12 +62,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const handleLogout = async () => {
     await auth.signOut();
+    localStorage.removeItem('userFirstName');
     router.push('/login');
   };
 
   const userMenuItems = [
     { href: '/', label: 'Início', icon: Home },
     { href: '/dashboard', label: 'Meus Chutes', icon: LayoutDashboard },
+    { href: '/history', label: 'Histórico', icon: History },
+    { href: '/settings', label: 'Configurações', icon: SettingsIcon },
   ];
 
   const adminMenuItems = [
@@ -120,18 +126,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               ))}
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter>
-             <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Configurações">
-                    <Link href="/admin?tab=configuracoes">
-                      <SettingsIcon />
-                      <span>Admin</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-             </SidebarMenu>
-          </SidebarFooter>
         </Sidebar>
         <SidebarInset>
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -144,6 +138,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </h2>
             </div>
             <div className="flex items-center gap-4">
+              <WelcomeBanner />
               <Button variant="ghost" size="icon">
                 <Bell className="h-5 w-5" />
               </Button>
@@ -166,6 +161,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>Editar Perfil</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sair</span>
