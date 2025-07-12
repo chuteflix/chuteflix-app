@@ -14,7 +14,9 @@ import {
   Trash2,
   LayoutGrid,
   DollarSign,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,17 +42,18 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { boloes, championships, teams, users, transactions, settings, updateSettings } from "@/lib/data";
+import { boloes, championships, teams, users, transactions as initialTransactions, settings, updateSettings } from "@/lib/data";
 import { BolaoFormModal } from "@/components/bolao-form-modal";
 import { ChampionshipFormModal } from "@/components/championship-form-modal";
 import { TeamFormModal } from "@/components/team-form-modal";
-import type { Settings } from "@/types";
+import type { Settings, Transaction } from "@/types";
 
 const AdminPage = () => {
   const [isBolaoModalOpen, setIsBolaoModalOpen] = useState(false);
   const [isChampionshipModalOpen, setIsChampionshipModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [currentSettings, setCurrentSettings] = useState<Settings>(settings);
+  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const activeTab = useMemo(() => searchParams.get('tab') || 'dashboard', [searchParams]);
@@ -71,6 +74,24 @@ const AdminPage = () => {
       description: "As configurações de pagamento foram atualizadas.",
     });
   };
+
+  const handleTransactionStatusChange = (transactionId: string, status: 'Confirmado' | 'Falhou') => {
+    setTransactions(prev => prev.map(t => t.id === transactionId ? { ...t, status } : t));
+    toast({
+      title: "Transação Atualizada!",
+      description: `A transação foi marcada como ${status.toLowerCase()}.`,
+      variant: status === "Confirmado" ? "success" : "destructive"
+    });
+  };
+
+  const getTransactionStatusVariant = (status: Transaction['status']) => {
+    switch (status) {
+      case 'Confirmado': return 'success';
+      case 'Pendente': return 'secondary';
+      case 'Falhou': return 'destructive';
+      default: return 'secondary';
+    }
+  }
 
   const renderHeaderButton = () => {
     switch(activeTab) {
@@ -258,15 +279,27 @@ const AdminPage = () => {
         return (
           <div className="bg-card rounded-lg overflow-hidden border">
             <Table>
-              <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Usuário</TableHead><TableHead>Bolão</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Usuário</TableHead><TableHead>Bolão</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
               <TableBody>
                 {transactions.map(t => (
-                  <TableRow key={t.id}>
+                  <TableRow key={t.id} className={t.status !== 'Pendente' ? 'opacity-60' : ''}>
                     <TableCell className="truncate max-w-[50px]">{t.id}</TableCell>
                     <TableCell>{users.find(u => u.id === t.userId)?.name}</TableCell>
                     <TableCell className="truncate max-w-[50px]">{t.bolaoId}</TableCell>
                     <TableCell>R$ {t.amount.toFixed(2)}</TableCell>
-                    <TableCell><Badge variant={t.status === 'Confirmado' ? 'success' : 'secondary'}>{t.status}</Badge></TableCell>
+                    <TableCell><Badge variant={getTransactionStatusVariant(t.status)}>{t.status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      {t.status === 'Pendente' && (
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="ghost" size="icon" title="Aprovar" onClick={() => handleTransactionStatusChange(t.id, 'Confirmado')}>
+                            <CheckCircle className="h-4 w-4 text-success" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Recusar" onClick={() => handleTransactionStatusChange(t.id, 'Falhou')}>
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
