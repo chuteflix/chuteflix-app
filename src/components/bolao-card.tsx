@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Calendar, DollarSign, Swords, Info } from "lucide-react";
@@ -20,10 +20,15 @@ interface BolaoCardProps {
 
 export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const isClosed = new Date() > bolao.matchDate || bolao.status !== 'Aberto';
-  const matchDateTime = format(bolao.matchDate, "eeee, dd/MM 'às' HH:mm'h'", { locale: ptBR });
+  const matchDateTime = isClient ? format(bolao.matchDate, "eeee, dd/MM 'às' HH:mm'h'", { locale: ptBR }) : "";
 
   const handleButtonClick = () => {
     if (isAuthenticated) {
@@ -39,9 +44,11 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
         <CardHeader className="p-4 bg-card">
           <div className="flex justify-between items-start">
             <CardTitle className="text-sm font-normal text-muted-foreground flex-1 pr-2">{bolao.championship}</CardTitle>
-            <Badge variant={isClosed ? "destructive" : "success"} className="whitespace-nowrap">
-              {isClosed ? 'Fechado' : 'Aberto'}
-            </Badge>
+            {isClient && (
+              <Badge variant={isClosed ? "destructive" : "success"} className="whitespace-nowrap">
+                {isClosed ? 'Fechado' : 'Aberto'}
+              </Badge>
+            )}
           </div>
           <div className="flex justify-around items-center text-center pt-4">
             <div className="flex flex-col items-center gap-2 w-2/5">
@@ -88,7 +95,7 @@ export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
           </div>
           <Button 
             onClick={handleButtonClick}
-            disabled={isClosed}
+            disabled={!isClient || isClosed}
             className="bg-accent hover:bg-accent/80 text-accent-foreground font-bold"
           >
             {bolao.userGuess ? 'Alterar Chute' : 'Chutar Placar'}
