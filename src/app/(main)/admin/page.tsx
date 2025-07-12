@@ -12,6 +12,7 @@ import {
   Trash2,
   LayoutGrid,
   DollarSign,
+  Settings as SettingsIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,18 +30,40 @@ import {
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { boloes, championships, teams, users, transactions } from "@/lib/data";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { boloes, championships, teams, users, transactions, settings, updateSettings } from "@/lib/data";
 import { BolaoFormModal } from "@/components/bolao-form-modal";
+import type { Settings } from "@/types";
 
 const AdminPage = () => {
   const [isBolaoModalOpen, setIsBolaoModalOpen] = useState(false);
-  
+  const [currentSettings, setCurrentSettings] = useState<Settings>(settings);
+  const { toast } = useToast();
+
   const totalArrecadado = transactions.reduce((acc, t) => t.status === 'Confirmado' ? acc + t.amount : acc, 0);
   const openBoloesCount = boloes.filter(b => b.status === 'Aberto').length;
+
+  const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCurrentSettings(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSettingsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettings(currentSettings);
+    toast({
+      title: "Configurações Salvas!",
+      description: "As configurações de pagamento foram atualizadas.",
+    });
+  };
 
   return (
     <>
@@ -53,13 +76,14 @@ const AdminPage = () => {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-7">
           <TabsTrigger value="dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</TabsTrigger>
           <TabsTrigger value="boloes"><Shield className="mr-2 h-4 w-4" />Bolões</TabsTrigger>
           <TabsTrigger value="campeonatos"><Trophy className="mr-2 h-4 w-4" />Campeonatos</TabsTrigger>
           <TabsTrigger value="times"><Flag className="mr-2 h-4 w-4" />Times</TabsTrigger>
           <TabsTrigger value="usuarios"><UsersIcon className="mr-2 h-4 w-4" />Usuários</TabsTrigger>
           <TabsTrigger value="transacoes"><ArrowRightLeft className="mr-2 h-4 w-4" />Transações</TabsTrigger>
+          <TabsTrigger value="configuracoes"><SettingsIcon className="mr-2 h-4 w-4" />Configurações</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-6">
@@ -222,6 +246,36 @@ const AdminPage = () => {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="configuracoes" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Pagamento</CardTitle>
+                <CardDescription>
+                  Altere os dados de pagamento que serão exibidos aos usuários no momento da aposta.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSettingsSubmit}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pixKey">Chave PIX</Label>
+                    <Input id="pixKey" name="pixKey" value={currentSettings.pixKey} onChange={handleSettingsChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="qrCodeUrl">URL do QR Code</Label>
+                    <Input id="qrCodeUrl" name="qrCodeUrl" value={currentSettings.qrCodeUrl} onChange={handleSettingsChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsappNumber">Número do WhatsApp para Comprovante</Label>
+                    <Input id="whatsappNumber" name="whatsappNumber" value={currentSettings.whatsappNumber} onChange={handleSettingsChange} />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground">Salvar Alterações</Button>
+                </CardFooter>
+              </form>
+            </Card>
         </TabsContent>
         
       </Tabs>

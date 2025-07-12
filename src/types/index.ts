@@ -42,3 +42,9 @@ export interface Transaction {
   date: Date;
   status: 'Pendente' | 'Confirmado' | 'Falhou';
 }
+
+export interface Settings {
+  pixKey: string;
+  qrCodeUrl: string;
+  whatsappNumber: string;
+}

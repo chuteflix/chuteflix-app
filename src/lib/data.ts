@@ -1,4 +1,4 @@
-import type { Bolao, Team, User, Transaction, Championship } from "@/types";
+import type { Bolao, Team, User, Transaction, Championship, Settings } from "@/types";
 
 export const teams: Team[] = [
   { id: '1', name: 'Flamengo', logoUrl: 'https://placehold.co/64x64/FF0000/FFFFFF.png?text=FLA' },
@@ -100,3 +100,16 @@ export const transactions: Transaction[] = [
     { id: 't3', userId: 'u2', bolaoId: 'b5', amount: 10.00, date: new Date(new Date().getTime() - 5 * 24 * 60 * 60 * 1000), status: 'Confirmado' },
     { id: 't4', userId: 'u3', bolaoId: 'b1', amount: 20.00, date: new Date(), status: 'Pendente' },
 ];
+
+export let settings: Settings = {
+    pixKey: '000.000.000-00',
+    qrCodeUrl: 'https://placehold.co/200x200.png',
+    whatsappNumber: '+5511999999999'
+};
+
+// Mock function to update settings
+export const updateSettings = (newSettings: Partial<Settings>) => {
+  settings = { ...settings, ...newSettings };
+  console.log('Updated settings:', settings);
+  return settings;
+};
