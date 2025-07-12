@@ -1,25 +1,18 @@
+
 "use client"
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -27,135 +20,116 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast"
-import type { Team } from "@/types";
+import { Team } from "@/services/teams"
+import { getStates, getCitiesByState, IBGEState, IBGECity } from "@/services/ibge"
 
 interface TeamFormModalProps {
-  team?: Team;
-  isOpen: boolean;
-  onClose: () => void;
+  team?: Team | null
+  onSave: (data: Omit<Team, "id">, id?: string) => void
+  children: React.ReactNode
 }
 
-const formSchema = z.object({
-  name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-  level: z.enum(['Profissional', 'Amador/Várzea'], { required_error: "Selecione o nível." }),
-  location: z.string().min(2, "A localização é obrigatória."),
-  scope: z.enum(['Nacional', 'Estadual', 'Municipal'], { required_error: "Selecione a projeção." }),
-});
+const initialFormData: Omit<Team, "id"> = {
+  name: "",
+  shieldUrl: "",
+  state: "",
+  city: "",
+}
 
-export function TeamFormModal({ team, isOpen, onClose }: TeamFormModalProps) {
-  const { toast } = useToast();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: team?.name || "",
-      level: team?.level || undefined,
-      location: team?.location || "",
-      scope: team?.scope || undefined,
-    },
-  })
+export function TeamFormModal({
+  team,
+  onSave,
+  children,
+}: TeamFormModalProps) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState<Omit<Team, "id">>(initialFormData)
+  const [states, setStates] = useState<IBGEState[]>([])
+  const [cities, setCities] = useState<IBGECity[]>([])
+  const [loadingCities, setLoadingCities] = useState(false)
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("Form submitted:", values);
-    toast({
-      title: "Time Salvo!",
-      description: `O time ${values.name} foi salvo com sucesso.`,
-    });
-    onClose();
-    form.reset();
+  const isEditing = !!team
+
+  useEffect(() => {
+    if (open) {
+      const loadStates = async () => {
+        const ibgeStates = await getStates()
+        setStates(ibgeStates)
+      }
+      loadStates()
+      
+      if (isEditing && team) {
+        setFormData({
+            name: team.name,
+            shieldUrl: team.shieldUrl,
+            state: team.state,
+            city: team.city,
+        })
+      } else {
+        setFormData(initialFormData)
+      }
+    }
+  }, [open, isEditing, team])
+
+  useEffect(() => {
+    if (formData.state) {
+      const loadCities = async () => {
+        setLoadingCities(true)
+        const ibgeCities = await getCitiesByState(formData.state!)
+        setCities(ibgeCities)
+        setLoadingCities(false)
+      }
+      loadCities()
+    } else {
+      setCities([])
+    }
+  }, [formData.state])
+
+  const handleChange = (id: string, value: string) => {
+    setFormData(prev => ({ ...prev, [id]: value }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData, isEditing ? team.id : undefined)
+    setOpen(false)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg bg-card border-border">
-        <DialogHeader>
-          <DialogTitle className="text-primary text-2xl">{team ? "Editar Time" : "Criar Novo Time"}</DialogTitle>
-          <DialogDescription>
-            Preencha os detalhes abaixo para configurar o time.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-             <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Time</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Flamengo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="level"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nível</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Selecione o nível" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Profissional">Profissional</SelectItem>
-                      <SelectItem value="Amador/Várzea">Amador/Várzea</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estado/Cidade</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Rio de Janeiro/RJ" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Editar Time" : "Adicionar Time"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label>Nome do Time</Label>
+            <Input value={formData.name} onChange={e => handleChange("name", e.target.value)} />
 
-            <FormField
-              control={form.control}
-              name="scope"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Projeção</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Selecione a projeção" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Nacional">Nacional</SelectItem>
-                      <SelectItem value="Estadual">Estadual</SelectItem>
-                       <SelectItem value="Municipal">Municipal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <Label>URL do Escudo</Label>
+            <Input value={formData.shieldUrl} onChange={e => handleChange("shieldUrl", e.target.value)} />
+            
+            <Label>Estado</Label>
+            <Select onValueChange={value => handleChange("state", value)} value={formData.state}>
+              <SelectTrigger><SelectValue placeholder="Selecione um estado" /></SelectTrigger>
+              <SelectContent>
+                {states.map(s => <SelectItem key={s.id} value={s.sigla}>{s.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            
+            <Label>Cidade</Label>
+            <Select onValueChange={value => handleChange("city", value)} value={formData.city} disabled={!formData.state || loadingCities}>
+              <SelectTrigger><SelectValue placeholder={loadingCities ? "Carregando..." : "Selecione uma cidade"} /></SelectTrigger>
+              <SelectContent>
+                {cities.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
 
-             <DialogFooter className="pt-4">
-              <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                {team ? "Salvar Alterações" : "Criar Time"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+          <DialogFooter>
+            <Button type="submit">Salvar</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
