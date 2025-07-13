@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
-import { Users, Trophy, Info } from "lucide-react"
+import { Users, Trophy, Info, AlertCircle } from "lucide-react"
+import { parse } from "date-fns"
 
 interface BolaoCardProps {
   bolao: Bolao
@@ -29,6 +30,7 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
   const router = useRouter()
   const [participantCount, setParticipantCount] = useState(0)
   const [loadingParticipants, setLoadingParticipants] = useState(true)
+  const [isClosingTimePassed, setIsClosingTimePassed] = useState(false)
 
   useEffect(() => {
     const fetchParticipantCount = async () => {
@@ -38,7 +40,21 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
       setLoadingParticipants(false)
     }
     fetchParticipantCount()
-  }, [bolao.id])
+
+    const checkClosingTime = () => {
+        if (bolao.matchDate && bolao.closingTime) {
+            const closingDateTime = parse(`${bolao.matchDate} ${bolao.closingTime}`, 'yyyy-MM-dd HH:mm', new Date());
+            if (new Date() > closingDateTime) {
+                setIsClosingTimePassed(true);
+            }
+        }
+    };
+
+    checkClosingTime();
+    const interval = setInterval(checkClosingTime, 60000); // Verifica a cada minuto
+
+    return () => clearInterval(interval);
+  }, [bolao.id, bolao.matchDate, bolao.closingTime])
 
   if (!teamA || !teamB || !championship) {
     return null 
@@ -57,12 +73,23 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
   const totalArrecadado = bolao.fee * participantCount
   const premioAtual = (bolao.initialPrize || 0) + (totalArrecadado * 0.90)
 
-  const statusMap: { [key: string]: { variant: "success" | "secondary" | "outline" | "destructive", label: string } } = {
-    'Aberto': { variant: 'success', label: 'Aberto' },
-    'Em breve': { variant: 'outline', label: 'Em Breve' },
+  // Determina o status atual para exibição
+  const displayStatus = isClosingTimePassed && bolao.status === 'Disponível' ? 'Chutes Encerrados' : bolao.status;
+
+  const statusMap: { [key: string]: { variant: "success" | "secondary" | "destructive" | "outline", label: string } } = {
+    'Disponível': { variant: 'success', label: 'Disponível' },
+    'Chutes Encerrados': { variant: 'secondary', label: 'Chutes Encerrados' },
     'Finalizado': { variant: 'destructive', label: 'Finalizado' },
   }
-  const currentStatus = statusMap[bolao.status] || { variant: 'secondary', label: bolao.status }
+  const currentStatusStyle = statusMap[displayStatus] || { variant: 'outline', label: displayStatus }
+
+  const isButtonDisabled = displayStatus === 'Chutes Encerrados' || displayStatus === 'Finalizado';
+  
+  const buttonText = () => {
+    if (displayStatus === 'Finalizado') return 'Ver Resultados';
+    if (displayStatus === 'Chutes Encerrados') return 'Chutes Encerrados';
+    return 'Chutar Placar';
+  }
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -73,7 +100,7 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
               <h3 className="font-bold leading-tight line-clamp-2">{bolao.name}</h3>
               <p className="text-xs text-muted-foreground">{championship.name}</p>
             </div>
-            <Badge variant={currentStatus.variant} className="shrink-0">{currentStatus.label}</Badge>
+            <Badge variant={currentStatusStyle.variant} className="shrink-0">{currentStatusStyle.label}</Badge>
           </div>
         </CardHeader>
         
@@ -134,9 +161,10 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
             <Button
                 className="w-full font-bold"
                 onClick={handleChutarClick}
-                disabled={bolao.status === 'Em breve'}
+                disabled={isButtonDisabled}
             >
-                {bolao.status === 'Finalizado' ? 'Ver Resultados' : 'Chutar Placar'}
+                {isButtonDisabled && <AlertCircle className="mr-2 h-4 w-4" />}
+                {buttonText()}
             </Button>
         </CardFooter>
       </Card>

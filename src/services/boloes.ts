@@ -23,8 +23,10 @@ export interface Bolao {
   endTime: string
   fee: number 
   initialPrize: number 
-  status: "Aberto" | "Em breve" | "Finalizado"
+  status: "Disponível" | "Chutes Encerrados" | "Finalizado"
   closingTime: string;
+  scoreTeam1?: number;
+  scoreTeam2?: number;
 }
 
 const fromFirestore = (doc: DocumentData): Bolao => {
@@ -42,6 +44,8 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     initialPrize: data.initialPrize || 0, 
     status: data.status,
     closingTime: data.closingTime,
+    scoreTeam1: data.scoreTeam1,
+    scoreTeam2: data.scoreTeam2,
   }
 }
 
@@ -51,13 +55,13 @@ export const addBolao = async (
   try {
     const docRef = await addDoc(collection(db, "boloes"), {
       ...data,
-      status: "Em breve",
+      status: "Disponível",
       createdAt: serverTimestamp(),
     })
     return {
       id: docRef.id,
       ...data,
-      status: "Em breve",
+      status: "Disponível",
     }
   } catch (error) {
     console.error("Erro ao adicionar bolão: ", error)

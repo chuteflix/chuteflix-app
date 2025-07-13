@@ -40,15 +40,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Trophy } from "lucide-react"
 import { BolaoFormModal } from "@/components/bolao-form-modal"
+import { ResultFormModal } from "@/components/result-form-modal"
+import { useToast } from "@/hooks/use-toast"
 
 export default function BoloesPage() {
   const [boloes, setBoloes] = useState<Bolao[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [championships, setChampionships] = useState<Championship[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const fetchData = async () => {
     setLoading(true)
@@ -62,7 +64,11 @@ export default function BoloesPage() {
       setTeams(teamsData)
       setChampionships(championshipsData)
     } catch (err) {
-      setError("Falha ao buscar dados.")
+      toast({
+        title: "Erro ao buscar dados",
+        description: "Não foi possível carregar a lista de bolões.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -91,8 +97,17 @@ export default function BoloesPage() {
             await addBolao(bolaoData);
         }
         fetchData();
+        toast({
+            title: "Sucesso!",
+            description: `Bolão ${id ? 'atualizado' : 'criado'} com sucesso.`,
+            variant: "success",
+        });
     } catch (err) {
-        setError("Falha ao salvar bolão.");
+        toast({
+            title: "Erro ao salvar",
+            description: "Não foi possível salvar o bolão.",
+            variant: "destructive",
+        });
     }
   }
 
@@ -100,13 +115,33 @@ export default function BoloesPage() {
     try {
       await deleteBolao(id)
       fetchData();
+      toast({
+        title: "Bolão Deletado",
+        description: "O bolão foi removido com sucesso.",
+        variant: "success",
+      })
     } catch (err) {
-      setError("Falha ao deletar bolão.")
+      toast({
+        title: "Erro ao deletar",
+        description: "Não foi possível remover o bolão.",
+        variant: "destructive",
+      })
     }
   }
   
   const getNameById = (id: string, list: {id: string, name: string}[]) => {
     return list.find(item => item.id === id)?.name || "N/A"
+  }
+
+  const getTeamName = (id: string) => getNameById(id, teams);
+
+  const statusVariant = (status: Bolao['status']) => {
+    switch (status) {
+      case 'Disponível': return 'success'
+      case 'Chutes Encerrados': return 'secondary'
+      case 'Finalizado': return 'destructive'
+      default: return 'outline'
+    }
   }
 
   return (
@@ -137,49 +172,51 @@ export default function BoloesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Partida</TableHead>
-                <TableHead>Campeonato</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead>Horário</TableHead>
-                <TableHead>Aposta</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Resultados</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Carregando...</TableCell>
-                </TableRow>
-              ) : error ? (
-                <TableRow>
-                    <TableCell colSpan={7} className="text-center text-red-500">{error}</TableCell>
+                  <TableCell colSpan={5} className="text-center">Carregando...</TableCell>
                 </TableRow>
               ) : boloes.length > 0 ? (
                 boloes.map(bolao => (
                   <TableRow key={bolao.id}>
-                    <TableCell className="font-medium">{`${getNameById(bolao.teamAId, teams)} vs ${getNameById(bolao.teamBId, teams)}`}</TableCell>
-                    <TableCell>{getNameById(bolao.championshipId, championships)}</TableCell>
+                    <TableCell className="font-medium">{`${getTeamName(bolao.teamAId)} vs ${getTeamName(bolao.teamBId)}`}</TableCell>
                     <TableCell>{new Date(bolao.matchDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
-                    <TableCell>{`${bolao.startTime} - ${bolao.endTime}`}</TableCell>
-                    <TableCell>R$ {bolao.fee.toFixed(2)}</TableCell>
                     <TableCell>
-                        <Badge variant={bolao.status === 'Ativo' ? 'default' : bolao.status === 'Em breve' ? 'outline' : 'secondary'}>
+                        <Badge variant={statusVariant(bolao.status)}>
                             {bolao.status}
                         </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {bolao.status === 'Finalizado' ? (
+                        <span className="font-bold">{`${bolao.scoreTeam1} x ${bolao.scoreTeam2}`}</span>
+                      ) : (
+                        <ResultFormModal bolao={{...bolao, teamA: getTeamName(bolao.teamAId), teamB: getTeamName(bolao.teamBId) }} onResultSubmitted={fetchData}>
+                          <Button variant="outline" size="sm" disabled={bolao.status !== 'Chutes Encerrados'}>
+                            <Trophy className="mr-2 h-4 w-4" />
+                            Lançar Placar
+                          </Button>
+                        </ResultFormModal>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <BolaoFormModal
                         bolao={bolao}
                         onSave={handleSave}
                       >
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" disabled={bolao.status === 'Finalizado'}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </BolaoFormModal>
-
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" disabled={bolao.status === 'Finalizado'}>
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </AlertDialogTrigger>
@@ -187,7 +224,7 @@ export default function BoloesPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Essa ação não pode ser desfeita.
+                              Essa ação não pode ser desfeita e irá remover o bolão permanentemente.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -203,7 +240,7 @@ export default function BoloesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
+                  <TableCell colSpan={5} className="text-center">
                     Nenhum bolão encontrado.
                   </TableCell>
                 </TableRow>
