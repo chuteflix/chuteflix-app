@@ -1,11 +1,10 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard,
   LogOut,
   Settings as SettingsIcon,
   Bell,
@@ -18,7 +17,7 @@ import {
   LayoutGrid,
   History,
   User as UserIcon,
-  Home // Adicionando o ícone Home
+  Home
 } from 'lucide-react';
 
 import {
@@ -52,23 +51,32 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [userFullName, setUserFullName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
-    } else if (!loading && user && (pathname === '/dashboard' || pathname === '/')) {
-      router.push('/inicio');
+    } else if (user) {
+        if (user.displayName) {
+            setUserFullName(user.displayName);
+        } else {
+            const storedName = localStorage.getItem('userFullName');
+            if (storedName) {
+                setUserFullName(storedName);
+            }
+        }
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router]);
 
   const handleLogout = async () => {
     await auth.signOut();
     localStorage.removeItem('userFirstName');
+    localStorage.removeItem('userFullName'); // Limpa o nome completo também
     router.push('/login');
   };
 
   const userMenuItems = [
-    { href: '/inicio', label: 'Início', icon: Home, exact: true }, // Alterado
+    { href: '/inicio', label: 'Início', icon: Home, exact: true },
     { href: '/meus-chutes', label: 'Meus Chutes', icon: History },
     { href: '/settings', label: 'Configurações', icon: SettingsIcon },
   ];
@@ -88,19 +96,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const menuItems = isAdminPage ? adminMenuItems : userMenuItems;
 
   const isActive = (href: string, exact = false) => {
-    if (exact) {
-      return pathname === href;
-    }
+    if (exact) return pathname === href;
     return pathname.startsWith(href);
   };
   
   const getHeaderTitle = () => {
-    // Prioriza o match exato para evitar que /inicio corresponda a /inicio/qualquercoisa
-    const exactMatch = menuItems.find(item => item.exact && pathname === item.href);
-    if (exactMatch) return exactMatch.label;
-
-    const matchingItem = menuItems.find(item => !item.exact && pathname.startsWith(item.href));
-    return matchingItem?.label || 'ChuteFlix';
+    const activeItem = menuItems.find(item => isActive(item.href, item.exact));
+    return activeItem?.label || 'ChuteFlix';
   }
 
   if (loading || !user) {
@@ -116,9 +118,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <SidebarProvider>
         <ToastProvider>
           <Sidebar>
-            <SidebarHeader>
-              <Logo />
-            </SidebarHeader>
+            <SidebarHeader><Logo /></SidebarHeader>
             <SidebarContent>
               <SidebarMenu>
                 {menuItems.map((item) => (
@@ -129,10 +129,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       tooltip={item.label}
                       className="data-[active=true]:bg-primary/10 data-[active=true]:text-primary hover:bg-muted"
                     >
-                      <Link href={item.href}>
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
-                      </Link>
+                      <Link href={item.href}><item.icon className="h-5 w-5" /><span>{item.label}</span></Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -142,18 +139,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <SidebarInset>
             <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">
               <div className="flex items-center gap-2">
-                <SidebarTrigger className="md:hidden text-muted-foreground hover:text-foreground">
-                  <Menu />
-                </SidebarTrigger>
-                <h2 className="text-xl font-semibold hidden sm:block">
-                  {getHeaderTitle()}
-                </h2>
+                <SidebarTrigger className="md:hidden text-muted-foreground hover:text-foreground"><Menu /></SidebarTrigger>
+                <h2 className="text-xl font-semibold hidden sm:block">{getHeaderTitle()}</h2>
               </div>
               <div className="flex items-center gap-4">
                 <WelcomeBanner />
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted">
-                  <Bell className="h-5 w-5" />
-                </Button>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted"><Bell className="h-5 w-5" /></Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-muted">
@@ -166,30 +157,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <DropdownMenuContent className="w-56 bg-card border-border text-foreground" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.displayName || "Usuário"}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user.email}
-                        </p>
+                        <p className="text-sm font-medium leading-none">{userFullName || 'Usuário'}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem asChild className="hover:bg-muted focus:bg-muted">
-                      <Link href="/profile">
-                        <UserIcon className="mr-2 h-4 w-4" />
-                        <span>Editar Perfil</span>
-                      </Link>
+                      <Link href="/profile"><UserIcon className="mr-2 h-4 w-4" /><span>Editar Perfil</span></Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout} className="text-secondary hover:bg-secondary/10 hover:text-secondary focus:bg-secondary/10 focus:text-secondary">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Sair</span>
+                      <LogOut className="mr-2 h-4 w-4" /><span>Sair</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </header>
-            <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/20">
-              {children}
-            </main>
+            <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/20">{children}</main>
           </SidebarInset>
         </ToastProvider>
       </SidebarProvider>

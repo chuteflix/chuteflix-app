@@ -1,6 +1,6 @@
 
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, DocumentData } from "firebase/firestore";
+import { collection, query, where, getDocs, DocumentData,getCountFromServer } from "firebase/firestore";
 import { Bolao } from "./boloes";
 import { Team } from "./teams";
 import { Championship } from "./championships";
@@ -62,4 +62,22 @@ export const getPalpitesByUser = async (userId: string): Promise<Palpite[]> => {
     console.error("Erro ao buscar palpites do usuário:", error);
     throw new Error("Não foi possível carregar seus palpites.");
   }
+};
+
+// Nova função para contar participantes de um bolão (apenas com status "Aprovado")
+export const getParticipantCount = async (bolaoId: string): Promise<number> => {
+    if (!bolaoId) return 0;
+    try {
+        const q = query(
+            collection(db, "palpites"),
+            where("bolaoId", "==", bolaoId),
+            where("status", "==", "Aprovado")
+        );
+        const snapshot = await getCountFromServer(q);
+        return snapshot.data().count;
+    } catch (error) {
+        console.error("Erro ao contar participantes:", error);
+        // Retorna 0 em caso de erro para não quebrar a UI
+        return 0;
+    }
 };

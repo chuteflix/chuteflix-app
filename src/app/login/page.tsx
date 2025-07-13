@@ -35,7 +35,8 @@ export default function LoginPage() {
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        localStorage.setItem('userFirstName', userData.firstName);
+        // Salva o nome completo para uso imediato na UI
+        localStorage.setItem('userFullName', `${userData.firstName} ${userData.lastName}`);
       }
       
       router.push('/inicio'); 
