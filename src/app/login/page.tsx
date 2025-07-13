@@ -38,7 +38,7 @@ export default function LoginPage() {
         localStorage.setItem('userFirstName', userData.firstName);
       }
       
-      router.push('/dashboard'); 
+      router.push('/inicio'); 
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",

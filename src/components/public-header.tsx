@@ -1,9 +1,11 @@
 
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
+import { auth } from "@/lib/firebase"
 import { Logo } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -20,11 +22,23 @@ import { LogOut, User as UserIcon, LayoutDashboard } from "lucide-react"
 export function PublicHeader() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const firstName = user?.displayName?.split(" ")[0]
+  const [firstName, setFirstName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user) {
+      const nameFromAuth = user.displayName?.split(" ")[0]
+      if (nameFromAuth) {
+        setFirstName(nameFromAuth)
+      } else {
+        const nameFromStorage = localStorage.getItem("userFirstName")
+        setFirstName(nameFromStorage)
+      }
+    }
+  }, [user])
 
   const handleLogout = async () => {
-    // Implemente a lógica de logout do seu auth-context aqui
-    // Ex: await auth.signOut();
+    await auth.signOut()
+    localStorage.removeItem("userFirstName")
     router.push("/login")
   }
   
@@ -59,9 +73,11 @@ export function PublicHeader() {
             <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse" />
         ) : user ? (
             <div className="flex items-center gap-4">
-                <span className="hidden sm:inline-block text-sm text-muted-foreground">
-                    Olá, <span className="font-semibold text-foreground">{firstName}!</span>
-                </span>
+                {firstName && (
+                    <span className="hidden sm:inline-block text-sm text-muted-foreground">
+                        Olá, <span className="font-semibold text-foreground">{firstName}!</span>
+                    </span>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="relative h-9 w-9 rounded-full">

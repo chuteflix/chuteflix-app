@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"; // Importar updateProfile
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,12 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Atualiza o perfil de autenticação do usuário
+      await updateProfile(user, {
+        displayName: `${firstName} ${lastName}`
+      });
+
+      // Salva os dados adicionais no Firestore
       await setDoc(doc(db, "users", user.uid), {
         firstName,
         lastName,
@@ -44,12 +50,14 @@ export default function RegisterPage() {
         cpf,
         email: user.email,
       });
+      
+      localStorage.setItem('userFirstName', firstName);
 
       toast({
         title: "Conta criada com sucesso!",
         description: "Você já pode fazer seus palpites.",
       });
-      router.push('/dashboard');
+      router.push('/inicio'); // Redireciona para a nova página de início
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",
