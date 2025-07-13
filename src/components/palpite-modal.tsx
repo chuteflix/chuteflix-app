@@ -9,11 +9,13 @@ import { z } from "zod"
 import { doc, setDoc, collection } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
+import { createTransaction } from "@/services/transactions"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
@@ -22,6 +24,7 @@ import { Bolao } from "@/services/boloes"
 const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
   scoreTeam2: z.number().min(0, "O placar deve ser no mínimo 0."),
+  comment: z.string().max(80, "O comentário não pode ter mais de 80 caracteres.").optional(),
 })
 
 type PalpiteFormValues = z.infer<typeof palpiteSchema>
@@ -43,10 +46,10 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     defaultValues: {
       scoreTeam1: 0,
       scoreTeam2: 0,
+      comment: "",
     },
   })
 
-  // Valida e formata os valores para exibição
   const fee = typeof bolao.fee === 'number' ? bolao.fee : 0;
   const prize = typeof bolao.prize === 'number' ? bolao.prize : 0;
 
@@ -69,8 +72,22 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
         bolaoId: bolao.id,
         scoreTeam1: values.scoreTeam1,
         scoreTeam2: values.scoreTeam2,
+        comment: values.comment || "",
         createdAt: new Date().toISOString(),
         status: "Pendente", // Pagamento pendente
+      })
+      
+      await createTransaction({
+        uid: user.uid,
+        type: 'bet_placement',
+        amount: -fee,
+        description: `Aposta no bolão: ${bolao.championship}`,
+        status: 'completed',
+        metadata: {
+          bolaoId: bolao.id,
+          palpiteId: palpiteRef.id,
+          matchDescription: `${bolao.team1Details?.name} vs ${bolao.team2Details?.name}`,
+        },
       })
 
       toast({
@@ -80,7 +97,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
       })
       
       onClose()
-      router.push("/inicio")
+      router.push("/transacoes")
 
     } catch (error) {
       console.error("Erro ao salvar o palpite:", error)
@@ -142,6 +159,24 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="comment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Comentário (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Deixe um comentário sobre sua aposta..."
+                      className="resize-none"
+                      maxLength={80}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="text-sm text-center text-muted-foreground p-3 bg-muted/50 rounded-md">
               <p>Taxa de participação: <span className="font-bold text-foreground">{fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
               <p>Prêmio estimado: <span className="font-bold text-foreground">{prize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>

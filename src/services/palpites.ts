@@ -1,6 +1,6 @@
 
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, DocumentData,getCountFromServer } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, DocumentData, getCountFromServer } from "firebase/firestore";
 import { Bolao } from "./boloes";
 import { Team } from "./teams";
 import { Championship } from "./championships";
@@ -13,9 +13,10 @@ export interface Palpite {
   scoreTeam2: number;
   createdAt: string;
   status: "Pendente" | "Aprovado" | "Recusado";
+  receiptUrl?: string; 
 }
 
-// Interface estendida para incluir detalhes
+
 export interface PalpiteComDetalhes extends Palpite {
     bolaoDetails?: Bolao & {
         team1Details?: Team;
@@ -35,8 +36,55 @@ const fromFirestore = (doc: DocumentData): Palpite => {
     scoreTeam2: data.scoreTeam2,
     createdAt: data.createdAt,
     status: data.status,
+    receiptUrl: data.receiptUrl,
   };
 };
+
+export const getPalpitesByStatus = async (status: string): Promise<Palpite[]> => {
+  try {
+    const q = query(collection(db, "palpites"), where("status", "==", status));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(fromFirestore);
+  } catch (error) {
+    console.error("Erro ao buscar palpites por status:", error);
+    throw error;
+  }
+};
+
+export const updatePalpiteStatus = async (id: string, status: "Aprovado" | "Recusado"): Promise<void> => {
+  try {
+    const palpiteRef = doc(db, "palpites", id);
+    await updateDoc(palpiteRef, { status });
+  } catch (error) {
+    console.error("Erro ao atualizar status do palpite:", error);
+    throw error;
+  }
+};
+
+export const getPalpitesByBolaoId = async (bolaoId: string): Promise<Palpite[]> => {
+    if (!bolaoId) {
+      console.warn("ID do bolão não fornecido para getPalpitesByBolaoId.");
+      return [];
+    }
+    
+    try {
+      const q = query(
+        collection(db, "palpites"), 
+        where("bolaoId", "==", bolaoId)
+      );
+  
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) {
+        return [];
+      }
+      
+      return querySnapshot.docs.map(fromFirestore);
+  
+    } catch (error) {
+      console.error("Erro ao buscar palpites do bolão:", error);
+      throw new Error("Não foi possível carregar os palpites.");
+    }
+  };
 
 export const getPalpitesByUser = async (userId: string): Promise<Palpite[]> => {
   if (!userId) {
@@ -48,7 +96,7 @@ export const getPalpitesByUser = async (userId: string): Promise<Palpite[]> => {
     const q = query(
       collection(db, "palpites"), 
       where("userId", "==", userId),
-      where("status", "==", "Aprovado") // Apenas palpites com pagamento aprovado
+      where("status", "==", "Aprovado")
     );
 
     const querySnapshot = await getDocs(q);
@@ -64,7 +112,6 @@ export const getPalpitesByUser = async (userId: string): Promise<Palpite[]> => {
   }
 };
 
-// Nova função para contar participantes de um bolão (apenas com status "Aprovado")
 export const getParticipantCount = async (bolaoId: string): Promise<number> => {
     if (!bolaoId) return 0;
     try {
@@ -77,7 +124,6 @@ export const getParticipantCount = async (bolaoId: string): Promise<number> => {
         return snapshot.data().count;
     } catch (error) {
         console.error("Erro ao contar participantes:", error);
-        // Retorna 0 em caso de erro para não quebrar a UI
         return 0;
     }
 };

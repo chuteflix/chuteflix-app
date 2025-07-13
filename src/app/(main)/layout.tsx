@@ -18,7 +18,8 @@ import {
   History,
   User as UserIcon,
   Home,
-  KeyRound
+  KeyRound,
+  TicketCheck,
 } from 'lucide-react';
 
 import {
@@ -79,12 +80,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const userMenuItems = [
     { href: '/inicio', label: 'Início', icon: Home, exact: true },
     { href: '/meus-chutes', label: 'Meus Chutes', icon: History },
+    { href: '/transacoes', label: 'Minhas Transações', icon: ArrowRightLeft },
     { href: '/settings', label: 'Chave PIX', icon: KeyRound },
   ];
 
   const adminMenuItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutGrid, exact: true },
     { href: '/admin/boloes', label: 'Bolões', icon: Shield },
+    { href: '/admin/chutes', label: 'Chutes', icon: TicketCheck },
     { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy },
     { href: '/admin/times', label: 'Times', icon: Flag },
     { href: '/admin/usuarios', label: 'Usuários', icon: UsersIcon },

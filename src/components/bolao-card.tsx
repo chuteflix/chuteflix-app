@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -131,12 +130,12 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
                 </Tooltip>
             </div>
             
-            <Button 
-                className="w-full font-bold" 
+            <Button
+                className="w-full font-bold"
                 onClick={handleChutarClick}
-                disabled={bolao.status !== 'Aberto'}
+                disabled={bolao.status === 'Em breve'}
             >
-                {bolao.status === 'Aberto' ? 'Chutar Placar' : 'Ver Detalhes'}
+                {bolao.status === 'Finalizado' ? 'Ver Resultados' : 'Chutar Placar'}
             </Button>
         </CardFooter>
       </Card>
