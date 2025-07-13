@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { parseISO } from "date-fns"
 import {
   addBolao,
   getBoloes,
@@ -144,6 +145,11 @@ export default function BoloesPage() {
     }
   }
 
+  const canLaunchResult = (bolao: Bolao) => {
+    const matchEndTime = parseISO(`${bolao.matchDate}T${bolao.endTime}:00`);
+    return new Date() > matchEndTime;
+  }
+
   return (
     <div className="container mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -198,7 +204,7 @@ export default function BoloesPage() {
                         <span className="font-bold">{`${bolao.scoreTeam1} x ${bolao.scoreTeam2}`}</span>
                       ) : (
                         <ResultFormModal bolao={{...bolao, teamA: getTeamName(bolao.teamAId), teamB: getTeamName(bolao.teamBId) }} onResultSubmitted={fetchData}>
-                          <Button variant="outline" size="sm" disabled={bolao.status !== 'Chutes Encerrados'}>
+                          <Button variant="outline" size="sm" disabled={!canLaunchResult(bolao)}>
                             <Trophy className="mr-2 h-4 w-4" />
                             Lançar Placar
                           </Button>

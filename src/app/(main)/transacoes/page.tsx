@@ -1,16 +1,9 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth-context"
 import { getUserTransactions, Transaction } from "@/services/transactions"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -19,8 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { format } from "date-fns"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
 
 export default function TransactionsPage() {
   const { user } = useAuth()
@@ -39,83 +34,62 @@ export default function TransactionsPage() {
     fetchTransactions()
   }, [user])
 
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0
-    const formatted = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Math.abs(amount))
-    return isNegative ? `- ${formatted}` : formatted
-  }
-
-  const getStatusVariant = (status: Transaction["status"]) => {
-    switch (status) {
-      case "completed":
-        return "default"
-      case "pending":
-        return "secondary"
-      case "failed":
-        return "destructive"
-      default:
-        return "outline"
+  const getTransactionTypeDetails = (type: Transaction['type']) => {
+    switch(type) {
+      case 'bet_placement': return { label: 'Aposta', icon: <ArrowDownLeft className="h-4 w-4 text-destructive" />, color: 'text-destructive' };
+      case 'prize_winning': return { label: 'Prêmio', icon: <ArrowUpRight className="h-4 w-4 text-success" />, color: 'text-success' };
+      default: return { label: type, icon: null, color: '' };
     }
   }
 
   return (
     <div className="container mx-auto">
-      <h1 className="text-3xl font-bold mb-8 text-foreground">
-        Minhas Transações
-      </h1>
+      <h1 className="text-3xl font-bold mb-8">Minhas Transações</h1>
       <Card>
         <CardHeader>
           <CardTitle>Histórico de Transações</CardTitle>
-          <CardDescription>
-            Veja aqui o registro de todas as suas movimentações na plataforma.
-          </CardDescription>
+          <CardDescription>Veja aqui todas as suas movimentações financeiras na plataforma.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Data</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Descrição</TableHead>
-                <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    Carregando...
-                  </TableCell>
-                </TableRow>
-              ) : transactions.length > 0 ? (
-                transactions.map(tx => (
-                  <TableRow key={tx.uid}>
-                    <TableCell>
-                      {format(tx.createdAt.toDate(), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>{tx.description}</TableCell>
-                    <TableCell
-                      className={
-                        tx.amount < 0 ? "text-red-500" : "text-green-500"
-                      }
-                    >
-                      {formatCurrency(tx.amount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(tx.status)}>
-                        {tx.status}
-                      </Badge>
-                    </TableCell>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-16" /></TableCell>
                   </TableRow>
                 ))
+              ) : transactions.length > 0 ? (
+                transactions.map(tx => {
+                  const typeDetails = getTransactionTypeDetails(tx.type);
+                  return (
+                    <TableRow key={tx.id}>
+                      <TableCell>{tx.createdAt.toDate().toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className="flex items-center gap-2">{typeDetails.icon} {typeDetails.label}</TableCell>
+                      <TableCell>{tx.description}</TableCell>
+                      <TableCell><Badge variant={tx.status === 'completed' ? 'success' : 'secondary'}>{tx.status}</Badge></TableCell>
+                      <TableCell className={`text-right font-bold ${typeDetails.color}`}>
+                        {tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    Nenhuma transação encontrada.
-                  </TableCell>
+                  <TableCell colSpan={5} className="text-center h-24">Nenhuma transação encontrada.</TableCell>
                 </TableRow>
               )}
             </TableBody>

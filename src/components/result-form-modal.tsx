@@ -16,8 +16,10 @@ import { Label } from "@/components/ui/label"
 import { Bolao } from "@/services/boloes"
 import { updateBolao } from "@/services/boloes"
 import { getPalpitesByBolaoId } from "@/services/palpites"
-import { createTransaction } from "@/services/transactions" // Corrigido aqui
+import { createTransaction, updateTransactionStatusByPalpiteId } from "@/services/transactions"
+import { updateUserBalance } from "@/services/users"
 import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
 
 interface ResultFormModalProps {
   bolao: Bolao & { teamA: string; teamB: string }
@@ -40,47 +42,57 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
     const finalScore2 = parseInt(scoreTeam2, 10)
 
     if (isNaN(finalScore1) || isNaN(finalScore2)) {
-      toast({
-        title: "Erro de Validação",
-        description: "Por favor, insira um placar válido.",
-        variant: "destructive",
-      })
+      toast({ title: "Erro de Validação", description: "Por favor, insira um placar válido.", variant: "destructive" })
       setIsSubmitting(false)
       return
     }
 
     try {
+      // 1. Finaliza o bolão com o placar
       await updateBolao(bolao.id, {
         scoreTeam1: finalScore1,
         scoreTeam2: finalScore2,
         status: "Finalizado",
       })
 
-      const palpites = await getPalpitesByBolaoId(bolao.id)
-      const winners = palpites.filter(
-        p => p.scoreTeam1 === finalScore1 && p.scoreTeam2 === finalScore2 && p.status === "Aprovado"
+      // 2. Busca apenas palpites APROVADOS
+      const approvedPalpites = await getPalpitesByBolaoId(bolao.id, "Aprovado")
+      if (approvedPalpites.length === 0) {
+        toast({ title: "Resultado Registrado!", description: "Nenhum palpite aprovado para este bolão.", variant: "info" })
+        onResultSubmitted()
+        setOpen(false)
+        return
+      }
+
+      // 3. Identifica os ganhadores entre os palpites aprovados
+      const winners = approvedPalpites.filter(
+        p => p.scoreTeam1 === finalScore1 && p.scoreTeam2 === finalScore2
       )
 
       if (winners.length > 0) {
-        const approvedPalpitesCount = palpites.filter(p => p.status === "Aprovado").length
-        const totalCollected = bolao.fee * approvedPalpitesCount
+        // 4. Calcula a premiação
+        const totalCollected = bolao.fee * approvedPalpites.length
         const totalPrize = (bolao.initialPrize || 0) + totalCollected * 0.9
         const prizePerWinner = totalPrize / winners.length
 
-        const transactionPromises = winners.map(winner =>
-          createTransaction({ // Corrigido aqui
+        // 5. Processa o pagamento para cada ganhador
+        for (const winner of winners) {
+          // Atualiza a transação da aposta de "pending" para "completed"
+          await updateTransactionStatusByPalpiteId(winner.id, "completed");
+
+          // Cria a transação de prêmio (crédito)
+          await createTransaction({
             uid: winner.userId,
             type: "prize_winning",
             amount: prizePerWinner,
             description: `Prêmio do bolão: ${bolao.name}`,
             status: "completed",
-            metadata: { 
-                bolaoId: bolao.id,
-                palpiteId: winner.id,
-             },
+            metadata: { bolaoId: bolao.id, palpiteId: winner.id },
           })
-        )
-        await Promise.all(transactionPromises)
+          
+          // Atualiza o saldo do usuário
+          await updateUserBalance(winner.userId, prizePerWinner)
+        }
         
         toast({
             title: "Resultado Registrado!",
@@ -92,6 +104,7 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
         toast({
             title: "Resultado Registrado!",
             description: "Nenhum ganhador para este bolão.",
+            variant: "info",
         })
       }
 
@@ -100,11 +113,7 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
 
     } catch (error) {
       console.error("Erro ao registrar resultado: ", error)
-      toast({
-        title: "Erro ao Salvar",
-        description: "Não foi possível registrar o resultado. Tente novamente.",
-        variant: "destructive",
-      })
+      toast({ title: "Erro ao Salvar", description: "Não foi possível registrar o resultado. Tente novamente.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -119,35 +128,16 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
             <DialogTitle>Registrar Resultado</DialogTitle>
           </DialogHeader>
           <div className="py-4 grid grid-cols-2 gap-4 items-center">
-            <Label htmlFor="score1" className="text-right">
-              {bolao.teamA}
-            </Label>
-            <Input
-              id="score1"
-              type="number"
-              value={scoreTeam1}
-              onChange={e => setScoreTeam1(e.target.value)}
-              className="col-span-1"
-              disabled={isSubmitting}
-            />
-             <Label htmlFor="score2" className="text-right">
-              {bolao.teamB}
-            </Label>
-            <Input
-              id="score2"
-              type="number"
-              value={scoreTeam2}
-              onChange={e => setScoreTeam2(e.target.value)}
-              className="col-span-1"
-              disabled={isSubmitting}
-            />
+            <Label htmlFor="score1" className="text-right">{bolao.teamA}</Label>
+            <Input id="score1" type="number" value={scoreTeam1} onChange={e => setScoreTeam1(e.target.value)} disabled={isSubmitting} />
+            <Label htmlFor="score2" className="text-right">{bolao.teamB}</Label>
+            <Input id="score2" type="number" value={scoreTeam2} onChange={e => setScoreTeam2(e.target.value)} disabled={isSubmitting} />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
-              Cancelar
-            </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancelar</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : "Salvar Resultado"}
+              {isSubmitting ? <Loader2 className="animate-spin mr-2"/> : null}
+              {isSubmitting ? "Processando..." : "Salvar Resultado e Pagar Prêmios"}
             </Button>
           </DialogFooter>
         </form>

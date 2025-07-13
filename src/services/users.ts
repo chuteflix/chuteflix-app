@@ -6,6 +6,7 @@ import {
   updateDoc,
   collection,
   getDocs,
+  increment,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
@@ -20,6 +21,7 @@ export interface UserProfile {
   pixKey?: string
   pixKeyType?: string
   isAdmin?: boolean
+  balance?: number
 }
 
 export const getAllUsers = async (): Promise<UserProfile[]> => {
@@ -77,4 +79,16 @@ export const createUserProfile = async (user: UserProfile): Promise<void> => {
     console.error("Error creating user profile: ", error)
     throw error
   }
+}
+
+export const updateUserBalance = async (uid: string, amount: number): Promise<void> => {
+    try {
+        const userDocRef = doc(db, "users", uid);
+        await updateDoc(userDocRef, {
+            balance: increment(amount)
+        });
+    } catch (error) {
+        console.error("Error updating user balance:", error);
+        throw new Error("Failed to update user balance.");
+    }
 }

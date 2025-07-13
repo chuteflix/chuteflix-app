@@ -7,10 +7,10 @@ import {
   getDocs,
   orderBy,
   Timestamp,
+  DocumentData,
+  writeBatch,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-
-// --- Tipos e Interfaces ---
 
 export type TransactionType =
   | "bet_placement"
@@ -22,24 +22,26 @@ export type TransactionType =
   | "refund"
 
 export interface Transaction {
-  uid: string // ID do usuário associado
+  id: string; 
+  uid: string 
   type: TransactionType
-  amount: number // Positivo para entradas (prêmio), negativo para saídas (aposta)
+  amount: number
   description: string
   status: "completed" | "pending" | "failed"
   createdAt: Timestamp
-  metadata?: Record<string, any> // Dados adicionais específicos do tipo de transação
+  metadata?: Record<string, any> 
 }
 
-// --- Funções do Serviço ---
+const fromFirestore = (doc: DocumentData): Transaction => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data
+    } as Transaction;
+}
 
-/**
- * Cria uma nova transação no Firestore.
- * @param transactionData - Os dados da transação a ser criada.
- * @returns O ID da transação criada.
- */
 export const createTransaction = async (
-  transactionData: Omit<Transaction, "createdAt">
+  transactionData: Omit<Transaction, "id" | "createdAt">
 ): Promise<string> => {
   try {
     const transactionWithTimestamp = {
@@ -57,11 +59,6 @@ export const createTransaction = async (
   }
 }
 
-/**
- * Busca o histórico de transações de um usuário.
- * @param uid - O ID do usuário.
- * @returns Uma lista de transações do usuário.
- */
 export const getUserTransactions = async (
   uid: string
 ): Promise<Transaction[]> => {
@@ -73,13 +70,44 @@ export const getUserTransactions = async (
       orderBy("createdAt", "desc")
     )
     const querySnapshot = await getDocs(q)
-    const transactions: Transaction[] = []
-    querySnapshot.forEach(doc => {
-      transactions.push({ id: doc.id, ...doc.data() } as Transaction)
-    })
-    return transactions
+    return querySnapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error("Error getting user transactions:", error)
     return []
   }
 }
+
+export const getAllTransactions = async (): Promise<Transaction[]> => {
+    try {
+      const transactionsRef = collection(db, "transactions");
+      const q = query(transactionsRef, orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(fromFirestore);
+    } catch (error) {
+      console.error("Error getting all transactions:", error);
+      return [];
+    }
+  };
+  
+export const updateTransactionStatusByPalpiteId = async (palpiteId: string, status: "completed" | "failed"): Promise<void> => {
+    try {
+        const q = query(collection(db, "transactions"), where("metadata.palpiteId", "==", palpiteId));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            console.warn(`Nenhuma transação encontrada para o palpiteId: ${palpiteId}`);
+            return;
+        }
+
+        const batch = writeBatch(db);
+        querySnapshot.forEach(doc => {
+            batch.update(doc.ref, { status: status });
+        });
+
+        await batch.commit();
+
+    } catch (error) {
+        console.error("Erro ao atualizar status da transação por palpiteId:", error);
+        throw new Error("Falha ao atualizar o status da transação.");
+    }
+};

@@ -9,6 +9,7 @@ import { z } from "zod"
 import { doc, setDoc, collection, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
+import { createTransaction } from "@/services/transactions"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -58,6 +59,21 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     setIsSubmitting(true)
     try {
       const palpiteRef = doc(collection(db, "palpites"))
+      
+      // Criação da transação de débito
+      await createTransaction({
+        uid: user.uid,
+        type: 'bet_placement',
+        amount: -bolao.fee, // Valor negativo para débito
+        description: `Aposta no bolão: ${bolao.name}`,
+        status: 'pending', // A transação fica pendente até o comprovante
+        metadata: { 
+            bolaoId: bolao.id,
+            palpiteId: palpiteRef.id,
+         },
+      });
+
+      // Criação do palpite
       await setDoc(palpiteRef, {
         id: palpiteRef.id,
         userId: user.uid,
@@ -67,7 +83,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
         comment: values.comment || "",
         createdAt: serverTimestamp(),
         status: "Pendente",
-        receiptUrl: "", // Será adicionado posteriormente
+        receiptUrl: "", 
       })
       
       toast({
