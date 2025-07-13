@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -40,7 +41,7 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
   }, [bolao.id])
 
   if (!teamA || !teamB || !championship) {
-    return null // ou um skeleton
+    return null 
   }
 
   const handleChutarClick = (e: React.MouseEvent) => {
@@ -54,7 +55,7 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
   }
   
   const totalArrecadado = bolao.fee * participantCount
-  const premioAtual = totalArrecadado * 0.90
+  const premioAtual = (bolao.initialPrize || 0) + (totalArrecadado * 0.90)
 
   const statusMap: { [key: string]: { variant: "success" | "secondary" | "outline" | "destructive", label: string } } = {
     'Aberto': { variant: 'success', label: 'Aberto' },
@@ -125,7 +126,7 @@ export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps)
                         </p>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs text-center">
-                        <p>O prêmio é 90% do total arrecadado e será dividido igualmente entre todos que acertarem o placar exato da partida.</p>
+                        <p>O prêmio é o valor inicial mais 90% do total arrecadado com as taxas, e será dividido igualmente entre todos que acertarem o placar exato.</p>
                     </TooltipContent>
                 </Tooltip>
             </div>

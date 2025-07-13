@@ -2,6 +2,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -20,9 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { Bolao } from "@/services/boloes"
 import { getChampionships, Championship } from "@/services/championships"
 import { getTeams, Team } from "@/services/teams"
+import { NumberFormatValues, PatternFormat, NumericFormat } from 'react-number-format';
+import { cn } from "@/lib/utils"
 
 interface BolaoFormModalProps {
   bolao?: Bolao | null
@@ -34,10 +44,12 @@ const initialFormData = {
     championshipId: "",
     teamAId: "",
     teamBId: "",
-    matchDate: "",
+    matchDate: undefined,
     startTime: "",
     endTime: "",
     fee: "",
+    initialPrize: "",
+    closingTime: "",
 }
 
 export function BolaoFormModal({
@@ -46,7 +58,7 @@ export function BolaoFormModal({
   children,
 }: BolaoFormModalProps) {
   const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState(initialFormData)
+  const [formData, setFormData] = useState<any>(initialFormData)
   const [championships, setChampionships] = useState<Championship[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -70,10 +82,12 @@ export function BolaoFormModal({
             championshipId: bolao.championshipId,
             teamAId: bolao.teamAId,
             teamBId: bolao.teamBId,
-            matchDate: bolao.matchDate,
+            matchDate: new Date(bolao.matchDate),
             startTime: bolao.startTime,
             endTime: bolao.endTime,
             fee: String(bolao.fee),
+            initialPrize: String(bolao.initialPrize || '0'),
+            closingTime: bolao.closingTime,
         })
       } else {
         setFormData(initialFormData)
@@ -81,78 +95,171 @@ export function BolaoFormModal({
     }
   }, [open, isEditing, bolao])
 
-  const handleChange = (id: string, value: string) => {
-    setFormData(prev => ({ ...prev, [id]: value }))
+  const handleValueChange = (values: NumberFormatValues, id: string) => {
+    handleChange(id, values.floatValue || '');
+  }
+
+  const handleChange = (id: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [id]: value }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    const { fee, ...rest } = formData
-    if (Object.values(rest).some(val => !val)) {
-        setError("Todos os campos são obrigatórios.")
-        return
+
+    const { fee, initialPrize, matchDate, ...rest } = formData;
+
+    const requiredFields: (keyof typeof initialFormData)[] = [
+        "championshipId", "teamAId", "teamBId", "matchDate", 
+        "startTime", "endTime", "closingTime"
+    ];
+
+    for (const field of requiredFields) {
+        if (!formData[field]) {
+            setError("Todos os campos são obrigatórios.")
+            return
+        }
     }
     
-    onSave({ ...rest, fee: parseFloat(fee) }, isEditing ? bolao.id : undefined)
+    onSave({ 
+        ...rest, 
+        fee: parseFloat(fee) || 0, 
+        initialPrize: parseFloat(initialPrize) || 0,
+        matchDate: format(matchDate, "yyyy-MM-dd"),
+    }, isEditing ? bolao!.id : undefined)
+    
     setOpen(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-2xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar Bolão" : "Adicionar Bolão"}</DialogTitle>
+            <DialogTitle>{isEditing ? "Editar Bolão" : "Criar Novo Bolão"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
 
-            <Label>Campeonato</Label>
-            <Select onValueChange={value => handleChange("championshipId", value)} value={formData.championshipId}>
-                <SelectTrigger><SelectValue placeholder="Selecione um campeonato"/></SelectTrigger>
-                <SelectContent>
-                    {championships.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-            </Select>
-
-            <Label>Time A</Label>
-            <Select onValueChange={value => handleChange("teamAId", value)} value={formData.teamAId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o Time A"/></SelectTrigger>
-                <SelectContent>
-                    {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                </SelectContent>
-            </Select>
-            
-            <Label>Time B</Label>
-            <Select onValueChange={value => handleChange("teamBId", value)} value={formData.teamBId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o Time B"/></SelectTrigger>
-                <SelectContent>
-                    {teams.filter(t => t.id !== formData.teamAId).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                </SelectContent>
-            </Select>
-
-            <Label>Valor da Aposta (R$)</Label>
-            <Input type="number" value={formData.fee} onChange={e => handleChange("fee", e.target.value)} />
-            
-            <Label>Data da Partida</Label>
-            <Input type="date" value={formData.matchDate} onChange={e => handleChange("matchDate", e.target.value)} />
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label>Início da Partida</Label>
-                    <Input type="time" value={formData.startTime} onChange={e => handleChange("startTime", e.target.value)} />
-                </div>
-                <div>
-                    <Label>Fim da Partida</Label>
-                    <Input type="time" value={formData.endTime} onChange={e => handleChange("endTime", e.target.value)} />
-                </div>
+            <div className="col-span-2">
+              <Label>Campeonato</Label>
+              <Select onValueChange={value => handleChange("championshipId", value)} value={formData.championshipId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um campeonato"/></SelectTrigger>
+                  <SelectContent>
+                      {championships.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+              </Select>
             </div>
 
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            <div>
+              <Label>Time A</Label>
+              <Select onValueChange={value => handleChange("teamAId", value)} value={formData.teamAId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o Time A"/></SelectTrigger>
+                  <SelectContent>
+                      {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Time B</Label>
+              <Select onValueChange={value => handleChange("teamBId", value)} value={formData.teamBId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o Time B"/></SelectTrigger>
+                  <SelectContent>
+                      {teams.filter(t => t.id !== formData.teamAId).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Valor da Taxa (R$)</Label>
+              <NumericFormat
+                  customInput={Input}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  value={formData.fee}
+                  onValueChange={(values) => handleValueChange(values, 'fee')}
+              />
+            </div>
+            <div>
+              <Label>Prêmio Inicial (R$)</Label>
+              <NumericFormat
+                  customInput={Input}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  value={formData.initialPrize}
+                  onValueChange={(values) => handleValueChange(values, 'initialPrize')}
+              />
+            </div>
+            
+            <div>
+              <Label>Data da Partida</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.matchDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.matchDate ? format(formData.matchDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={formData.matchDate}
+                    onSelect={(date) => handleChange("matchDate", date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label>Horário Limite para Apostas</Label>
+              <PatternFormat
+                customInput={Input}
+                format="##:##"
+                placeholder="HH:MM"
+                mask={['H', 'H', 'M', 'M']}
+                value={formData.closingTime}
+                onValueChange={(values) => handleChange('closingTime', values.formattedValue)}
+              />
+            </div>
+
+            <div>
+              <Label>Início da Partida</Label>
+              <PatternFormat
+                customInput={Input}
+                format="##:##"
+                placeholder="HH:MM"
+                mask={['H', 'H', 'M', 'M']}
+                value={formData.startTime}
+                onValueChange={(values) => handleChange('startTime', values.formattedValue)}
+              />
+            </div>
+            <div>
+              <Label>Fim da Partida</Label>
+              <PatternFormat
+                customInput={Input}
+                format="##:##"
+                placeholder="HH:MM"
+                mask={['H', 'H', 'M', 'M']}
+                value={formData.endTime}
+                onValueChange={(values) => handleChange('endTime', values.formattedValue)}
+              />
+            </div>
+            
+            {error && <p className="col-span-2 text-red-500 text-sm text-center">{error}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="submit">{isEditing ? "Salvar Alterações" : "Criar Bolão"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

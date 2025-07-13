@@ -5,12 +5,11 @@ import {
   addDoc,
   getDocs,
   doc,
-  getDoc, // Importar getDoc
+  getDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp,
   DocumentData,
-  Timestamp,
 } from "firebase/firestore"
 
 export interface Bolao {
@@ -19,16 +18,15 @@ export interface Bolao {
   championshipId: string
   teamAId: string
   teamBId: string
-  matchDate: string // YYYY-MM-DD
-  startTime: string // HH:MM
-  endTime: string // HH:MM
-  fee: number // Valor da aposta
-  prize: number // Prêmio
+  matchDate: string 
+  startTime: string 
+  endTime: string
+  fee: number 
+  initialPrize: number 
   status: "Aberto" | "Em breve" | "Finalizado"
-  closingDate: string;
+  closingTime: string;
 }
 
-// Função para converter dados do Firestore
 const fromFirestore = (doc: DocumentData): Bolao => {
   const data = doc.data()
   return {
@@ -41,9 +39,9 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     startTime: data.startTime,
     endTime: data.endTime,
     fee: data.fee,
-    prize: data.prize,
+    initialPrize: data.initialPrize || 0, 
     status: data.status,
-    closingDate: data.closingDate,
+    closingTime: data.closingTime,
   }
 }
 
@@ -77,7 +75,6 @@ export const getBoloes = async (): Promise<Bolao[]> => {
   }
 }
 
-// Nova função para buscar um bolão pelo ID
 export const getBolaoById = async (id: string): Promise<Bolao | undefined> => {
     if (!id) return undefined;
     try {
