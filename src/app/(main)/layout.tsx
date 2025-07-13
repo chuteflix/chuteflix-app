@@ -17,7 +17,8 @@ import {
   LayoutGrid,
   History,
   User as UserIcon,
-  Home
+  Home,
+  KeyRound
 } from 'lucide-react';
 
 import {
@@ -78,7 +79,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const userMenuItems = [
     { href: '/inicio', label: 'Início', icon: Home, exact: true },
     { href: '/meus-chutes', label: 'Meus Chutes', icon: History },
-    { href: '/settings', label: 'Configurações', icon: SettingsIcon },
+    { href: '/settings', label: 'Chave PIX', icon: KeyRound },
   ];
 
   const adminMenuItems = [

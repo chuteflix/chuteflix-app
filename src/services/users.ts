@@ -1,45 +1,80 @@
 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore"
 
-export interface User {
-  id: string
-  name?: string
-  email?: string
+export interface UserProfile {
+  uid: string
+  email: string
+  displayName?: string
+  firstName?: string
+  lastName?: string
+  cpf?: string
+  phone?: string
+  pixKey?: string
+  pixKeyType?: string
   isAdmin?: boolean
 }
 
-export const getUsers = async (): Promise<User[]> => {
+export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, "users"))
-    return querySnapshot.docs.map(
-      doc =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        } as User)
-    )
+    const usersCollectionRef = collection(db, "users")
+    const querySnapshot = await getDocs(usersCollectionRef)
+    const users: UserProfile[] = []
+    querySnapshot.forEach(doc => {
+      users.push({ uid: doc.id, ...doc.data() } as UserProfile)
+    })
+    return users
   } catch (error) {
-    console.error("Erro ao buscar usuários: ", error)
-    throw new Error("Não foi possível buscar os usuários.")
+    console.error("Error getting all users:", error)
+    return []
   }
 }
 
-export const setUserAdminStatus = async (
-  uid: string,
-  isAdmin: boolean
-): Promise<void> => {
-  if (!uid) {
-    throw new Error("UID do usuário é obrigatório.")
-  }
-
+export const getUserProfile = async (
+  uid: string
+): Promise<UserProfile | null> => {
   try {
-    const userRef = doc(db, "users", uid)
-    await updateDoc(userRef, {
-      isAdmin: isAdmin,
-    })
+    const userDocRef = doc(db, "users", uid)
+    const userDocSnap = await getDoc(userDocRef)
+
+    if (userDocSnap.exists()) {
+      return { uid, ...userDocSnap.data() } as UserProfile
+    } else {
+      console.log("No such document!")
+      return null
+    }
   } catch (error) {
-    console.error("Erro ao atualizar status de admin: ", error)
-    throw new Error("Não foi possível atualizar o status de admin do usuário.")
+    console.error("Error getting user profile:", error)
+    return null
+  }
+}
+
+export const updateUserProfile = async (
+  uid: string,
+  data: Partial<UserProfile>
+): Promise<void> => {
+  try {
+    const userDocRef = doc(db, "users", uid)
+    await updateDoc(userDocRef, data)
+  } catch (error) {
+    console.error("Error updating user profile:", error)
+    throw error
+  }
+}
+
+export const createUserProfile = async (user: UserProfile): Promise<void> => {
+  try {
+    const userDocRef = doc(db, "users", user.uid)
+    await setDoc(userDocRef, user)
+  } catch (error) {
+    console.error("Error creating user profile: ", error)
+    throw error
   }
 }
