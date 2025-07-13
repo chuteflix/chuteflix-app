@@ -1,132 +1,80 @@
-"use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Calendar, DollarSign, Swords, Info, CircleDot, CheckCircle } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import type { Bolao } from "@/types";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { PalpiteModal } from "@/components/palpite-modal";
-import { useAuth } from "@/context/auth-context";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+"use client"
+
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/context/auth-context"
+import { Bolao } from "@/services/boloes"
+import { Team } from "@/services/teams"
+import { Championship } from "@/services/championships"
+import { CircleDot } from "lucide-react"
 
 interface BolaoCardProps {
-  bolao: Bolao;
-  isAuthenticated: boolean;
+  bolao: Bolao
+  teamA: Team | undefined
+  teamB: Team | undefined
+  championship: Championship | undefined
 }
 
-export function BolaoCard({ bolao, isAuthenticated }: BolaoCardProps) {
-  const { user } = useAuth();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [hasGuessed, setHasGuessed] = useState(false);
-  const router = useRouter();
+export function BolaoCard({ bolao, teamA, teamB, championship }: BolaoCardProps) {
+  const { user } = useAuth()
+  const router = useRouter()
+  
+  if (!teamA || !teamB || !championship) {
+    return null
+  }
 
-  useEffect(() => {
-    setIsClient(true);
-    
-    if (user && isAuthenticated) {
-      const q = query(
-        collection(db, "guesses"),
-        where("userId", "==", user.uid),
-        where("bolaoId", "==", bolao.id)
-      );
-      
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        setHasGuessed(!querySnapshot.empty);
-      });
-      
-      return () => unsubscribe();
-    }
-  }, [user, isAuthenticated, bolao.id]);
-
-  const isClosed = new Date() > bolao.matchStartDate || bolao.status !== 'Aberto';
-  const matchDateTime = isClient ? format(bolao.matchStartDate, "eeee, dd/MM 'às' HH:mm'h'", { locale: ptBR }) : "";
-
-  const handleButtonClick = () => {
-    if (isAuthenticated) {
-      setIsModalOpen(true);
+  const handleChutarClick = () => {
+    if (user) {
+      // Lógica para abrir o modal de chute (a ser implementada)
+      console.log("Abrir modal de chute para o bolão:", bolao.id)
     } else {
-      router.push('/login');
+      router.push('/login')
     }
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
   }
 
   return (
-    <>
-      <Card className="w-full max-w-sm bg-card border-border overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:shadow-primary/20 hover:-translate-y-1 flex flex-col">
+    <Card className="w-full max-w-sm border-border hover:border-primary transition-all group overflow-hidden">
         <CardHeader className="p-4">
-          <div className="flex justify-between items-start">
-            <CardTitle className="text-sm font-normal text-muted-foreground flex-1 pr-2">{bolao.championship}</CardTitle>
-            {isClient && (
-              <Badge variant={isClosed ? "destructive" : "default"} className={`${isClosed ? 'bg-secondary text-secondary-foreground' : 'bg-primary text-primary-foreground'}`}>
-                {isClosed ? 'Fechado' : 'Aberto'}
-              </Badge>
-            )}
-          </div>
-          <div className="flex justify-around items-center text-center pt-4">
-            <div className="flex flex-col items-center gap-2 w-2/5">
-              <Image
-                src={bolao.teamA.logoUrl}
-                alt={bolao.teamA.name}
-                width={48}
-                height={48}
-                className="rounded-full aspect-square object-cover bg-muted"
-              />
-              <span className="font-semibold text-foreground text-sm truncate w-full">{bolao.teamA.name}</span>
+            <div className="flex justify-between items-center">
+                <Badge variant={bolao.status === 'Ativo' ? 'default' : 'outline'}>{bolao.status}</Badge>
+                <p className="text-xs text-muted-foreground">
+                    {new Date(bolao.matchDate).toLocaleDateString('pt-BR', {day: '2-digit', month: 'short', timeZone: 'UTC'})}
+                    {' - '}
+                    {bolao.startTime}
+                </p>
             </div>
-            <Swords className="h-6 w-6 text-primary" />
-            <div className="flex flex-col items-center gap-2 w-2/5">
-              <Image
-                src={bolao.teamB.logoUrl}
-                alt={bolao.teamB.name}
-                width={48}
-                height={48}
-                className="rounded-full aspect-square object-cover bg-muted"
-              />
-              <span className="font-semibold text-foreground text-sm truncate w-full">{bolao.teamB.name}</span>
-            </div>
-          </div>
         </CardHeader>
-        <CardContent className="p-4 space-y-3 flex-grow">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground capitalize">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span>{matchDateTime}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <DollarSign className="h-4 w-4 text-primary" />
-            <span>Aposta de R$ {bolao.betAmount.toFixed(2)}</span>
-          </div>
+        <CardContent className="flex flex-col items-center justify-center gap-4 p-4 aspect-video relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black z-10"/>
+            <Avatar className="h-24 w-24 absolute left-4 top-1/2 -translate-y-1/2 z-20">
+                <AvatarImage src={teamA.shieldUrl} alt={teamA.name} />
+                <AvatarFallback>{teamA.name.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <Avatar className="h-24 w-24 absolute right-4 top-1/2 -translate-y-1/2 z-20">
+                <AvatarImage src={teamB.shieldUrl} alt={teamB.name} />
+                <AvatarFallback>{teamB.name.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div className="z-20 text-center">
+                <p className="font-bold text-4xl text-white drop-shadow-lg">VS</p>
+                <p className="text-sm text-muted-foreground mt-2">{championship.name}</p>
+            </div>
         </CardContent>
-        <CardFooter className="p-4 bg-muted/50">
-          <Button 
-            onClick={handleButtonClick}
-            disabled={!isClient || isClosed || (isAuthenticated && hasGuessed)}
-            className="w-full font-bold bg-primary hover:bg-primary/90 text-primary-foreground disabled:bg-gray-600"
-          >
-            {isAuthenticated && hasGuessed ? (
-              <>
-                <CheckCircle className="mr-2 h-5 w-5" />
-                Palpite Enviado
-              </>
-            ) : (
-              <>
-                <CircleDot className="mr-2 h-5 w-5" />
-                {isAuthenticated ? 'Chutar Placar' : 'Faça Login para Chutar'}
-              </>
-            )}
-          </Button>
+        <CardFooter className="p-4 bg-muted/50 transition-all duration-300 opacity-0 group-hover:opacity-100">
+            <div className="w-full flex justify-between items-center">
+                <div className="text-left">
+                    <p className="text-sm font-semibold">{`${teamA.name} vs ${teamB.name}`}</p>
+                    <p className="text-xs text-muted-foreground">Aposta: {bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                </div>
+                <Button size="sm" onClick={handleChutarClick}>
+                    <CircleDot className="h-4 w-4 mr-2" />
+                    Chutar
+                </Button>
+            </div>
         </CardFooter>
-      </Card>
-      {isAuthenticated && <PalpiteModal bolao={bolao} isOpen={isModalOpen} onClose={handleModalClose} />}
-    </>
-  );
+    </Card>
+  )
 }

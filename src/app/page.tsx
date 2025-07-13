@@ -1,34 +1,35 @@
-import Link from 'next/link';
-import { BolaoCard } from "@/components/bolao-card";
-import { Button } from '@/components/ui/button';
-import { Logo } from '@/components/icons';
-import { boloes } from "@/lib/data";
-import type { Bolao } from "@/types";
-import { ArrowRight, Award, Tv, Users } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 
-const featureData = [
-  {
-    icon: <Tv className="w-10 h-10 text-primary" />,
-    title: "Participe de Onde Quiser",
-    description: "Acesse os bolões no seu computador, TV, celular ou tablet.",
-  },
-  {
-    icon: <Award className="w-10 h-10 text-primary" />,
-    title: "Prêmios em Dinheiro",
-    description: "Acerte os palpites e ganhe prêmios reais, pagos com segurança via PIX.",
-  },
-  {
-    icon: <Users className="w-10 h-10 text-primary" />,
-    title: "Crie Bolões com Amigos",
-    description: "Desafie seus amigos em bolões privados e mostre quem entende mais de futebol.",
-  },
-];
+"use client"
+
+import { useState, useEffect } from "react"
+import { getBoloes, Bolao } from "@/services/boloes"
+import { getTeams, Team } from "@/services/teams"
+import { getChampionships, Championship } from "@/services/championships"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { BoloesCarousel } from "@/components/boloes-carousel"
+import { HeroSection } from "@/components/hero-section"
+import { Tv, Medal, Users } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { PublicHeader } from "@/components/public-header"
+
+const features = [
+    {
+      icon: <Tv className="h-8 w-8 text-primary" />,
+      title: "Participe de Onde Quiser",
+      description: "Acesse os bolões no seu computador, TV, celular ou tablet."
+    },
+    {
+      icon: <Medal className="h-8 w-8 text-primary" />,
+      title: "Prêmios em Dinheiro",
+      description: "Acerte os palpites e ganhe prêmios reais, pagos com segurança via PIX."
+    },
+    {
+      icon: <Users className="h-8 w-8 text-primary" />,
+      title: "Crie Bolões com Amigos",
+      description: "Desafie seus amigos em bolões privados e mostre quem entende mais de futebol."
+    }
+]
 
 const faqData = [
   {
@@ -45,119 +46,111 @@ const faqData = [
   },
   {
     question: "É seguro participar?",
-    answer: "Sim! Levamos a segurança a sério. Utilizamos as melhores práticas de proteção de dados e transações seguras para garantir que sua experiência e seus prêmios estejam sempre protegidos."
+    answer: "Sim! Nossa plataforma utiliza as melhores práticas de segurança para proteger seus dados e garantir que todos os pagamentos e premiações sejam processados de forma segura e transparente."
   }
-]
+];
 
-export default function HomePage() {
-  const activeBoloes = boloes.filter(b => new Date() < b.matchDate && b.status === 'Aberto');
+export default function PublicHomePage() {
+  const [boloes, setBoloes] = useState<Bolao[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [championships, setChampionships] = useState<Championship[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const [boloesData, teamsData, championshipsData] = await Promise.all([
+          getBoloes(),
+          getTeams(),
+          getChampionships(),
+        ])
+        setBoloes(boloesData.filter(b => b.status !== 'Finalizado'))
+        setTeams(teamsData)
+        setChampionships(championshipsData)
+      } catch (error) {
+        console.error("Falha ao buscar dados para a home page:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const renderSkeleton = () => (
+    <div className="mb-12">
+        <Skeleton className="h-8 w-1/3 mb-6" />
+        <div className="flex space-x-4">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-56 w-80 rounded-lg" />)}
+        </div>
+    </div>
+  )
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-sm">
-        <div className="container flex h-20 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <Logo />
-          </Link>
-          <div className="flex items-center space-x-4">
-             <Button asChild variant="ghost" className="hover:bg-muted">
-                <Link href="/login">Entrar</Link>
-            </Button>
-             <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                <Link href="/register">Cadastre-se</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="bg-background text-foreground">
+      <PublicHeader />
+      <HeroSection />
       
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative text-center py-20 md:py-32 border-b-8 border-muted flex flex-col items-center justify-center">
-          <div className="container relative">
-            <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-              Bolões, prêmios e muita emoção.
-            </h1>
-            <h2 className="mt-4 text-2xl font-semibold sm:text-3xl md:text-4xl text-muted-foreground">Sem limites.</h2>
-            <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
-              Pronto para participar? Cadastre-se agora e comece a dar seus palpites.
-            </p>
-            <div className="mt-10">
-              <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md px-10 py-6 text-lg">
-                <Link href="/register">
-                  Quero começar <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
+      <main>
+        <Separator className="bg-border/20" />
+        <section id="features" className="container mx-auto py-16 sm:py-24">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold">A maior plataforma de bolões da América Latina</h2>
+                <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Tudo o que você precisa para se divertir e competir, em um só lugar.</p>
             </div>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                {features.map(feature => (
+                    <div key={feature.title} className="flex flex-col items-center text-center">
+                        {feature.icon}
+                        <h3 className="text-xl font-semibold mt-6">{feature.title}</h3>
+                        <p className="text-muted-foreground mt-2">{feature.description}</p>
+                    </div>
+                ))}
+            </div>
+        </section>
+        <Separator className="bg-border/20" />
+
+        <section id="boloes" className="container mx-auto py-16 sm:py-24">
+             {loading ? (
+                renderSkeleton()
+            ) : boloes.length > 0 ? (
+                <BoloesCarousel 
+                    title="Bolões em Destaque"
+                    boloes={boloes}
+                    teams={teams}
+                    championships={championships}
+                />
+            ) : (
+                <div className="text-center bg-muted/20 border-2 border-dashed border-border/30 rounded-lg py-20">
+                    <h3 className="text-2xl font-bold">Nenhum bolão em destaque no momento.</h3>
+                    <p className="text-muted-foreground mt-2">Fique de olho! Novas oportunidades em breve.</p>
+                </div>
+            )}
         </section>
 
-        {/* Features Section */}
-        <section className="py-20 bg-background">
-          <div className="container mx-auto text-center">
-             <h2 className="text-3xl font-bold mb-4 sm:text-4xl md:text-5xl">
-              A maior plataforma de bolões da América Latina
-            </h2>
-            <p className="text-lg text-muted-foreground mb-12 max-w-3xl mx-auto">Tudo o que você precisa para se divertir e competir, em um só lugar.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              {featureData.map((feature, index) => (
-                <div key={index} className="flex flex-col items-center">
-                  {feature.icon}
-                  <h3 className="mt-6 text-xl font-bold">{feature.title}</h3>
-                  <p className="mt-2 text-muted-foreground">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-        
-        {/* Boloes em Destaque Section */}
-        <section className="py-20 bg-muted/50 border-y-8 border-muted">
-          <div className="container mx-auto">
-            <h2 className="text-3xl font-bold mb-10 text-center sm:text-4xl">
-              Bolões em Destaque
-            </h2>
-            {activeBoloes.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-                {activeBoloes.map((bolao: Bolao) => (
-                  <BolaoCard key={bolao.id} bolao={bolao} isAuthenticated={false} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-background rounded-lg border-2 border-dashed border-muted">
-                <p className="text-xl font-semibold text-muted-foreground">Nenhum bolão em destaque no momento.</p>
-                <p className="mt-2 text-muted-foreground">Fique de olho! Novas oportunidades em breve.</p>
-              </div>
-            )}
-          </div>
-        </section>
-        
-        {/* FAQ Section */}
-        <section className="py-20 bg-background">
-          <div className="container max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-10 text-center sm:text-4xl">Perguntas Frequentes</h2>
+        <Separator className="bg-border/20" />
+        <section id="faq" className="container mx-auto max-w-4xl py-16 sm:py-24">
+            <h2 className="text-3xl font-bold text-center mb-8">Perguntas Frequentes</h2>
             <Accordion type="single" collapsible className="w-full">
-              {faqData.map((faq, index) => (
-                 <AccordionItem key={index} value={`item-${index}`} className="bg-muted mb-2 rounded-lg border-none">
-                  <AccordionTrigger className="p-6 text-lg hover:no-underline text-left">
-                    {faq.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="p-6 pt-0 text-muted-foreground text-base">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                {faqData.map((faq, index) => (
+                    <AccordionItem value={`item-${index}`} key={index}>
+                        <AccordionTrigger className="text-lg text-left">{faq.question}</AccordionTrigger>
+                        <AccordionContent className="text-base text-muted-foreground">
+                            {faq.answer}
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
             </Accordion>
-          </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="py-8 bg-background border-t-2 border-muted">
-        <div className="container flex justify-center items-center text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} ChuteFlix. Todos os direitos reservados.</p>
-        </div>
+      <footer className="border-t border-border/20">
+          <div className="container mx-auto text-center py-6">
+            <p className="text-sm text-muted-foreground">
+                © {new Date().getFullYear()} ChuteFlix. Todos os direitos reservados.
+            </p>
+          </div>
       </footer>
     </div>
-  );
+  )
 }
