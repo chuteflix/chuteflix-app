@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { doc, setDoc, collection } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { doc, setDoc, collection, serverTimestamp } from "firebase/firestore"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import { db, storage } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
-import { createTransaction } from "@/services/transactions"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,7 @@ const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
   scoreTeam2: z.number().min(0, "O placar deve ser no mínimo 0."),
   comment: z.string().max(80, "O comentário não pode ter mais de 80 caracteres.").optional(),
+  receipt: z.instanceof(File).refine(file => file.size > 0, "O comprovante é obrigatório."),
 })
 
 type PalpiteFormValues = z.infer<typeof palpiteSchema>
@@ -32,7 +33,7 @@ type PalpiteFormValues = z.infer<typeof palpiteSchema>
 interface PalpiteModalProps {
   isOpen: boolean
   onClose: () => void
-  bolao: Bolao & { team1Details?: any; team2Details?: any }
+  bolao: Bolao & { teamADetails?: any; teamBDetails?: any }
 }
 
 export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
@@ -50,21 +51,20 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     },
   })
 
-  const fee = typeof bolao.fee === 'number' ? bolao.fee : 0;
-  const prize = typeof bolao.prize === 'number' ? bolao.prize : 0;
-
   const onSubmit = async (values: PalpiteFormValues) => {
     if (!user) {
-      toast({
-        title: "Erro de Autenticação",
-        description: "Você precisa estar logado para chutar.",
-        variant: "destructive",
-      })
+      toast({ title: "Erro de Autenticação", description: "Você precisa estar logado para chutar.", variant: "destructive" })
       return router.push("/login")
     }
 
     setIsSubmitting(true)
     try {
+      // 1. Upload do comprovante
+      const receiptRef = ref(storage, `receipts/${bolao.id}/${user.uid}_${new Date().getTime()}`)
+      await uploadBytes(receiptRef, values.receipt)
+      const receiptUrl = await getDownloadURL(receiptRef)
+
+      // 2. Salvar o palpite com a URL do comprovante
       const palpiteRef = doc(collection(db, "palpites"))
       await setDoc(palpiteRef, {
         id: palpiteRef.id,
@@ -73,39 +73,22 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
         scoreTeam1: values.scoreTeam1,
         scoreTeam2: values.scoreTeam2,
         comment: values.comment || "",
-        createdAt: new Date().toISOString(),
-        status: "Pendente", // Pagamento pendente
+        createdAt: serverTimestamp(),
+        status: "Pendente",
+        receiptUrl: receiptUrl,
       })
       
-      await createTransaction({
-        uid: user.uid,
-        type: 'bet_placement',
-        amount: -fee,
-        description: `Aposta no bolão: ${bolao.championship}`,
-        status: 'completed',
-        metadata: {
-          bolaoId: bolao.id,
-          palpiteId: palpiteRef.id,
-          matchDescription: `${bolao.team1Details?.name} vs ${bolao.team2Details?.name}`,
-        },
-      })
-
       toast({
-        title: "Palpite Enviado!",
-        description: "Seu chute foi registrado. Agora, finalize o pagamento para validá-lo.",
+        title: "Palpite Enviado com Sucesso!",
+        description: "Seu chute foi registrado e está aguardando aprovação.",
         variant: "success",
       })
       
       onClose()
-      router.push("/transacoes")
-
+      
     } catch (error) {
       console.error("Erro ao salvar o palpite:", error)
-      toast({
-        title: "Ops! Algo deu errado.",
-        description: "Não foi possível registrar seu palpite. Tente novamente.",
-        variant: "destructive",
-      })
+      toast({ title: "Ops! Algo deu errado.", description: "Não foi possível registrar seu palpite. Tente novamente.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -113,30 +96,23 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Chutar Placar</DialogTitle>
+          <DialogTitle>Faça seu Chute</DialogTitle>
           <DialogDescription>
-            Insira seu palpite para o jogo <span className="font-bold">{bolao.team1Details?.name}</span> vs <span className="font-bold">{bolao.team2Details?.name}</span>.
+            Defina o placar, anexe o comprovante PIX e deixe um comentário para a torcida!
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="flex items-center justify-around space-x-4">
-              <FormField
+               <FormField
                 control={form.control}
                 name="scoreTeam1"
                 render={({ field }) => (
                   <FormItem className="flex-1 text-center">
-                    <FormLabel className="text-lg font-semibold">{bolao.team1Details?.name}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        className="text-center text-2xl h-16"
-                        {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}
-                      />
-                    </FormControl>
+                    <FormLabel className="text-lg font-semibold">{bolao.teamADetails?.name}</FormLabel>
+                    <FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
                   </FormItem>
                 )}
               />
@@ -146,15 +122,8 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
                 name="scoreTeam2"
                 render={({ field }) => (
                   <FormItem className="flex-1 text-center">
-                    <FormLabel className="text-lg font-semibold">{bolao.team2Details?.name}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        className="text-center text-2xl h-16"
-                        {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}
-                      />
-                    </FormControl>
+                    <FormLabel className="text-lg font-semibold">{bolao.teamBDetails?.name}</FormLabel>
+                    <FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
                   </FormItem>
                 )}
               />
@@ -163,31 +132,30 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
               control={form.control}
               name="comment"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Comentário (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Deixe um comentário sobre sua aposta..."
-                      className="resize-none"
-                      maxLength={80}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <FormItem><FormLabel>Comentário (Opcional)</FormLabel><FormControl><Textarea placeholder="Ex: Hoje vai ser de lavada! Rumo à vitória!" className="resize-none" maxLength={80} {...field}/></FormControl><FormMessage /></FormItem>
               )}
             />
-            <div className="text-sm text-center text-muted-foreground p-3 bg-muted/50 rounded-md">
-              <p>Taxa de participação: <span className="font-bold text-foreground">{fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
-              <p>Prêmio estimado: <span className="font-bold text-foreground">{prize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
+             <FormField
+                control={form.control}
+                name="receipt"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Comprovante PIX</FormLabel>
+                        <FormControl>
+                            <Input type="file" accept="image/*" onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <div className="text-sm text-center text-muted-foreground p-3 bg-muted/20 rounded-md">
+              <p>Valor da aposta: <span className="font-bold text-foreground">{bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                Cancelar
-              </Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Confirmar Chute
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? "Enviando..." : "Confirmar Chute"}
               </Button>
             </DialogFooter>
           </form>

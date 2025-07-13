@@ -3,34 +3,30 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import Link from "next/link"
 import { useAuth } from "@/context/auth-context"
-import { Bolao } from "@/services/boloes"
+import { getBolaoById, Bolao } from "@/services/boloes"
 import { getTeamById, Team } from "@/services/teams"
 import { getChampionshipById, Championship } from "@/services/championships"
-import { Palpite, getPalpitesByBolaoId } from "@/services/palpites"
-import { getUserProfile, UserProfile } from "@/services/users"
+import { getLatestPalpitesWithUserData, getParticipantCount, PalpiteComDetalhes } from "@/services/palpites"
+import { PalpiteModal } from "@/components/palpite-modal"
 
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { PalpiteModal } from "@/components/palpite-modal"
-import { PalpiteCard } from "@/components/palpite-card"
-import { ArrowLeft, Calendar, Shield, Trophy, MessageSquare } from "lucide-react"
-import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
+import Countdown from "react-countdown"
+import { ArrowLeft, Users, Trophy, MessageSquare, Info } from "lucide-react"
+import { parse } from "date-fns"
 
 type BolaoDetails = Bolao & {
-  team1Details?: Team
-  team2Details?: Team
+  teamADetails?: Team
+  teamBDetails?: Team
   championshipDetails?: Championship
 }
-
-type PalpiteWithUser = Palpite & { user?: UserProfile }
 
 export default function BolaoPage() {
   const params = useParams()
@@ -39,142 +35,168 @@ export default function BolaoPage() {
   const id = params.id as string
 
   const [bolao, setBolao] = useState<BolaoDetails | null>(null)
-  const [palpites, setPalpites] = useState<PalpiteWithUser[]>([])
+  const [comments, setComments] = useState<PalpiteComDetalhes[]>([])
+  const [participantCount, setParticipantCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  useEffect(() => {
-    if (!id) return
-
-    const fetchBolaoData = async () => {
+  const fetchData = async () => {
+    try {
+      if (!id) throw new Error("ID do bolão não encontrado.")
       setLoading(true)
-      setError(null)
-      try {
-        // Fetch Bolão Details
-        const bolaoDoc = await getDoc(doc(db, "boloes", id))
-        if (!bolaoDoc.exists()) throw new Error("Bolão não encontrado.")
-        const bolaoData = { id: bolaoDoc.id, ...bolaoDoc.data() } as Bolao
-        
-        const [team1Details, team2Details, championshipDetails] = await Promise.all([
-          getTeamById(bolaoData.team1Id),
-          getTeamById(bolaoData.team2Id),
-          getChampionshipById(bolaoData.championshipId),
-        ])
-        setBolao({ ...bolaoData, team1Details, team2Details, championshipDetails })
 
-        // Fetch Palpites and User data
-        const approvedPalpites = await getPalpitesByBolaoId(id, "Aprovado")
-        const palpitesWithUsers = await Promise.all(
-          approvedPalpites.map(async palpite => {
-            const userProfile = await getUserProfile(palpite.userId)
-            return { ...palpite, user: userProfile || undefined }
-          })
-        )
-        setPalpites(palpitesWithUsers)
+      const bolaoDoc = await getBolaoById(id)
+      if (!bolaoDoc) throw new Error("Bolão não encontrado.")
 
-      } catch (err) {
-        console.error("Erro ao buscar dados do bolão:", err)
-        setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.")
-      } finally {
-        setLoading(false)
-      }
+      const [teamADetails, teamBDetails, championshipDetails, fetchedComments, fetchedCount] = await Promise.all([
+        getTeamById(bolaoDoc.teamAId),
+        getTeamById(bolaoDoc.teamBId),
+        getChampionshipById(bolaoDoc.championshipId),
+        getLatestPalpitesWithUserData(id),
+        getParticipantCount(id)
+      ])
+
+      setBolao({ ...bolaoDoc, teamADetails, teamBDetails, championshipDetails })
+      setComments(fetchedComments)
+      setParticipantCount(fetchedCount)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocorreu um erro.")
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchBolaoData()
+  useEffect(() => {
+    fetchData()
   }, [id])
   
-  const handleChutarClick = () => {
-    if (!user) router.push("/login")
-    else setIsModalOpen(true)
+  const closingDateTime = bolao ? parse(`${bolao.matchDate} ${bolao.closingTime}`, 'yyyy-MM-dd HH:mm', new Date()) : new Date();
+  const isBettingClosed = new Date() > closingDateTime || bolao?.status === 'Chutes Encerrados' || bolao?.status === 'Finalizado';
+  const totalPrize = (bolao?.initialPrize || 0) + (participantCount * (bolao?.fee || 0) * 0.9);
+
+  const countdownRenderer = ({ days, hours, minutes, seconds, completed }: any) => {
+    if (completed || isBettingClosed) {
+      return <span className="text-destructive font-bold">Chutes Encerrados</span>
+    } else {
+      return (
+        <div className="flex space-x-2 text-center">
+          <div className="flex flex-col"><span className="text-2xl font-bold">{String(days).padStart(2, '0')}</span><span className="text-xs">DIAS</span></div>
+          <div className="flex flex-col"><span className="text-2xl font-bold">{String(hours).padStart(2, '0')}</span><span className="text-xs">HORAS</span></div>
+          <div className="flex flex-col"><span className="text-2xl font-bold">{String(minutes).padStart(2, '0')}</span><span className="text-xs">MIN</span></div>
+          <div className="flex flex-col"><span className="text-2xl font-bold">{String(seconds).padStart(2, '0')}</span><span className="text-xs">SEG</span></div>
+        </div>
+      )
+    }
   }
-  
-  const MatchInfo = () => (
-    <div className="flex items-center justify-center space-x-4 sm:space-x-8 md:space-x-12 my-6">
-       <div className="flex flex-col items-center gap-3 text-center">
-        <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-border">
-          <AvatarImage src={bolao?.team1Details?.logoUrl} alt={bolao?.team1Details?.name} />
-          <AvatarFallback>{bolao?.team1Details?.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <span className="font-semibold text-lg">{bolao?.team1Details?.name}</span>
-      </div>
-      <div className="text-2xl sm:text-3xl font-bold text-muted-foreground">VS</div>
-      <div className="flex flex-col items-center gap-3 text-center">
-        <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-border">
-          <AvatarImage src={bolao?.team2Details?.logoUrl} alt={bolao?.team2Details?.name} />
-          <AvatarFallback>{bolao?.team2Details?.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <span className="font-semibold text-lg">{bolao?.team2Details?.name}</span>
-      </div>
-    </div>
-  )
-  
+
   if (loading || authLoading) {
-    // Basic skeleton loader
-    return <div className="container mx-auto p-4"><Skeleton className="h-96 w-full" /></div>
+    return (
+      <div className="container mx-auto p-4 space-y-4">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="container mx-auto p-4"><Alert variant="destructive"><AlertTitle>Erro</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>
+    return (
+      <div className="container mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertTitle>Erro</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
   return (
     <>
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-6 pb-10">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para Início</Link>
+          <Link href="/inicio"><ArrowLeft className="mr-2 h-4 w-4" />Voltar ao Início</Link>
         </Button>
-        
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-muted/30">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="text-2xl sm:text-3xl font-bold">{bolao?.name}</CardTitle>
-              <Badge variant={bolao?.status === 'Aberto' ? 'default' : 'secondary'}>{bolao?.status}</Badge>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-              <div className="flex items-center gap-1.5"><Trophy className="h-4 w-4" /><span>{bolao?.championshipDetails?.name || 'Campeonato'}</span></div>
-              <div className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /><span>Encerra em: {new Date(bolao?.closingDate || '').toLocaleDateString('pt-BR')}</span></div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <MatchInfo />
-            <Separator className="my-6" />
-            <div className="text-center">
-              <Button size="lg" onClick={handleChutarClick} disabled={bolao?.status !== 'Aberto'}>
-                Chutar Placar
-              </Button>
-              {bolao?.status !== 'Aberto' && <p className="text-sm text-muted-foreground mt-3">Este bolão não está mais aceitando palpites.</p>}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-6 w-6"/>
-                    Comentários dos Chutes
-                </CardTitle>
-                <CardDescription>Veja o que outros torcedores estão chutando para esta partida.</CardDescription>
+        <Card className="overflow-hidden">
+            <CardHeader className="p-4 bg-muted/20">
+              <div className="flex justify-between items-start">
+                  <div>
+                      <h1 className="text-2xl font-bold">{bolao?.teamADetails?.name} vs {bolao?.teamBDetails?.name}</h1>
+                      <p className="text-sm text-muted-foreground">{bolao?.championshipDetails?.name}</p>
+                  </div>
+                  <Badge variant={bolao?.status === 'Disponível' ? 'success' : 'destructive'}>{bolao?.status}</Badge>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-                {palpites.length > 0 ? (
-                    palpites.map(palpite => (
-                        <PalpiteCard key={palpite.id} palpite={palpite} />
-                    ))
-                ) : (
-                    <div className="text-center text-muted-foreground py-8">
-                        <p>Nenhum palpite aprovado ainda.</p>
-                        <p className="text-sm">Seja o primeiro a chutar!</p>
-                    </div>
-                )}
+            <CardContent className="p-4">
+              <div className="flex justify-center items-center my-4 space-x-4">
+                <Avatar className="h-20 w-20 border-2"><AvatarImage src={bolao?.teamADetails?.shieldUrl} /><AvatarFallback>{bolao?.teamADetails?.name.slice(0,2)}</AvatarFallback></Avatar>
+                <span className="text-3xl font-bold">VS</span>
+                <Avatar className="h-20 w-20 border-2"><AvatarImage src={bolao?.teamBDetails?.shieldUrl} /><AvatarFallback>{bolao?.teamBDetails?.name.slice(0,2)}</AvatarFallback></Avatar>
+              </div>
+
+              <Separator className="my-4"/>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                  <div>
+                      <p className="text-sm text-muted-foreground">Encerra em</p>
+                      <Countdown date={closingDateTime} renderer={countdownRenderer} />
+                  </div>
+                  <div>
+                      <p className="text-sm text-muted-foreground">Prêmio Estimado</p>
+                      <p className="text-2xl font-bold text-primary">{totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                  </div>
+                  <div>
+                      <p className="text-sm text-muted-foreground">Participantes</p>
+                      <p className="text-2xl font-bold">{participantCount}</p>
+                  </div>
+              </div>
+              
+              <Separator className="my-4"/>
+              
+              <div className="text-center">
+                <Button size="lg" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>
+                  {isBettingClosed ? "Apostas Encerradas" : "Chutar Placar"}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">Taxa de aposta: {bolao?.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              </div>
+
             </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><MessageSquare />Últimos Chutes</CardTitle>
+            <CardDescription>Veja os palpites mais recentes da galera.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {comments.length > 0 ? (
+              comments.map(p => (
+                <div key={p.id} className="flex items-start gap-3 text-sm">
+                  <Avatar className="h-9 w-9 border-2">
+                      <AvatarImage src={p.user?.photoURL || ''} />
+                      <AvatarFallback>{p.user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                      <p className="font-semibold">{p.user?.displayName || "Anônimo"} <span className="font-normal text-muted-foreground">apostou</span> {p.scoreTeam1} x {p.scoreTeam2}</p>
+                      {p.comment && <p className="text-muted-foreground bg-muted/50 p-2 rounded-md mt-1">"{p.comment}"</p>}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-6">Ainda não há chutes. Seja o primeiro a apostar!</p>
+            )}
+          </CardContent>
         </Card>
       </div>
 
       {bolao && (
         <PalpiteModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false)
+            fetchData() // Recarrega os dados para mostrar o novo comentário
+          }}
           bolao={bolao}
         />
       )}
