@@ -17,7 +17,8 @@ import {
   ArrowRightLeft,
   LayoutGrid,
   History,
-  User as UserIcon
+  User as UserIcon,
+  Home // Adicionando o ícone Home
 } from 'lucide-react';
 
 import {
@@ -55,8 +56,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    } else if (!loading && user && (pathname === '/dashboard' || pathname === '/')) {
+      router.push('/inicio');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -65,8 +68,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
 
   const userMenuItems = [
-    { href: '/dashboard', label: 'Meus Chutes', icon: LayoutDashboard },
-    { href: '/history', label: 'Histórico', icon: History },
+    { href: '/inicio', label: 'Início', icon: Home, exact: true }, // Alterado
+    { href: '/meus-chutes', label: 'Meus Chutes', icon: History },
     { href: '/settings', label: 'Configurações', icon: SettingsIcon },
   ];
 
@@ -92,21 +95,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
   
   const getHeaderTitle = () => {
-    if (!isAdminPage) {
-        return menuItems.find(item => isActive(item.href))?.label || 'ChuteFlix';
-    }
+    // Prioriza o match exato para evitar que /inicio corresponda a /inicio/qualquercoisa
+    const exactMatch = menuItems.find(item => item.exact && pathname === item.href);
+    if (exactMatch) return exactMatch.label;
 
-    // Prioritize exact match for dashboard
-    if (pathname === '/admin') {
-        return 'Dashboard';
-    }
-
-    // Find the most specific match for other admin pages
-    const matchingItem = [...adminMenuItems]
-        .sort((a, b) => b.href.length - a.href.length) // Sort by length to find most specific
-        .find(item => !item.exact && pathname.startsWith(item.href));
-    
-    return matchingItem?.label || 'Painel do Administrador';
+    const matchingItem = menuItems.find(item => !item.exact && pathname.startsWith(item.href));
+    return matchingItem?.label || 'ChuteFlix';
   }
 
   if (loading || !user) {

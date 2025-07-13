@@ -5,6 +5,7 @@ import {
   addDoc,
   getDocs,
   doc,
+  getDoc, // Importar getDoc
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -62,6 +63,22 @@ export const getChampionships = async (): Promise<Championship[]> => {
     throw new Error("Não foi possível buscar os campeonatos.")
   }
 }
+
+// Nova função para buscar um campeonato pelo ID
+export const getChampionshipById = async (id: string): Promise<Championship | undefined> => {
+    if (!id) return undefined;
+    try {
+      const docRef = doc(db, 'championships', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return fromFirestore(docSnap);
+      }
+      return undefined;
+    } catch (error) {
+      console.error("Erro ao buscar campeonato pelo ID: ", error);
+      throw new Error("Não foi possível buscar os dados do campeonato.");
+    }
+};
 
 export const updateChampionship = async (
   id: string,

@@ -2,10 +2,32 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/auth-context"
 import { Logo } from "@/components/icons"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LogOut, User as UserIcon, LayoutDashboard } from "lucide-react"
 
 export function PublicHeader() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const firstName = user?.displayName?.split(" ")[0]
+
+  const handleLogout = async () => {
+    // Implemente a lógica de logout do seu auth-context aqui
+    // Ex: await auth.signOut();
+    router.push("/login")
+  }
+  
   const scrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     const element = document.getElementById(id)
@@ -32,14 +54,56 @@ export function PublicHeader() {
                 Dúvidas
             </Link>
         </nav>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" asChild>
-            <Link href="/login">Entrar</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/register">Criar Conta</Link>
-          </Button>
-        </div>
+        
+        {loading ? (
+            <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse" />
+        ) : user ? (
+            <div className="flex items-center gap-4">
+                <span className="hidden sm:inline-block text-sm text-muted-foreground">
+                    Olá, <span className="font-semibold text-foreground">{firstName}!</span>
+                </span>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage src={user.photoURL || ""} alt={user.displayName || ""} />
+                                <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link href="/inicio">
+                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                <span>Meu Painel</span>
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href="/profile">
+                                <UserIcon className="mr-2 h-4 w-4" />
+                                <span>Editar Perfil</span>
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Sair</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        ) : (
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" asChild>
+                    <Link href="/login">Entrar</Link>
+                </Button>
+                <Button asChild>
+                    <Link href="/register">Criar Conta</Link>
+                </Button>
+            </div>
+        )}
       </div>
     </header>
   )

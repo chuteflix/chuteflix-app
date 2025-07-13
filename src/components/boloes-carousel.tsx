@@ -1,4 +1,5 @@
 
+import Link from "next/link"
 import {
   Carousel,
   CarouselContent,
@@ -39,14 +40,16 @@ export function BoloesCarousel({ title, boloes, teams, championships }: BoloesCa
         <CarouselContent className="-ml-2">
           {boloes.map(bolao => (
             <CarouselItem key={bolao.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4 pl-2">
-              <div className="p-1">
-                <BolaoCard 
-                  bolao={bolao}
-                  teamA={findTeam(bolao.teamAId)}
-                  teamB={findTeam(bolao.teamBId)}
-                  championship={findChampionship(bolao.championshipId)}
-                />
-              </div>
+              <Link href={`/boloes/${bolao.id}`} className="block hover:scale-[1.02] transition-transform duration-200">
+                <div className="p-1">
+                  <BolaoCard 
+                    bolao={bolao}
+                    teamA={findTeam(bolao.teamAId)}
+                    teamB={findTeam(bolao.teamBId)}
+                    championship={findChampionship(bolao.championshipId)}
+                  />
+                </div>
+              </Link>
             </CarouselItem>
           ))}
         </CarouselContent>

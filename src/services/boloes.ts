@@ -5,6 +5,7 @@ import {
   addDoc,
   getDocs,
   doc,
+  getDoc, // Importar getDoc
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -22,7 +23,9 @@ export interface Bolao {
   startTime: string // HH:MM
   endTime: string // HH:MM
   fee: number // Valor da aposta
-  status: "Ativo" | "Em breve" | "Finalizado"
+  prize: number // Prêmio
+  status: "Aberto" | "Em breve" | "Finalizado"
+  closingDate: string;
 }
 
 // Função para converter dados do Firestore
@@ -38,7 +41,9 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     startTime: data.startTime,
     endTime: data.endTime,
     fee: data.fee,
+    prize: data.prize,
     status: data.status,
+    closingDate: data.closingDate,
   }
 }
 
@@ -72,6 +77,22 @@ export const getBoloes = async (): Promise<Bolao[]> => {
   }
 }
 
+// Nova função para buscar um bolão pelo ID
+export const getBolaoById = async (id: string): Promise<Bolao | undefined> => {
+    if (!id) return undefined;
+    try {
+      const docRef = doc(db, 'boloes', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return fromFirestore(docSnap);
+      }
+      return undefined;
+    } catch (error) {
+      console.error("Erro ao buscar bolão pelo ID: ", error);
+      throw new Error("Não foi possível buscar os dados do bolão.");
+    }
+};
+
 export const updateBolao = async (
   id: string,
   data: Partial<Omit<Bolao, "id">>
@@ -89,7 +110,8 @@ export const deleteBolao = async (id: string): Promise<void> => {
   try {
     const bolaoRef = doc(db, "boloes", id)
     await deleteDoc(bolaoRef)
-  } catch (error) {
+  } catch (error)
+ {
     console.error("Erro ao deletar bolão: ", error)
     throw new Error("Não foi possível deletar o bolão.")
   }

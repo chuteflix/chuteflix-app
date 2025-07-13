@@ -5,6 +5,7 @@ import {
   addDoc,
   getDocs,
   doc,
+  getDoc, // Importar getDoc
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -56,6 +57,22 @@ export const getTeams = async (): Promise<Team[]> => {
     throw new Error("Não foi possível buscar os times.")
   }
 }
+
+// Nova função para buscar um time pelo ID
+export const getTeamById = async (id: string): Promise<Team | undefined> => {
+    if (!id) return undefined;
+    try {
+      const docRef = doc(db, 'teams', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return fromFirestore(docSnap);
+      }
+      return undefined;
+    } catch (error) {
+      console.error("Erro ao buscar time pelo ID: ", error);
+      throw new Error("Não foi possível buscar os dados do time.");
+    }
+};
 
 export const updateTeam = async (
   id: string,

@@ -8,7 +8,7 @@ import { getChampionships, Championship } from "@/services/championships"
 import { BolaoCard } from "@/components/bolao-card"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export default function DashboardPage() {
+export default function InicioPage() { // Renomeado
   const [boloes, setBoloes] = useState<Bolao[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [championships, setChampionships] = useState<Championship[]>([])
@@ -27,7 +27,7 @@ export default function DashboardPage() {
         setTeams(teamsData)
         setChampionships(championshipsData)
       } catch (error) {
-        console.error("Falha ao buscar dados para o dashboard:", error)
+        console.error("Falha ao buscar dados para a página inicial:", error)
       } finally {
         setLoading(false)
       }
@@ -40,10 +40,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-8 text-foreground">Meus Chutes</h1>
+      <h1 className="text-3xl font-bold mb-8 text-foreground">Bolões Disponíveis</h1> {/* Alterado */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-96 w-full" />)
+          Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-80 w-full rounded-lg" />)
         ) : boloes.length > 0 ? (
           boloes.map(bolao => (
             <BolaoCard 
@@ -55,9 +55,10 @@ export default function DashboardPage() {
             />
           ))
         ) : (
-          <p className="text-muted-foreground col-span-full">
-            Você ainda não participou de nenhum bolão. Explore os bolões disponíveis!
-          </p>
+          <div className="text-center bg-muted/20 border-2 border-dashed border-border/30 rounded-lg py-20 col-span-full">
+            <h3 className="text-2xl font-bold">Nenhum bolão disponível no momento.</h3>
+            <p className="text-muted-foreground mt-2">Fique de olho! Novas oportunidades surgirão em breve.</p>
+          </div>
         )}
       </div>
     </div>
