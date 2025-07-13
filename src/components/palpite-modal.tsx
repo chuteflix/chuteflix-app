@@ -7,8 +7,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { doc, setDoc, collection, serverTimestamp } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
-import { db, storage } from "@/lib/firebase"
+import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
@@ -25,7 +24,6 @@ const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
   scoreTeam2: z.number().min(0, "O placar deve ser no mínimo 0."),
   comment: z.string().max(80, "O comentário não pode ter mais de 80 caracteres.").optional(),
-  receipt: z.instanceof(File).refine(file => file.size > 0, "O comprovante é obrigatório."),
 })
 
 type PalpiteFormValues = z.infer<typeof palpiteSchema>
@@ -59,12 +57,6 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
 
     setIsSubmitting(true)
     try {
-      // 1. Upload do comprovante
-      const receiptRef = ref(storage, `receipts/${bolao.id}/${user.uid}_${new Date().getTime()}`)
-      await uploadBytes(receiptRef, values.receipt)
-      const receiptUrl = await getDownloadURL(receiptRef)
-
-      // 2. Salvar o palpite com a URL do comprovante
       const palpiteRef = doc(collection(db, "palpites"))
       await setDoc(palpiteRef, {
         id: palpiteRef.id,
@@ -75,16 +67,17 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
         comment: values.comment || "",
         createdAt: serverTimestamp(),
         status: "Pendente",
-        receiptUrl: receiptUrl,
+        receiptUrl: "", // Será adicionado posteriormente
       })
       
       toast({
-        title: "Palpite Enviado com Sucesso!",
-        description: "Seu chute foi registrado e está aguardando aprovação.",
+        title: "Palpite Confirmado!",
+        description: "Agora vá para 'Meus Chutes' para enviar o comprovante e validar sua aposta.",
         variant: "success",
       })
       
       onClose()
+      router.push("/meus-chutes")
       
     } catch (error) {
       console.error("Erro ao salvar o palpite:", error)
@@ -100,7 +93,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
         <DialogHeader>
           <DialogTitle>Faça seu Chute</DialogTitle>
           <DialogDescription>
-            Defina o placar, anexe o comprovante PIX e deixe um comentário para a torcida!
+            Defina o placar e, se quiser, deixe um comentário para a torcida!
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -135,19 +128,6 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
                 <FormItem><FormLabel>Comentário (Opcional)</FormLabel><FormControl><Textarea placeholder="Ex: Hoje vai ser de lavada! Rumo à vitória!" className="resize-none" maxLength={80} {...field}/></FormControl><FormMessage /></FormItem>
               )}
             />
-             <FormField
-                control={form.control}
-                name="receipt"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Comprovante PIX</FormLabel>
-                        <FormControl>
-                            <Input type="file" accept="image/*" onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
              <div className="text-sm text-center text-muted-foreground p-3 bg-muted/20 rounded-md">
               <p>Valor da aposta: <span className="font-bold text-foreground">{bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
             </div>
@@ -155,7 +135,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Enviando..." : "Confirmar Chute"}
+                {isSubmitting ? "Confirmando..." : "Confirmar Chute"}
               </Button>
             </DialogFooter>
           </form>
