@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { parse, parseISO } from "date-fns"
+import Link from "next/link"
 import {
   addBolao,
   getBoloes,
@@ -41,7 +42,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2, Trophy } from "lucide-react"
+import { Pencil, Trash2, Trophy, Users } from "lucide-react"
 import { BolaoFormModal } from "@/components/bolao-form-modal"
 import { ResultFormModal } from "@/components/result-form-modal"
 import { useToast } from "@/hooks/use-toast"
@@ -183,13 +184,14 @@ export default function BoloesPage() {
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Resultados</TableHead>
+                <TableHead>Ganhadores</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">Carregando...</TableCell>
+                  <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
                 </TableRow>
               ) : boloes.length > 0 ? (
                 boloes.map(bolao => {
@@ -230,6 +232,16 @@ export default function BoloesPage() {
                                 </ResultFormModal>
                             )}
                             </TableCell>
+                            <TableCell>
+                                {displayStatus === 'Finalizado' && (
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={`/admin/boloes/${bolao.id}/ganhadores`}>
+                                            <Users className="mr-2 h-4 w-4" />
+                                            Ver
+                                        </Link>
+                                    </Button>
+                                )}
+                            </TableCell>
                             <TableCell className="text-right">
                             <BolaoFormModal
                                 bolao={bolao}
@@ -266,7 +278,7 @@ export default function BoloesPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
+                  <TableCell colSpan={6} className="text-center">
                     Nenhum bolão encontrado.
                   </TableCell>
                 </TableRow>
