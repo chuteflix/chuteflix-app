@@ -2,13 +2,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import {
   addChampionship,
   getChampionships,
   updateChampionship,
   deleteChampionship,
-  Championship,
 } from "@/services/championships"
+import { Championship } from "@/types"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -38,8 +39,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2 } from "lucide-react"
+import { Eye, Pencil, Trash2, Ticket } from "lucide-react"
 import { ChampionshipFormModal } from "@/components/championship-form-modal"
+import { ChampionshipDetailsModal } from "@/components/championship-details-modal"
 
 export default function CampeonatosPage() {
   const [championships, setChampionships] = useState<Championship[]>([])
@@ -69,7 +71,7 @@ export default function CampeonatosPage() {
         } else {
             await addChampionship(data);
         }
-        fetchChampionships(); // Re-fetch all data to reflect changes
+        fetchChampionships();
     } catch (err) {
         setError("Falha ao salvar campeonato.");
     }
@@ -82,6 +84,13 @@ export default function CampeonatosPage() {
     } catch (err) {
       setError("Falha ao deletar campeonato.")
     }
+  }
+
+  const getLocation = (champ: Championship) => {
+    if (champ.competitionType === 'international') {
+      return `${champ.country}, ${champ.continent}`;
+    }
+    return champ.city ? `${champ.city}, ${champ.state}`: champ.state || 'Nacional';
   }
 
   return (
@@ -112,9 +121,7 @@ export default function CampeonatosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Projeção</TableHead>
-                <TableHead>Série</TableHead>
+                <TableHead>Tipo de Competição</TableHead>
                 <TableHead>Local</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -122,25 +129,35 @@ export default function CampeonatosPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
+                  <TableCell colSpan={4} className="text-center">Carregando...</TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
+                    <TableCell colSpan={4} className="text-center text-red-500">{error}</TableCell>
                 </TableRow>
               ) : championships.length > 0 ? (
                 championships.map(champ => (
                   <TableRow key={champ.id}>
                     <TableCell className="font-medium">{champ.name}</TableCell>
                     <TableCell>
-                        <Badge variant={champ.type === 'professional' ? 'default' : 'secondary'}>
-                            {champ.type === 'professional' ? 'Profissional' : 'Amador'}
+                        <Badge variant={champ.competitionType === 'national' ? 'default' : 'secondary'}>
+                            {champ.competitionType === 'national' ? 'Nacional' : 'Internacional'}
                         </Badge>
                     </TableCell>
-                    <TableCell>{champ.scope || 'N/A'}</TableCell>
-                    <TableCell>{champ.series ? `Série ${champ.series}` : 'N/A'}</TableCell>
-                    <TableCell>{champ.city ? `${champ.city}, ${champ.state}`: champ.state || 'N/A'}</TableCell>
+                    <TableCell>{getLocation(champ)}</TableCell>
                     <TableCell className="text-right">
+                        <Link href={`/admin/boloes?championshipId=${champ.id}`}>
+                            <Button variant="ghost" size="icon">
+                                <Ticket className="h-4 w-4" />
+                            </Button>
+                        </Link>
+
+                      <ChampionshipDetailsModal championship={champ}>
+                        <Button variant="ghost" size="icon">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </ChampionshipDetailsModal>
+
                       <ChampionshipFormModal
                         championship={champ}
                         onSave={(data) => handleSave(data, champ.id)}
@@ -176,7 +193,7 @@ export default function CampeonatosPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={4} className="text-center">
                     Nenhum campeonato encontrado.
                   </TableCell>
                 </TableRow>

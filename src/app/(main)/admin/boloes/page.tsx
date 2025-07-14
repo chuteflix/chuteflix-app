@@ -2,7 +2,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { parse, parseISO } from "date-fns"
+import { useSearchParams } from "next/navigation"
+import { parse } from "date-fns"
 import Link from "next/link"
 import {
   addBolao,
@@ -48,6 +49,9 @@ import { ResultFormModal } from "@/components/result-form-modal"
 import { useToast } from "@/hooks/use-toast"
 
 export default function BoloesPage() {
+  const searchParams = useSearchParams()
+  const championshipIdFilter = searchParams.get("championshipId")
+
   const [boloes, setBoloes] = useState<Bolao[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [championships, setChampionships] = useState<Championship[]>([])
@@ -62,7 +66,12 @@ export default function BoloesPage() {
         getTeams(),
         getChampionships(),
       ])
-      setBoloes(boloesData)
+      
+      const filteredBoloes = championshipIdFilter 
+        ? boloesData.filter(bolao => bolao.championshipId === championshipIdFilter)
+        : boloesData;
+
+      setBoloes(filteredBoloes)
       setTeams(teamsData)
       setChampionships(championshipsData)
     } catch (err) {
@@ -78,7 +87,7 @@ export default function BoloesPage() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [championshipIdFilter])
 
   const handleSave = async (data: Omit<Bolao, "id" | "status" | "name">, id?: string) => {
     try {
@@ -136,6 +145,8 @@ export default function BoloesPage() {
   }
 
   const getTeamName = (id: string) => getNameById(id, teams);
+  
+  const getChampionshipName = (id: string) => getNameById(id, championships);
 
   const getDisplayStatus = (bolao: Bolao): Bolao['status'] => {
     if (bolao.status === 'Finalizado') return 'Finalizado';
@@ -161,7 +172,7 @@ export default function BoloesPage() {
                 Gerenciamento de Bolões
             </h1>
             <p className="text-muted-foreground">
-                Adicione, edite e visualize os bolões da plataforma.
+                {championshipIdFilter ? `Bolões do campeonato ${getChampionshipName(championshipIdFilter)}` : 'Adicione, edite e visualize os bolões da plataforma.'}
             </p>
         </div>
         <BolaoFormModal onSave={handleSave}>
