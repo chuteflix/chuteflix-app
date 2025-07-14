@@ -1,0 +1,22 @@
+# This file specifies files and directories that should not be
+# uploaded to Google Cloud when running gcloud commands.
+#
+# For more information, please see:
+#   https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore
+
+.gcloudignore
+.git
+.gitignore
+
+# Node.js dependencies
+node_modules/
+
+# Firebase directory
+functions/
+
+# Next.js build output
+.next/
+
+# Other
+.DS_Store
+*.log

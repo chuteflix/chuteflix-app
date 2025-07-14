@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
 import { Bolao } from "@/services/boloes"
+import { PaymentModal } from "./payment-modal"
 
 const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
@@ -40,6 +41,8 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [step, setStep] = useState<'palpite' | 'pagamento'>('palpite')
+  const [currentPalpiteId, setCurrentPalpiteId] = useState("")
 
   const form = useForm<PalpiteFormValues>({
     resolver: zodResolver(palpiteSchema),
@@ -59,7 +62,8 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     setIsSubmitting(true)
     try {
       const palpiteRef = doc(collection(db, "palpites"))
-      
+      setCurrentPalpiteId(palpiteRef.id)
+
       await createTransaction({
         uid: user.uid,
         type: 'bet_placement',
@@ -83,12 +87,11 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
       
       toast({
         title: "Palpite Confirmado!",
-        description: "Agora vá para 'Meus Chutes' para enviar o comprovante e validar sua aposta.",
+        description: "Agora realize o pagamento para confirmar sua aposta.",
         variant: "success",
       })
       
-      onClose()
-      router.push("/meus-chutes")
+      setStep('pagamento')
       
     } catch (error) {
       console.error("Erro ao salvar o palpite:", error)
@@ -98,41 +101,68 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     }
   }
 
+  const handleClose = () => {
+    if (step === 'pagamento') {
+        router.push("/meus-chutes");
+    }
+    setStep('palpite'); 
+    onClose();
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Faça seu Chute</DialogTitle>
-          <DialogDescription>
-            Defina o placar e, se quiser, deixe um comentário para a torcida!
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex items-center justify-around space-x-4">
-               <FormField control={form.control} name="scoreTeam1" render={({ field }) => (
-                  <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamADetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
-                )}/>
-              <div className="text-2xl font-bold text-muted-foreground pt-8">X</div>
-              <FormField control={form.control} name="scoreTeam2" render={({ field }) => (
-                  <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamBDetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
-                )}/>
-            </div>
-            <FormField control={form.control} name="comment" render={({ field }) => (
-                <FormItem><FormLabel>Comentário (Opcional)</FormLabel><FormControl><Textarea placeholder="Ex: Hoje vai ser de lavada! Rumo à vitória!" className="resize-none" maxLength={80} {...field}/></FormControl><FormMessage /></FormItem>
-              )}/>
-             <div className="text-sm text-center text-muted-foreground p-3 bg-muted/20 rounded-md">
-              <p>Valor da aposta: <span className="font-bold text-foreground">{bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Confirmando..." : "Confirmar Chute"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {step === 'palpite' ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Faça seu Chute</DialogTitle>
+              <DialogDescription>
+                Defina o placar e, se quiser, deixe um comentário para a torcida!
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="flex items-center justify-around space-x-4">
+                  <FormField control={form.control} name="scoreTeam1" render={({ field }) => (
+                      <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamADetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
+                    )}/>
+                  <div className="text-2xl font-bold text-muted-foreground pt-8">X</div>
+                  <FormField control={form.control} name="scoreTeam2" render={({ field }) => (
+                      <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamBDetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
+                    )}/>
+                </div>
+                <FormField control={form.control} name="comment" render={({ field }) => (
+                    <FormItem><FormLabel>Comentário (Opcional)</FormLabel><FormControl><Textarea placeholder="Ex: Hoje vai ser de lavada! Rumo à vitória!" className="resize-none" maxLength={80} {...field}/></FormControl><FormMessage /></FormItem>
+                  )}/>
+                <div className="text-sm text-center text-muted-foreground p-3 bg-muted/20 rounded-md">
+                  <p>Valor da aposta: <span className="font-bold text-foreground">{bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancelar</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? "Confirmando..." : "Confirmar Chute"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Pagamento da Aposta</DialogTitle>
+              <DialogDescription>
+                Para confirmar sua aposta no bolão <span className="font-bold">{bolao.name}</span>,
+                realize o pagamento de <span className="font-bold">{bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <PaymentModal
+              bolao={bolao}
+              palpiteId={currentPalpiteId}
+              onClose={handleClose} 
+            />
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
