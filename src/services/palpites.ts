@@ -1,9 +1,9 @@
 
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, DocumentData, getCountFromServer, orderBy, limit } from "firebase/firestore";
-import { Bolao } from "./boloes";
-import { Team } from "./teams";
-import { Championship } from "./championships";
+import { getBolaoById, Bolao } from "./boloes";
+import { getTeamById, Team } from "./teams";
+import { getChampionshipById, Championship } from "./championships";
 import { getUserProfile, UserProfile } from "./users";
 
 export interface Palpite {
@@ -21,8 +21,8 @@ export interface Palpite {
 export interface PalpiteComDetalhes extends Palpite {
     user?: UserProfile;
     bolaoDetails?: Bolao & {
-        team1Details?: Team;
-        team2Details?: Team;
+        teamADetails?: Team;
+        teamBDetails?: Team;
         championshipDetails?: Championship;
     };
 }
@@ -41,6 +41,37 @@ const fromFirestore = (doc: DocumentData): Palpite => {
     comment: data.comment,
   };
 };
+
+export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteComDetalhes[]> => {
+    if (!userId) return [];
+    
+    const userPalpites = await getPalpitesByUser(userId);
+    
+    const palpitesComDetalhes = await Promise.all(
+        userPalpites.map(async (palpite) => {
+          const bolaoDetails = await getBolaoById(palpite.bolaoId);
+          if (!bolaoDetails) return palpite;
+
+          const [teamADetails, teamBDetails, championshipDetails] = await Promise.all([
+              getTeamById(bolaoDetails.teamAId),
+              getTeamById(bolaoDetails.teamBId),
+              getChampionshipById(bolaoDetails.championshipId),
+          ]);
+
+          return {
+            ...palpite,
+            bolaoDetails: {
+              ...bolaoDetails,
+              teamADetails,
+              teamBDetails,
+              championshipDetails,
+            },
+          }
+        })
+    );
+
+    return palpitesComDetalhes;
+}
 
 export const getLatestPalpitesWithUserData = async (bolaoId: string): Promise<PalpiteComDetalhes[]> => {
     if (!bolaoId) return [];
@@ -137,6 +168,7 @@ export const getPalpitesByUser = async (userId: string): Promise<Palpite[]> => {
     const q = query(
       collection(db, "palpites"), 
       where("userId", "==", userId),
+      orderBy("createdAt", "desc")
     );
 
     const querySnapshot = await getDocs(q);
