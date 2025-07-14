@@ -21,6 +21,8 @@ import { Loader2 } from "lucide-react"
 
 import { Bolao } from "@/services/boloes"
 import { PaymentModal } from "./payment-modal"
+import { Championship } from "@/services/championships"
+import { Team } from "@/services/teams"
 
 const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
@@ -33,7 +35,7 @@ type PalpiteFormValues = z.infer<typeof palpiteSchema>
 interface PalpiteModalProps {
   isOpen: boolean
   onClose: () => void
-  bolao: Bolao & { teamADetails?: any; teamBDetails?: any }
+  bolao: Bolao & { teamADetails?: Team; teamBDetails?: Team, championshipDetails?: Championship }
 }
 
 export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
@@ -43,6 +45,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [step, setStep] = useState<'palpite' | 'pagamento'>('palpite')
   const [currentPalpiteId, setCurrentPalpiteId] = useState("")
+  const [currentScores, setCurrentScores] = useState({ scoreTeam1: 0, scoreTeam2: 0 })
 
   const form = useForm<PalpiteFormValues>({
     resolver: zodResolver(palpiteSchema),
@@ -63,6 +66,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     try {
       const palpiteRef = doc(collection(db, "palpites"))
       setCurrentPalpiteId(palpiteRef.id)
+      setCurrentScores({ scoreTeam1: values.scoreTeam1, scoreTeam2: values.scoreTeam2 });
 
       await createTransaction({
         uid: user.uid,
@@ -159,6 +163,11 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
             <PaymentModal
               bolao={bolao}
               palpiteId={currentPalpiteId}
+              teamAName={bolao.teamADetails?.name || 'Time A'}
+              teamBName={bolao.teamBDetails?.name || 'Time B'}
+              championshipName={bolao.championshipDetails?.name || 'Campeonato'}
+              scoreTeam1={currentScores.scoreTeam1}
+              scoreTeam2={currentScores.scoreTeam2}
               onClose={handleClose} 
             />
           </>

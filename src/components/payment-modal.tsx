@@ -14,10 +14,24 @@ import { Loader2 } from "lucide-react"
 interface PaymentModalProps {
   onClose: () => void
   bolao: Bolao
-  chuteId: string
+  palpiteId: string
+  teamAName: string
+  teamBName: string
+  championshipName: string
+  scoreTeam1: number
+  scoreTeam2: number
 }
 
-export function PaymentModal({ onClose, bolao, chuteId }: PaymentModalProps) {
+export function PaymentModal({ 
+    onClose, 
+    bolao, 
+    palpiteId,
+    teamAName,
+    teamBName,
+    championshipName,
+    scoreTeam1,
+    scoreTeam2
+}: PaymentModalProps) {
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [settings, setSettings] = useState<Settings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -59,7 +73,11 @@ export function PaymentModal({ onClose, bolao, chuteId }: PaymentModalProps) {
       toast({ title: "Número do WhatsApp não configurado.", variant: "destructive" })
       return
     }
-    const message = `Olá! Estou enviando o comprovante para o bolão *${bolao.name}*. Meu ID de chute é: *${chuteId}*.`
+    const message = `Acabei de apostar o placar ${scoreTeam1} ${teamAName} vs ${scoreTeam2} ${teamBName} no ${championshipName}.
+
+Estou enviando o comprovante de pagamento do bolão.
+
+Meu ID de palpite é: ${palpiteId}`
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${settings.whatsappNumber.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, "_blank")
   }
