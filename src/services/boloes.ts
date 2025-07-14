@@ -1,16 +1,15 @@
 
-import { db } from "@/lib/firebase"
 import {
-  collection,
-  addDoc,
-  getDocs,
   doc,
   getDoc,
+  setDoc,
   updateDoc,
-  deleteDoc,
+  collection,
+  getDocs,
   serverTimestamp,
   DocumentData,
 } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 export interface Bolao {
   id: string
@@ -27,6 +26,7 @@ export interface Bolao {
   closingTime: string;
   scoreTeam1?: number;
   scoreTeam2?: number;
+  winningTeamId?: string | 'draw'; // Adicionado
 }
 
 const fromFirestore = (doc: DocumentData): Bolao => {
@@ -46,6 +46,7 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     closingTime: data.closingTime,
     scoreTeam1: data.scoreTeam1,
     scoreTeam2: data.scoreTeam2,
+    winningTeamId: data.winningTeamId,
   }
 }
 

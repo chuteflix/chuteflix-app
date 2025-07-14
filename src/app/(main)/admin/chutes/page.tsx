@@ -27,6 +27,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from '@/components/ui/skeleton';
 
 type PalpiteComDetalhes = Palpite & {
   user?: UserProfile;
@@ -35,7 +36,6 @@ type PalpiteComDetalhes = Palpite & {
     teamB?: Team;
     championship?: Championship;
   };
-  receiptUrl?: string;
 };
 
 const statusParaFiltro = {
@@ -50,60 +50,55 @@ export default function AdminChutesPage() {
   const [activeTab, setActiveTab] = useState("pendentes");
   const { toast } = useToast();
 
+  const fetchPalpites = async () => {
+    setLoading(true);
+    try {
+      const status = statusParaFiltro[activeTab as keyof typeof statusParaFiltro];
+      const palpitesData = await getPalpitesByStatus(status);
+      const palpitesComDetalhes = await Promise.all(
+        palpitesData.map(async (palpite) => {
+          const [user, bolao] = await Promise.all([
+            getUserProfile(palpite.userId),
+            getBolaoById(palpite.bolaoId),
+          ]);
+
+          const [teamA, teamB, championship] = bolao
+            ? await Promise.all([
+                getTeamById(bolao.teamAId),
+                getTeamById(bolao.teamBId),
+                getChampionshipById(bolao.championshipId),
+              ])
+            : [undefined, undefined, undefined];
+
+          return { ...palpite, user, bolao: bolao ? { ...bolao, teamA, teamB, championship } : undefined };
+        })
+      );
+      setPalpites(palpitesComDetalhes);
+    } catch (error) {
+      console.error("Erro ao buscar palpites:", error);
+      toast({
+        title: "Erro ao carregar palpites",
+        description: "Não foi possível buscar os palpites. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPalpites = async () => {
-      setLoading(true);
-      try {
-        const status = statusParaFiltro[activeTab as keyof typeof statusParaFiltro];
-        const palpitesData = await getPalpitesByStatus(status);
-        const palpitesComDetalhes = await Promise.all(
-          palpitesData.map(async (palpite) => {
-            const [user, bolao] = await Promise.all([
-              getUserProfile(palpite.userId),
-              getBolaoById(palpite.bolaoId),
-            ]);
-
-            const [teamA, teamB, championship] = bolao
-              ? await Promise.all([
-                  getTeamById(bolao.teamAId),
-                  getTeamById(bolao.teamBId),
-                  getChampionshipById(bolao.championshipId),
-                ])
-              : [undefined, undefined, undefined];
-
-            return {
-              ...palpite,
-              user,
-              bolao: bolao ? { ...bolao, teamA, teamB, championship } : undefined,
-              receiptUrl: palpite.receiptUrl,
-            };
-          })
-        );
-        setPalpites(palpitesComDetalhes);
-      } catch (error) {
-        console.error("Erro ao buscar palpites:", error);
-        toast({
-          title: "Erro ao carregar palpites",
-          description: "Não foi possível buscar os palpites. Tente novamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPalpites();
   }, [activeTab, toast]);
 
   const handleUpdateStatus = async (id: string, newStatus: "Aprovado" | "Recusado") => {
     try {
       await updatePalpiteStatus(id, newStatus);
-      setPalpites((prev) => prev.filter((p) => p.id !== id));
       toast({
         title: "Status atualizado!",
         description: `O palpite foi ${newStatus === "Aprovado" ? "aprovado" : "recusado"}.`,
         variant: "success",
       });
+      fetchPalpites(); // Recarrega os dados para refletir a mudança
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast({
@@ -113,6 +108,13 @@ export default function AdminChutesPage() {
       });
     }
   };
+  
+  const getFullName = (user?: UserProfile) => {
+    if (!user) return "N/A";
+    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+    return user.displayName || user.email || "Usuário desconhecido";
+  };
+
 
   return (
     <div className="container mx-auto">
@@ -128,6 +130,7 @@ export default function AdminChutesPage() {
             palpites={palpites}
             loading={loading}
             onUpdateStatus={handleUpdateStatus}
+            getFullName={getFullName}
           />
         </TabsContent>
       </Tabs>
@@ -139,17 +142,42 @@ function ChutesTable({
   palpites,
   loading,
   onUpdateStatus,
+  getFullName,
 }: {
   palpites: PalpiteComDetalhes[];
   loading: boolean;
   onUpdateStatus: (id: string, status: "Aprovado" | "Recusado") => void;
+  getFullName: (user?: UserProfile) => string;
 }) {
   if (loading) {
-    return <div>Carregando...</div>;
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Bolão</TableHead>
+                    <TableHead>Palpite</TableHead>
+                    <TableHead>Comprovante</TableHead>
+                    <TableHead>Ações</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-40" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    )
   }
 
   if (palpites.length === 0) {
-    return <div className="text-center py-12">Nenhum chute encontrado.</div>;
+    return <div className="text-center text-muted-foreground py-12">Nenhum chute encontrado nesta categoria.</div>;
   }
 
   return (
@@ -166,7 +194,7 @@ function ChutesTable({
       <TableBody>
         {palpites.map((palpite) => (
           <TableRow key={palpite.id}>
-            <TableCell>{palpite.user?.displayName || "N/A"}</TableCell>
+            <TableCell>{getFullName(palpite.user)}</TableCell>
             <TableCell>{palpite.bolao?.name || "N/A"}</TableCell>
             <TableCell>
               {palpite.bolao?.teamA?.name} {palpite.scoreTeam1} x {palpite.scoreTeam2} {palpite.bolao?.teamB?.name}

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
@@ -24,6 +25,7 @@ import { Bolao } from "@/services/boloes"
 const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
   scoreTeam2: z.number().min(0, "O placar deve ser no mínimo 0."),
+  predictedWinner: z.string({ required_error: "Você precisa prever um vencedor." }),
   comment: z.string().max(80, "O comentário não pode ter mais de 80 caracteres.").optional(),
 })
 
@@ -60,26 +62,22 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     try {
       const palpiteRef = doc(collection(db, "palpites"))
       
-      // Criação da transação de débito
       await createTransaction({
         uid: user.uid,
         type: 'bet_placement',
-        amount: -bolao.fee, // Valor negativo para débito
+        amount: -bolao.fee,
         description: `Aposta no bolão: ${bolao.name}`,
-        status: 'pending', // A transação fica pendente até o comprovante
-        metadata: { 
-            bolaoId: bolao.id,
-            palpiteId: palpiteRef.id,
-         },
+        status: 'pending',
+        metadata: { bolaoId: bolao.id, palpiteId: palpiteRef.id },
       });
 
-      // Criação do palpite
       await setDoc(palpiteRef, {
         id: palpiteRef.id,
         userId: user.uid,
         bolaoId: bolao.id,
         scoreTeam1: values.scoreTeam1,
         scoreTeam2: values.scoreTeam2,
+        predictedWinner: values.predictedWinner,
         comment: values.comment || "",
         createdAt: serverTimestamp(),
         status: "Pendente",
@@ -105,45 +103,37 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Faça seu Chute</DialogTitle>
           <DialogDescription>
-            Defina o placar e, se quiser, deixe um comentário para a torcida!
+            Defina o placar, o vencedor e, se quiser, deixe um comentário!
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex items-center justify-around space-x-4">
-               <FormField
-                control={form.control}
-                name="scoreTeam1"
-                render={({ field }) => (
-                  <FormItem className="flex-1 text-center">
-                    <FormLabel className="text-lg font-semibold">{bolao.teamADetails?.name}</FormLabel>
-                    <FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
-                  </FormItem>
-                )}
-              />
+               <FormField control={form.control} name="scoreTeam1" render={({ field }) => (
+                  <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamADetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
+                )}/>
               <div className="text-2xl font-bold text-muted-foreground pt-8">X</div>
-              <FormField
-                control={form.control}
-                name="scoreTeam2"
-                render={({ field }) => (
-                  <FormItem className="flex-1 text-center">
-                    <FormLabel className="text-lg font-semibold">{bolao.teamBDetails?.name}</FormLabel>
-                    <FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="scoreTeam2" render={({ field }) => (
+                  <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamBDetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
+                )}/>
             </div>
-            <FormField
-              control={form.control}
-              name="comment"
-              render={({ field }) => (
+            <FormField control={form.control} name="predictedWinner" render={({ field }) => (
+              <FormItem className="space-y-3"><FormLabel>Quem vence?</FormLabel>
+                <FormControl>
+                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value={bolao.teamAId} /></FormControl><FormLabel className="font-normal">{bolao.teamADetails?.name}</FormLabel></FormItem>
+                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="draw" /></FormControl><FormLabel className="font-normal">Empate</FormLabel></FormItem>
+                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value={bolao.teamBId} /></FormControl><FormLabel className="font-normal">{bolao.teamBDetails?.name}</FormLabel></FormItem>
+                  </RadioGroup>
+                </FormControl><FormMessage /></FormItem>
+              )}/>
+            <FormField control={form.control} name="comment" render={({ field }) => (
                 <FormItem><FormLabel>Comentário (Opcional)</FormLabel><FormControl><Textarea placeholder="Ex: Hoje vai ser de lavada! Rumo à vitória!" className="resize-none" maxLength={80} {...field}/></FormControl><FormMessage /></FormItem>
-              )}
-            />
+              )}/>
              <div className="text-sm text-center text-muted-foreground p-3 bg-muted/20 rounded-md">
               <p>Valor da aposta: <span className="font-bold text-foreground">{bolao.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
             </div>
