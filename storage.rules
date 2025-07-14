@@ -1,10 +1,27 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Regra para fotos de perfil:
+    // O usuário só pode escrever em sua própria pasta (ex: /users/USER_ID/profile.jpg)
+    // O arquivo deve ser uma imagem e ter menos de 5MB.
+    match /users/{userId}/{fileName} {
+      allow read;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Regra para comprovantes de depósito:
+    match /receipts/deposits/{userId}/{fileName} {
+        allow read; // Administradores terão acesso via back-end
+        allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regras futuras para escudos de times, etc.
+    // ...
+
+    // Bloqueia todo o resto por padrão
     match /{allPaths=**} {
       allow read, write: if false;
     }

@@ -1,32 +1,141 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
 
-import {setGlobalOptions} from "firebase-functions";
-// import {onRequest} from "firebase-functions/https";
-// import * as logger from "firebase-functions/logger";
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+admin.initializeApp();
+const db = admin.firestore();
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+exports.onPalpiteStatusChangeV1 = functions.firestore
+    .document("palpites/{palpiteId}")
+    .onUpdate(async (change, context) => {
+        functions.logger.info(`Palpite ${context.params.palpiteId} status change detected.`);
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+        const before = change.before.data();
+        const after = change.after.data();
+
+        if (!before || !after) {
+            functions.logger.error("Data missing in change event.");
+            return null;
+        }
+
+        if (before.status === after.status || after.status !== "Aprovado") {
+            functions.logger.info(`Status not changed to 'Aprovado'. No action taken.`);
+            return null;
+        }
+
+        functions.logger.info(`Status changed to 'Aprovado' for palpite ${context.params.palpiteId}.`);
+
+        const palpiteId = context.params.palpiteId;
+        const batch = db.batch();
+
+        try {
+            const transacoesRef = db.collection("transactions");
+            const q = transacoesRef.where("metadata.palpiteId", "==", palpiteId);
+            const transacoesSnapshot = await q.get();
+            
+            if (transacoesSnapshot.empty) {
+                functions.logger.warn(`No transaction found for palpiteId: ${palpiteId}`);
+                return null;
+            }
+
+            transacoesSnapshot.forEach(doc => {
+                functions.logger.info(`Updating transaction ${doc.id} to 'completed'.`);
+                batch.update(doc.ref, { status: "completed" });
+            });
+            
+            await batch.commit();
+            functions.logger.info(`Successfully updated transaction status for palpite ${palpiteId}.`);
+            return { success: true };
+
+        } catch (error) {
+            functions.logger.error("Error updating transaction status:", error);
+            return { success: false, error: error };
+        }
+    });
+
+exports.placeChute = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para fazer um chute.');
+    }
+
+    const { bolaoId, scoreTeam1, scoreTeam2, comment, fee, bolaoName } = data;
+    const userId = context.auth.uid;
+
+    const userRef = db.collection('users').doc(userId);
+    const chuteRef = db.collection('chutes').doc();
+    const transactionRef = db.collection('transactions').doc();
+
+    return db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Usuário não encontrado.');
+        }
+
+        const currentBalance = userDoc.data()?.balance || 0;
+        if (currentBalance < fee) {
+            throw new functions.https.HttpsError('failed-precondition', 'Saldo insuficiente.');
+        }
+
+        const newBalance = currentBalance - fee;
+        transaction.update(userRef, { balance: newBalance });
+
+        transaction.set(chuteRef, {
+            id: chuteRef.id,
+            userId,
+            bolaoId,
+            scoreTeam1,
+            scoreTeam2,
+            comment: comment || "",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: "Aprovado",
+        });
+        
+        transaction.set(transactionRef, {
+            uid: userId,
+            type: 'bet_placement',
+            amount: -fee,
+            description: `Chute no bolão: ${bolaoName}`,
+            status: 'completed',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            metadata: { bolaoId, chuteId: chuteRef.id },
+        });
+
+        return { success: true, message: "Chute realizado com sucesso!" };
+    });
+});
+
+exports.approveDeposit = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.admin) { // Assumindo que você tem um custom claim 'admin'
+        throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem aprovar depósitos.');
+    }
+
+    const { depositId, userId, amount } = data;
+
+    const depositRef = db.collection('deposits').doc(depositId);
+    const userRef = db.collection('users').doc(userId);
+    const transactionRef = db.collection('transactions').doc();
+
+    return db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Usuário não encontrado.');
+        }
+
+        const currentBalance = userDoc.data()?.balance || 0;
+        const newBalance = currentBalance + amount;
+
+        transaction.update(depositRef, { status: 'aprovado' });
+        transaction.update(userRef, { balance: newBalance });
+        transaction.set(transactionRef, {
+            uid: userId,
+            type: 'deposit',
+            amount: amount,
+            description: `Depósito aprovado`,
+            status: 'completed',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            metadata: { depositId },
+        });
+
+        return { success: true, message: "Depósito aprovado com sucesso!" };
+    });
+});

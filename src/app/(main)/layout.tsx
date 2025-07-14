@@ -20,6 +20,9 @@ import {
   Home,
   KeyRound,
   TicketCheck,
+  Wallet,
+  DollarSign,
+  Banknote, // Ícone para depósitos
 } from 'lucide-react';
 
 import {
@@ -52,7 +55,7 @@ import { WelcomeBanner } from '@/components/welcome-banner';
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, balance } = useAuth();
   const [userFullName, setUserFullName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,13 +76,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const handleLogout = async () => {
     await auth.signOut();
     localStorage.removeItem('userFirstName');
-    localStorage.removeItem('userFullName'); // Limpa o nome completo também
+    localStorage.removeItem('userFullName');
     router.push('/login');
   };
 
   const userMenuItems = [
     { href: '/inicio', label: 'Início', icon: Home, exact: true },
     { href: '/meus-chutes', label: 'Meus Chutes', icon: History },
+    { href: '/recarga', label: 'Recarregar', icon: DollarSign },
     { href: '/transacoes', label: 'Minhas Transações', icon: ArrowRightLeft },
     { href: '/settings', label: 'Chave PIX', icon: KeyRound },
   ];
@@ -88,6 +92,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { href: '/admin', label: 'Dashboard', icon: LayoutGrid, exact: true },
     { href: '/admin/boloes', label: 'Bolões', icon: Shield },
     { href: '/admin/chutes', label: 'Chutes', icon: TicketCheck },
+    { href: '/admin/depositos', label: 'Depósitos', icon: Banknote }, // Novo item de menu
     { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy },
     { href: '/admin/times', label: 'Times', icon: Flag },
     { href: '/admin/usuarios', label: 'Usuários', icon: UsersIcon },
@@ -147,7 +152,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <h2 className="text-xl font-semibold hidden sm:block">{getHeaderTitle()}</h2>
               </div>
               <div className="flex items-center gap-4">
-                <WelcomeBanner />
+                {balance !== null && !isAdminPage && (
+                    <div className="flex items-center gap-2">
+                        <Wallet className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-semibold text-foreground">
+                            {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                    </div>
+                )}
                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted"><Bell className="h-5 w-5" /></Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -17,10 +17,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User as UserIcon, LayoutDashboard } from "lucide-react"
+import { LogOut, User as UserIcon, LayoutDashboard, Wallet } from "lucide-react"
 
 export function PublicHeader() {
-  const { user, loading } = useAuth()
+  const { user, loading, balance } = useAuth()
   const router = useRouter()
   const [firstName, setFirstName] = useState<string | null>(null)
 
@@ -73,10 +73,13 @@ export function PublicHeader() {
             <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse" />
         ) : user ? (
             <div className="flex items-center gap-4">
-                {firstName && (
-                    <span className="hidden sm:inline-block text-sm text-muted-foreground">
-                        Olá, <span className="font-semibold text-foreground">{firstName}!</span>
-                    </span>
+                {balance !== null && (
+                    <div className="flex items-center gap-2">
+                        <Wallet className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-semibold text-foreground">
+                            {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                    </div>
                 )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

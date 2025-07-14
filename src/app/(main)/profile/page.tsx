@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,9 +16,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db } from "@/lib/firebase";
-import { Upload } from "lucide-react";
+import { uploadFile } from "@/services/storage";
+import { Upload, Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState("");
   const [photoURL, setPhotoURL] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -45,18 +47,15 @@ export default function ProfilePage() {
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0] && user) {
       const file = event.target.files[0];
-      const storage = getStorage();
-      const storageRef = ref(storage, `profile_pictures/${user.uid}`);
       
       setIsUploading(true);
       try {
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
+        const downloadURL = await uploadFile(file, `users/${user.uid}/profile.jpg`);
         setPhotoURL(downloadURL);
         await updateDoc(doc(db, "users", user.uid), { photoURL: downloadURL });
-        toast({ title: "Foto de perfil atualizada!" });
+        toast({ title: "Foto de perfil atualizada!", variant: "success" });
       } catch (error) {
-        toast({ title: "Erro no upload da foto", variant: "destructive" });
+        toast({ title: "Erro no upload da foto", description: "Verifique o tamanho e o formato do arquivo.", variant: "destructive" });
       } finally {
         setIsUploading(false);
       }
@@ -65,6 +64,7 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (user) {
+      setIsSaving(true);
       try {
         await updateDoc(doc(db, "users", user.uid), {
           firstName,
@@ -72,69 +72,72 @@ export default function ProfilePage() {
         });
         toast({
           title: "Perfil atualizado com sucesso!",
-          style: { backgroundColor: '#39FF14', color: 'black', fontWeight: 'bold' }
+          variant: "success"
         });
       } catch (error) {
         toast({
           title: "Erro ao atualizar o perfil.",
           variant: "destructive",
         });
+      } finally {
+        setIsSaving(false);
       }
     }
   };
 
   return (
     <div className="container mx-auto">
-      <h1 className="text-3xl font-bold mb-8 text-gray-50">Editar Perfil</h1>
-      <Card className="max-w-3xl mx-auto bg-gray-950 border-gray-800 text-gray-50">
+      <h1 className="text-3xl font-bold mb-8 text-foreground">Editar Perfil</h1>
+      <Card className="max-w-3xl mx-auto bg-card border-border text-card-foreground">
         <CardHeader>
           <CardTitle className="text-2xl">Informações Pessoais</CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardDescription>
             Atualize seu nome e foto de perfil.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">
             <div className="flex items-center gap-6">
-              <Avatar className="h-24 w-24 border-4 border-gray-800">
+              <Avatar className="h-24 w-24 border-4 border-border">
                 <AvatarImage src={photoURL} />
                 <AvatarFallback>{firstName?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="grid gap-2">
-                <Label htmlFor="picture" className="text-gray-300">Foto de Perfil</Label>
-                 <Button asChild variant="outline" className="bg-gray-800 border-gray-700 hover:bg-gray-700">
-                  <label htmlFor="picture">
-                    <Upload className="mr-2 h-4 w-4" />
+                <Label htmlFor="picture">Foto de Perfil</Label>
+                 <Button asChild variant="outline" className="border-border hover:bg-muted">
+                  <label htmlFor="picture" className="cursor-pointer">
+                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                     {isUploading ? 'Enviando...' : 'Trocar Foto'}
-                    <Input id="picture" type="file" className="sr-only" onChange={handleFileChange} disabled={isUploading} />
+                    <Input id="picture" type="file" className="sr-only" onChange={handleFileChange} disabled={isUploading} accept="image/*" />
                   </label>
                 </Button>
-                <p className="text-xs text-gray-500">PNG, JPG ou GIF de até 10MB.</p>
+                <p className="text-xs text-muted-foreground">PNG, JPG de até 5MB.</p>
               </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="first-name" className="text-gray-300">Nome</Label>
+                <Label htmlFor="first-name">Nome</Label>
                 <Input
                   id="first-name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="bg-gray-900 border-gray-700 focus:ring-green-500"
+                  className="bg-background border-border focus:ring-primary"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="last-name" className="text-gray-300">Sobrenome</Label>
+                <Label htmlFor="last-name">Sobrenome</Label>
                 <Input
                   id="last-name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="bg-gray-900 border-gray-700 focus:ring-green-500"
+                  className="bg-background border-border focus:ring-primary"
                 />
               </div>
             </div>
 
-            <Button onClick={handleSave} className="w-full mt-4 bg-green-500 text-black font-bold hover:bg-green-600">
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Salvar Alterações
             </Button>
           </div>

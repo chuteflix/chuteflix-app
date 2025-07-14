@@ -3,7 +3,9 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth-context"
-import { getUserTransactions, Transaction } from "@/services/transactions"
+import { db } from "@/lib/firebase"
+import { collection, query, where, orderBy, onSnapshot, DocumentData } from "firebase/firestore"
+import { Transaction } from "@/services/transactions"
 import {
   Table,
   TableBody,
@@ -17,21 +19,36 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
 
+const fromFirestore = (doc: DocumentData): Transaction => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data
+    } as Transaction;
+}
+
 export default function TransactionsPage() {
   const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      if (user) {
-        setLoading(true)
-        const userTransactions = await getUserTransactions(user.uid)
+    if (user) {
+      const transactionsRef = collection(db, "transactions")
+      const q = query(
+        transactionsRef,
+        where("uid", "==", user.uid),
+        orderBy("createdAt", "desc")
+      )
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userTransactions = querySnapshot.docs.map(fromFirestore)
         setTransactions(userTransactions)
         setLoading(false)
-      }
+      });
+
+      return () => unsubscribe();
     }
-    fetchTransactions()
   }, [user])
 
   const getTransactionTypeDetails = (type: Transaction['type']) => {

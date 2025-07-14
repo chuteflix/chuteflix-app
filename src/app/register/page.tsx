@@ -49,6 +49,7 @@ export default function RegisterPage() {
         phone,
         cpf,
         email: user.email,
+        balance: 0,
       });
       
       localStorage.setItem('userFirstName', firstName);
