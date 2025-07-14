@@ -5,22 +5,13 @@ import {
   addDoc,
   getDocs,
   doc,
-  getDoc, // Importar getDoc
+  getDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp,
   DocumentData,
 } from "firebase/firestore"
-
-export interface Championship {
-  id: string
-  name: string
-  type: "professional" | "amateur"
-  scope?: "national" | "state" | "municipal"
-  series?: "A" | "B" | "C" | "D"
-  state?: string
-  city?: string
-}
+import { Championship } from "@/types" // Import from types/index.ts
 
 // Função para converter dados do Firestore para o tipo Championship
 const fromFirestore = (doc: DocumentData): Championship => {
@@ -29,10 +20,13 @@ const fromFirestore = (doc: DocumentData): Championship => {
     id: doc.id,
     name: data.name,
     type: data.type,
+    competitionType: data.competitionType,
     scope: data.scope,
     series: data.series,
     state: data.state,
     city: data.city,
+    continent: data.continent,
+    country: data.country,
   }
 }
 
@@ -44,10 +38,12 @@ export const addChampionship = async (
       ...data,
       createdAt: serverTimestamp(),
     })
-    return {
+    // Create a new object for the return value to avoid passing non-serializable data
+    const returnData: Championship = {
       id: docRef.id,
       ...data,
-    }
+    };
+    return returnData;
   } catch (error) {
     console.error("Erro ao adicionar campeonato: ", error)
     throw new Error("Não foi possível adicionar o campeonato.")
@@ -64,7 +60,6 @@ export const getChampionships = async (): Promise<Championship[]> => {
   }
 }
 
-// Nova função para buscar um campeonato pelo ID
 export const getChampionshipById = async (id: string): Promise<Championship | undefined> => {
     if (!id) return undefined;
     try {

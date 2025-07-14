@@ -5,7 +5,6 @@ import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Championship } from "@/services/championships"
 import { getStates, getCitiesByState, IBGEState, IBGECity } from "@/services/ibge"
+import { continents, countriesByContinent } from "@/lib/countries"
 
 interface ChampionshipFormModalProps {
   championship?: Championship | null
@@ -33,6 +33,7 @@ interface ChampionshipFormModalProps {
 const initialFormData: Omit<Championship, "id"> = {
   name: "",
   type: "amateur",
+  competitionType: "national",
 }
 
 export function ChampionshipFormModal({
@@ -45,6 +46,7 @@ export function ChampionshipFormModal({
   const [states, setStates] = useState<IBGEState[]>([])
   const [cities, setCities] = useState<IBGECity[]>([])
   const [loadingCities, setLoadingCities] = useState(false)
+  const [countries, setCountries] = useState<{ id: string; name: string }[]>([])
 
   const isEditing = !!championship
 
@@ -60,10 +62,13 @@ export function ChampionshipFormModal({
         setFormData({
             name: championship.name,
             type: championship.type,
+            competitionType: championship.competitionType || 'national',
             scope: championship.scope,
             series: championship.series,
             state: championship.state,
             city: championship.city,
+            continent: championship.continent,
+            country: championship.country,
         })
       } else {
         setFormData(initialFormData)
@@ -84,9 +89,31 @@ export function ChampionshipFormModal({
       setCities([])
     }
   }, [formData.state])
+
+  useEffect(() => {
+    if (formData.continent) {
+      setCountries(countriesByContinent[formData.continent] || [])
+    } else {
+      setCountries([])
+    }
+  }, [formData.continent])
   
   const handleChange = (id: string, value: string) => {
     const newFormData: any = { ...formData, [id]: value }
+
+    if (id === "competitionType") {
+      // Reset fields that depend on competitionType
+      delete newFormData.type
+      delete newFormData.scope
+      delete newFormData.series
+      delete newFormData.state
+      delete newFormData.city
+      delete newFormData.continent
+      delete newFormData.country
+      if (value === 'international') {
+        newFormData.type = 'professional'
+      }
+    }
 
     if (id === "type") {
       // Reset fields that depend on type
@@ -106,6 +133,10 @@ export function ChampionshipFormModal({
         // Reset city when state changes
         delete newFormData.city
     }
+    if (id === "continent") {
+        // Reset country when continent changes
+        delete newFormData.country
+    }
 
     setFormData(newFormData)
   }
@@ -116,9 +147,11 @@ export function ChampionshipFormModal({
     setOpen(false)
   }
   
+  const showNationalFields = formData.competitionType === 'national';
+  const showInternationalFields = formData.competitionType === 'international';
   const showProfessionalFields = formData.type === 'professional';
-  const showStateField = formData.type === 'amateur' || (showProfessionalFields && (formData.scope === 'state' || formData.scope === 'municipal'));
-  const showCityField = formData.type === 'amateur' || (showProfessionalFields && formData.scope === 'municipal');
+  const showStateField = showNationalFields && (formData.type === 'amateur' || (showProfessionalFields && (formData.scope === 'state' || formData.scope === 'municipal')));
+  const showCityField = showNationalFields && (formData.type === 'amateur' || (showProfessionalFields && formData.scope === 'municipal'));
 
 
   return (
@@ -133,62 +166,95 @@ export function ChampionshipFormModal({
             <Label>Nome</Label>
             <Input value={formData.name} onChange={e => handleChange("name", e.target.value)} />
 
-            <Label>Tipo</Label>
-            <Select onValueChange={value => handleChange("type", value)} value={formData.type}>
+            <Label>Competição</Label>
+            <Select onValueChange={value => handleChange("competitionType", value)} value={formData.competitionType}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="professional">Profissional</SelectItem>
-                <SelectItem value="amateur">Amador/Várzea</SelectItem>
+                <SelectItem value="national">Nacional/Brasileiro</SelectItem>
+                <SelectItem value="international">Internacional</SelectItem>
               </SelectContent>
             </Select>
 
-            {showProfessionalFields && (
+            {showNationalFields && (
               <>
-                <Label>Projeção</Label>
-                <Select onValueChange={value => handleChange("scope", value)} value={formData.scope}>
-                  <SelectTrigger><SelectValue placeholder="Selecione a projeção"/></SelectTrigger>
+                <Label>Tipo</Label>
+                <Select onValueChange={value => handleChange("type", value)} value={formData.type}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="national">Nacional</SelectItem>
-                    <SelectItem value="state">Estadual</SelectItem>
-                    <SelectItem value="municipal">Municipal</SelectItem>
+                    <SelectItem value="professional">Profissional</SelectItem>
+                    <SelectItem value="amateur">Amador/Várzea</SelectItem>
                   </SelectContent>
                 </Select>
 
-                <Label>Série</Label>
-                <Select onValueChange={value => handleChange("series", value)} value={formData.series}>
-                  <SelectTrigger><SelectValue placeholder="Selecione a série"/></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">Série A</SelectItem>
-                    <SelectItem value="B">Série B</SelectItem>
-                    <SelectItem value="C">Série C</SelectItem>
-                    <SelectItem value="D">Série D</SelectItem>
-                  </SelectContent>
-                </Select>
+                {showProfessionalFields && (
+                  <>
+                    <Label>Projeção</Label>
+                    <Select onValueChange={value => handleChange("scope", value)} value={formData.scope}>
+                      <SelectTrigger><SelectValue placeholder="Selecione a projeção"/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="national">Nacional</SelectItem>
+                        <SelectItem value="state">Estadual</SelectItem>
+                        <SelectItem value="municipal">Municipal</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Label>Série</Label>
+                    <Select onValueChange={value => handleChange("series", value)} value={formData.series}>
+                      <SelectTrigger><SelectValue placeholder="Selecione a série"/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">Série A</SelectItem>
+                        <SelectItem value="B">Série B</SelectItem>
+                        <SelectItem value="C">Série C</SelectItem>
+                        <SelectItem value="D">Série D</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+
+                {showStateField && (
+                    <>
+                        <Label>Estado</Label>
+                        <Select onValueChange={value => handleChange("state", value)} value={formData.state}>
+                            <SelectTrigger><SelectValue placeholder="Selecione um estado" /></SelectTrigger>
+                            <SelectContent>
+                                {states.map(s => <SelectItem key={s.id} value={s.sigla}>{s.nome}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </>
+                )}
+
+                {showCityField && (
+                    <>
+                        <Label>Cidade</Label>
+                        <Select onValueChange={value => handleChange("city", value)} value={formData.city} disabled={!formData.state || loadingCities}>
+                        <SelectTrigger><SelectValue placeholder={loadingCities ? "Carregando..." : "Selecione uma cidade"} /></SelectTrigger>
+                        <SelectContent>
+                            {cities.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                    </>
+                )}
               </>
             )}
 
-            {showStateField && (
-                <>
-                    <Label>Estado</Label>
-                    <Select onValueChange={value => handleChange("state", value)} value={formData.state}>
-                        <SelectTrigger><SelectValue placeholder="Selecione um estado" /></SelectTrigger>
-                        <SelectContent>
-                            {states.map(s => <SelectItem key={s.id} value={s.sigla}>{s.nome}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </>
-            )}
+            {showInternationalFields && (
+              <>
+                <Label>Continente</Label>
+                <Select onValueChange={value => handleChange("continent", value)} value={formData.continent}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o continente"/></SelectTrigger>
+                  <SelectContent>
+                    {continents.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
 
-            {showCityField && (
-                <>
-                    <Label>Cidade</Label>
-                    <Select onValueChange={value => handleChange("city", value)} value={formData.city} disabled={!formData.state || loadingCities}>
-                    <SelectTrigger><SelectValue placeholder={loadingCities ? "Carregando..." : "Selecione uma cidade"} /></SelectTrigger>
-                    <SelectContent>
-                        {cities.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
-                    </SelectContent>
-                    </Select>
-                </>
+                <Label>País</Label>
+                <Select onValueChange={value => handleChange("country", value)} value={formData.country} disabled={!formData.continent}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o país"/></SelectTrigger>
+                  <SelectContent>
+                    {countries.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </>
             )}
 
           </div>

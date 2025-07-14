@@ -10,8 +10,14 @@ export interface Team {
 export interface Championship {
   id: string;
   name: string;
-  location: string; // Estado/Cidade
-  level: 'Profissional' | 'Amador/Várzea';
+  type: 'professional' | 'amateur';
+  competitionType: 'national' | 'international';
+  scope?: 'national' | 'state' | 'municipal';
+  series?: 'A' | 'B' | 'C' | 'D';
+  state?: string;
+  city?: string;
+  continent?: string;
+  country?: string;
 }
 
 export interface Bolao {
