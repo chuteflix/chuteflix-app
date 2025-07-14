@@ -14,9 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Bolao } from "@/services/boloes"
 import { updateBolao } from "@/services/boloes"
 import { getPalpitesByBolaoId } from "@/services/palpites"
@@ -28,7 +27,6 @@ import { Loader2 } from "lucide-react"
 const resultSchema = z.object({
     scoreTeam1: z.number().min(0),
     scoreTeam2: z.number().min(0),
-    winningTeamId: z.string({ required_error: "É obrigatório definir o vencedor." }),
 });
 
 type ResultFormValues = z.infer<typeof resultSchema>;
@@ -59,7 +57,6 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
       await updateBolao(bolao.id, {
         scoreTeam1: values.scoreTeam1,
         scoreTeam2: values.scoreTeam2,
-        winningTeamId: values.winningTeamId,
         status: "Finalizado",
       })
 
@@ -72,7 +69,7 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
       }
 
       const winners = approvedPalpites.filter(
-        p => p.scoreTeam1 === values.scoreTeam1 && p.scoreTeam2 === values.scoreTeam2 && p.predictedWinner === values.winningTeamId
+        p => p.scoreTeam1 === values.scoreTeam1 && p.scoreTeam2 === values.scoreTeam2
       )
 
       if (winners.length > 0) {
@@ -134,17 +131,6 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
                         <FormItem className="flex-1 text-center"><FormLabel>{bolao.teamB}</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
                     )}/>
                 </div>
-                <FormField control={form.control} name="winningTeamId" render={({ field }) => (
-                    <FormItem className="space-y-2"><FormLabel>Time Vencedor</FormLabel>
-                        <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                            <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value={bolao.teamAId} /></FormControl><FormLabel className="font-normal">{bolao.teamA}</FormLabel></FormItem>
-                            <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="draw" /></FormControl><FormLabel className="font-normal">Empate</FormLabel></FormItem>
-                            <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value={bolao.teamBId} /></FormControl><FormLabel className="font-normal">{bolao.teamB}</FormLabel></FormItem>
-                        </RadioGroup>
-                        </FormControl><FormMessage />
-                    </FormItem>
-                )}/>
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancelar</Button>
                     <Button type="submit" disabled={isSubmitting}>

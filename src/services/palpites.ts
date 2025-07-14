@@ -16,7 +16,6 @@ export interface Palpite {
   status: "Pendente" | "Aprovado" | "Recusado";
   receiptUrl?: string; 
   comment?: string;
-  predictedWinner?: string | 'draw'; // Adicionado
 }
 
 export interface PalpiteComDetalhes extends Palpite {
@@ -40,7 +39,6 @@ const fromFirestore = (doc: DocumentData): Palpite => {
     status: data.status,
     receiptUrl: data.receiptUrl,
     comment: data.comment,
-    predictedWinner: data.predictedWinner,
   };
 };
 

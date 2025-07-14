@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
@@ -25,7 +24,6 @@ import { Bolao } from "@/services/boloes"
 const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
   scoreTeam2: z.number().min(0, "O placar deve ser no mínimo 0."),
-  predictedWinner: z.string({ required_error: "Você precisa prever um vencedor." }),
   comment: z.string().max(80, "O comentário não pode ter mais de 80 caracteres.").optional(),
 })
 
@@ -77,7 +75,6 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
         bolaoId: bolao.id,
         scoreTeam1: values.scoreTeam1,
         scoreTeam2: values.scoreTeam2,
-        predictedWinner: values.predictedWinner,
         comment: values.comment || "",
         createdAt: serverTimestamp(),
         status: "Pendente",
@@ -103,11 +100,11 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Faça seu Chute</DialogTitle>
           <DialogDescription>
-            Defina o placar, o vencedor e, se quiser, deixe um comentário!
+            Defina o placar e, se quiser, deixe um comentário para a torcida!
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -121,16 +118,6 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
                   <FormItem className="flex-1 text-center"><FormLabel className="text-lg font-semibold">{bolao.teamBDetails?.name}</FormLabel><FormControl><Input type="number" className="text-center text-2xl h-16" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
                 )}/>
             </div>
-            <FormField control={form.control} name="predictedWinner" render={({ field }) => (
-              <FormItem className="space-y-3"><FormLabel>Quem vence?</FormLabel>
-                <FormControl>
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value={bolao.teamAId} /></FormControl><FormLabel className="font-normal">{bolao.teamADetails?.name}</FormLabel></FormItem>
-                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="draw" /></FormControl><FormLabel className="font-normal">Empate</FormLabel></FormItem>
-                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value={bolao.teamBId} /></FormControl><FormLabel className="font-normal">{bolao.teamBDetails?.name}</FormLabel></FormItem>
-                  </RadioGroup>
-                </FormControl><FormMessage /></FormItem>
-              )}/>
             <FormField control={form.control} name="comment" render={({ field }) => (
                 <FormItem><FormLabel>Comentário (Opcional)</FormLabel><FormControl><Textarea placeholder="Ex: Hoje vai ser de lavada! Rumo à vitória!" className="resize-none" maxLength={80} {...field}/></FormControl><FormMessage /></FormItem>
               )}/>
