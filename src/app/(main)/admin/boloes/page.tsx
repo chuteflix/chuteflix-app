@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { parseISO } from "date-fns"
+import { parse, parseISO } from "date-fns"
 import {
   addBolao,
   getBoloes,
@@ -136,6 +136,13 @@ export default function BoloesPage() {
 
   const getTeamName = (id: string) => getNameById(id, teams);
 
+  const getDisplayStatus = (bolao: Bolao): Bolao['status'] => {
+    if (bolao.status === 'Finalizado') return 'Finalizado';
+    const closingDateTime = parse(`${bolao.matchDate} ${bolao.closingTime}`, 'yyyy-MM-dd HH:mm', new Date());
+    if (new Date() > closingDateTime) return 'Chutes Encerrados';
+    return bolao.status;
+  };
+
   const statusVariant = (status: Bolao['status']) => {
     switch (status) {
       case 'Disponível': return 'success'
@@ -144,12 +151,7 @@ export default function BoloesPage() {
       default: return 'outline'
     }
   }
-
-  const canLaunchResult = (bolao: Bolao) => {
-    const matchEndTime = parseISO(`${bolao.matchDate}T${bolao.endTime}:00`);
-    return new Date() > matchEndTime;
-  }
-
+  
   return (
     <div className="container mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -190,60 +192,78 @@ export default function BoloesPage() {
                   <TableCell colSpan={5} className="text-center">Carregando...</TableCell>
                 </TableRow>
               ) : boloes.length > 0 ? (
-                boloes.map(bolao => (
-                  <TableRow key={bolao.id}>
-                    <TableCell className="font-medium">{`${getTeamName(bolao.teamAId)} vs ${getTeamName(bolao.teamBId)}`}</TableCell>
-                    <TableCell>{new Date(bolao.matchDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
-                    <TableCell>
-                        <Badge variant={statusVariant(bolao.status)}>
-                            {bolao.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {bolao.status === 'Finalizado' ? (
-                        <span className="font-bold">{`${bolao.scoreTeam1} x ${bolao.scoreTeam2}`}</span>
-                      ) : (
-                        <ResultFormModal bolao={{...bolao, teamA: getTeamName(bolao.teamAId), teamB: getTeamName(bolao.teamBId) }} onResultSubmitted={fetchData}>
-                          <Button variant="outline" size="sm" disabled={!canLaunchResult(bolao)}>
-                            <Trophy className="mr-2 h-4 w-4" />
-                            Lançar Placar
-                          </Button>
-                        </ResultFormModal>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <BolaoFormModal
-                        bolao={bolao}
-                        onSave={handleSave}
-                      >
-                        <Button variant="ghost" size="icon" disabled={bolao.status === 'Finalizado'}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </BolaoFormModal>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" disabled={bolao.status === 'Finalizado'}>
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Essa ação não pode ser desfeita e irá remover o bolão permanentemente.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(bolao.id)}>
-                              Deletar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))
+                boloes.map(bolao => {
+                    const displayStatus = getDisplayStatus(bolao);
+                    
+                    let winnerInfo = '';
+                    if (displayStatus === 'Finalizado' && bolao.scoreTeam1 !== undefined && bolao.scoreTeam2 !== undefined) {
+                        if (bolao.scoreTeam1 > bolao.scoreTeam2) {
+                            winnerInfo = `Vencedor: ${getTeamName(bolao.teamAId)}`;
+                        } else if (bolao.scoreTeam2 > bolao.scoreTeam1) {
+                            winnerInfo = `Vencedor: ${getTeamName(bolao.teamBId)}`;
+                        } else {
+                            winnerInfo = 'Empate';
+                        }
+                    }
+
+                    return (
+                        <TableRow key={bolao.id}>
+                            <TableCell className="font-medium">{`${getTeamName(bolao.teamAId)} vs ${getTeamName(bolao.teamBId)}`}</TableCell>
+                            <TableCell>{new Date(bolao.matchDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
+                            <TableCell>
+                                <Badge variant={statusVariant(displayStatus)}>
+                                    {displayStatus}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                            {displayStatus === 'Finalizado' ? (
+                                <div>
+                                    <span className="font-bold">{`${bolao.scoreTeam1} x ${bolao.scoreTeam2}`}</span>
+                                    <p className="text-xs text-muted-foreground">{winnerInfo}</p>
+                                </div>
+                            ) : (
+                                <ResultFormModal bolao={{...bolao, teamA: getTeamName(bolao.teamAId), teamB: getTeamName(bolao.teamBId) }} onResultSubmitted={fetchData}>
+                                <Button variant="outline" size="sm" disabled={displayStatus !== 'Chutes Encerrados'}>
+                                    <Trophy className="mr-2 h-4 w-4" />
+                                    Lançar Placar
+                                </Button>
+                                </ResultFormModal>
+                            )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <BolaoFormModal
+                                bolao={bolao}
+                                onSave={handleSave}
+                            >
+                                <Button variant="ghost" size="icon" disabled={displayStatus === 'Finalizado'}>
+                                <Pencil className="h-4 w-4" />
+                                </Button>
+                            </BolaoFormModal>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={displayStatus !== 'Finalizado'}>
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    Essa ação não pode ser desfeita e irá remover o bolão permanentemente.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(bolao.id)}>
+                                    Deletar
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            </TableCell>
+                        </TableRow>
+                    )
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center">
