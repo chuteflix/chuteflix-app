@@ -100,7 +100,9 @@ export default function BoloesPage() {
         }
         
         const name = `${teamA.name} vs ${teamB.name} - ${championship.name}`
-        const bolaoData = { ...data, name }
+        const categories = Array.isArray(data.categories) ? data.categories : [];
+        const subcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
+        const bolaoData = { ...data, name, categories, subcategories }
 
         if (id) {
             await updateBolao(id, bolaoData);

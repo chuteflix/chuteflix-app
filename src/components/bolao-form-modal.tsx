@@ -33,6 +33,7 @@ import { getChampionships, Championship } from "@/services/championships"
 import { getTeams, Team } from "@/services/teams"
 import { NumberFormatValues, PatternFormat, NumericFormat } from 'react-number-format';
 import { cn } from "@/lib/utils"
+import { bolaoCategories, Category } from "@/lib/categories"
 
 interface BolaoFormModalProps {
   bolao?: Bolao | null
@@ -50,6 +51,8 @@ const initialFormData = {
     fee: "",
     initialPrize: "",
     closingTime: "",
+    category: "",
+    subcategory: "",
 }
 
 export function BolaoFormModal({
@@ -62,6 +65,7 @@ export function BolaoFormModal({
   const [championships, setChampionships] = useState<Championship[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [subcategories, setSubcategories] = useState<string[]>([]);
 
   const isEditing = !!bolao
 
@@ -78,6 +82,7 @@ export function BolaoFormModal({
       fetchData()
 
       if(isEditing && bolao) {
+        const category = bolao.categories?.[0] as Category | undefined;
         setFormData({
             championshipId: bolao.championshipId,
             teamAId: bolao.teamAId,
@@ -88,12 +93,24 @@ export function BolaoFormModal({
             fee: String(bolao.fee),
             initialPrize: String(bolao.initialPrize || '0'),
             closingTime: bolao.closingTime,
+            category: category || "",
+            subcategory: bolao.subcategories?.[0] || "",
         })
+        if (category) {
+          setSubcategories(bolaoCategories[category] || []);
+        }
       } else {
         setFormData(initialFormData)
+        setSubcategories([]);
       }
     }
   }, [open, isEditing, bolao])
+
+  const handleCategoryChange = (value: Category) => {
+    handleChange("category", value);
+    setSubcategories(bolaoCategories[value] || []);
+    handleChange("subcategory", "");
+  }
 
   const handleValueChange = (values: NumberFormatValues, id: string) => {
     handleChange(id, values.floatValue || '');
@@ -107,9 +124,9 @@ export function BolaoFormModal({
     e.preventDefault()
     setError(null)
 
-    const { fee, initialPrize, matchDate, ...rest } = formData;
+    const { fee, initialPrize, matchDate, category, subcategory, ...rest } = formData;
 
-    const requiredFields: (keyof typeof initialFormData)[] = [
+    const requiredFields: (keyof Omit<typeof initialFormData, 'category' | 'subcategory'>)[] = [
         "championshipId", "teamAId", "teamBId", "matchDate", 
         "startTime", "endTime", "closingTime"
     ];
@@ -126,6 +143,8 @@ export function BolaoFormModal({
         fee: parseFloat(fee) || 0, 
         initialPrize: parseFloat(initialPrize) || 0,
         matchDate: format(matchDate, "yyyy-MM-dd"),
+        categories: category ? [category] : [],
+        subcategories: subcategory ? [subcategory] : [],
     }, isEditing ? bolao!.id : undefined)
     
     setOpen(false)
@@ -253,6 +272,24 @@ export function BolaoFormModal({
                 value={formData.endTime}
                 onValueChange={(values) => handleChange('endTime', values.formattedValue)}
               />
+            </div>
+            <div>
+              <Label>Categorias</Label>
+                <Select onValueChange={handleCategoryChange} value={formData.category}>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma categoria"/></SelectTrigger>
+                    <SelectContent>
+                        {Object.keys(bolaoCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div>
+              <Label>Subcategorias</Label>
+                <Select onValueChange={value => handleChange("subcategory", value)} value={formData.subcategory} disabled={subcategories.length === 0}>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma subcategoria"/></SelectTrigger>
+                    <SelectContent>
+                        {subcategories.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
+                    </SelectContent>
+                </Select>
             </div>
             
             {error && <p className="col-span-2 text-red-500 text-sm text-center">{error}</p>}

@@ -28,7 +28,9 @@ export interface Bolao {
   closingTime: string;
   finalScoreTeam1?: number;
   finalScoreTeam2?: number;
-  createdAt: any; // Adicionado
+  createdAt: any;
+  categories?: string[];
+  subcategories?: string[];
 }
 
 const fromFirestore = (doc: DocumentData): Bolao => {
@@ -48,7 +50,9 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     closingTime: data.closingTime,
     finalScoreTeam1: data.finalScoreTeam1,
     finalScoreTeam2: data.finalScoreTeam2,
-    createdAt: data.createdAt, // Adicionado
+    createdAt: data.createdAt,
+    categories: data.categories || [],
+    subcategories: data.subcategories || [],
   }
 }
 

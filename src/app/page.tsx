@@ -1,10 +1,11 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { getBoloes, Bolao } from "@/services/boloes"
 import { getTeams, Team } from "@/services/teams"
 import { getChampionships, Championship } from "@/services/championships"
+import { getParticipantCount } from "@/services/palpites"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BoloesCarousel } from "@/components/boloes-carousel"
@@ -12,6 +13,45 @@ import { HeroSection } from "@/components/hero-section"
 import { Tv, Medal, Users } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { PublicHeader } from "@/components/public-header"
+
+type BolaoComDetalhes = Bolao & {
+  teamADetails?: Team;
+  teamBDetails?: Team;
+  championshipDetails?: Championship;
+  participantCount?: number;
+};
+
+const useCategorizedBoloes = (boloes: BolaoComDetalhes[]) => {
+  return useMemo(() => {
+    const customCategories = boloes.reduce((acc, bolao) => {
+      bolao.categories?.forEach(category => {
+        if (!acc[category]) {
+          acc[category] = {};
+        }
+        bolao.subcategories?.forEach(subcategory => {
+          if (!acc[category][subcategory]) {
+            acc[category][subcategory] = [];
+          }
+          acc[category][subcategory].push(bolao);
+        });
+      });
+      return acc;
+    }, {} as Record<string, Record<string, BolaoComDetalhes[]>>);
+
+    const customCategoryCarousels = Object.entries(customCategories).flatMap(([category, subcategories]) => 
+      Object.entries(subcategories).map(([subcategory, boloes]) => ({
+        title: `${category} - ${subcategory}`,
+        boloes
+      }))
+    );
+    
+    const categories = [
+      ...customCategoryCarousels
+    ].filter(category => category.boloes.length > 0);
+
+    return categories;
+  }, [boloes]);
+};
 
 const features = [
     {
@@ -51,9 +91,7 @@ const faqData = [
 ];
 
 export default function PublicHomePage() {
-  const [boloes, setBoloes] = useState<Bolao[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
-  const [championships, setChampionships] = useState<Championship[]>([])
+  const [boloes, setBoloes] = useState<BolaoComDetalhes[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -64,10 +102,24 @@ export default function PublicHomePage() {
           getBoloes(),
           getTeams(),
           getChampionships(),
-        ])
-        setBoloes(boloesData.filter(b => b.status !== 'Finalizado'))
-        setTeams(teamsData)
-        setChampionships(championshipsData)
+        ]);
+
+        const availableBoloes = boloesData.filter(b => b.status !== 'Finalizado');
+
+        const detailedBoloes = await Promise.all(
+          availableBoloes.map(async (bolao) => {
+            const [teamADetails, teamBDetails, championshipDetails, participantCount] = await Promise.all([
+              teamsData.find(t => t.id === bolao.teamAId),
+              teamsData.find(t => t.id === bolao.teamBId),
+              championshipsData.find(c => c.id === bolao.championshipId),
+              getParticipantCount(bolao.id)
+            ]);
+            return { ...bolao, teamADetails, teamBDetails, championshipDetails, participantCount };
+          })
+        );
+        
+        setBoloes(detailedBoloes);
+
       } catch (error) {
         console.error("Falha ao buscar dados para a home page:", error)
       } finally {
@@ -76,6 +128,8 @@ export default function PublicHomePage() {
     }
     fetchData()
   }, [])
+
+  const categorizedBoloes = useCategorizedBoloes(boloes);
 
   const renderSkeleton = () => (
     <div className="mb-12">
@@ -114,12 +168,9 @@ export default function PublicHomePage() {
              {loading ? (
                 renderSkeleton()
             ) : boloes.length > 0 ? (
-                <BoloesCarousel 
-                    title="Bolões em Destaque"
-                    boloes={boloes}
-                    teams={teams}
-                    championships={championships}
-                />
+                categorizedBoloes.map(({ title, boloes }) => (
+                  <BoloesCarousel key={title} title={title} boloes={boloes} />
+                ))
             ) : (
                 <div className="text-center bg-muted/20 border-2 border-dashed border-border/30 rounded-lg py-20">
                     <h3 className="text-2xl font-bold">Nenhum bolão em destaque no momento.</h3>

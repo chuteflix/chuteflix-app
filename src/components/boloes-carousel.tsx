@@ -12,18 +12,19 @@ import { Bolao } from "@/services/boloes"
 import { Team } from "@/services/teams"
 import { Championship } from "@/services/championships"
 
+type BolaoComDetalhes = Bolao & {
+  teamADetails?: Team;
+  teamBDetails?: Team;
+  championshipDetails?: Championship;
+};
+
 interface BoloesCarouselProps {
   title: string
-  boloes: Bolao[]
-  teams: Team[]
-  championships: Championship[]
+  boloes: BolaoComDetalhes[]
 }
 
-export function BoloesCarousel({ title, boloes, teams, championships }: BoloesCarouselProps) {
+export function BoloesCarousel({ title, boloes }: BoloesCarouselProps) {
   if (boloes.length === 0) return null
-
-  const findTeam = (id: string) => teams.find(t => t.id === id)
-  const findChampionship = (id: string) => championships.find(c => c.id === id)
 
   return (
     <section className="mb-12">
@@ -44,9 +45,9 @@ export function BoloesCarousel({ title, boloes, teams, championships }: BoloesCa
                 <div className="p-1">
                   <BolaoCard 
                     bolao={bolao}
-                    teamA={findTeam(bolao.teamAId)}
-                    teamB={findTeam(bolao.teamBId)}
-                    championship={findChampionship(bolao.championshipId)}
+                    teamA={bolao.teamADetails}
+                    teamB={bolao.teamBDetails}
+                    championship={bolao.championshipDetails}
                   />
                 </div>
               </Link>

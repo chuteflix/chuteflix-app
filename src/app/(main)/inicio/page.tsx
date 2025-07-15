@@ -10,6 +10,7 @@ import { BoloesCarousel } from "@/components/boloes-carousel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { WelcomeBanner } from "@/components/welcome-banner"
 import { subMinutes, isBefore } from 'date-fns'
+import { bolaoCategories, Category } from "@/lib/categories"
 
 type BolaoComDetalhes = Bolao & {
   teamADetails?: Team;
@@ -30,24 +31,22 @@ const useCategorizedBoloes = (boloes: BolaoComDetalhes[]) => {
         return isBefore(closingTime, lastChanceTime) && isBefore(now, closingTime);
     });
 
-    const brasileiros = boloes.filter(b => b.championshipDetails?.competitionType === 'national' && b.championshipDetails?.country === 'Brasil');
-    const series = ['A', 'B', 'C', 'D'].map(serie => ({
-        title: `Brasileirão Série ${serie}`,
-        boloes: brasileiros.filter(b => b.championshipDetails?.series === serie)
-    }));
-
-    const estaduais = boloes.filter(b => b.championshipDetails?.scope === 'state');
-    const amadores = boloes.filter(b => b.championshipDetails?.type === 'amateur');
-    const internacionais = boloes.filter(b => b.championshipDetails?.competitionType === 'international');
-
+    const customCategoryCarousels = (Object.keys(bolaoCategories) as Category[]).flatMap(category => {
+      const subcategories = bolaoCategories[category];
+      return subcategories.map(subcategory => {
+        const filteredBoloes = boloes.filter(b => b.categories?.includes(category) && b.subcategories?.includes(subcategory));
+        return {
+          title: `${category} - ${subcategory}`,
+          boloes: filteredBoloes
+        };
+      });
+    });
+    
     const categories = [
       { title: "Em Destaque", boloes: destaques },
       { title: "Última Chance", boloes: ultimaChance },
       { title: "Adicionados Recentemente", boloes: recentes },
-      ...series,
-      { title: "Campeonatos Estaduais", boloes: estaduais },
-      { title: "Futebol Internacional", boloes: internacionais },
-      { title: "Futebol Amador", boloes: amadores },
+      ...customCategoryCarousels
     ].filter(category => category.boloes.length > 0);
 
     return categories;
