@@ -209,10 +209,11 @@ export default function BoloesPage() {
                     const displayStatus = getDisplayStatus(bolao);
                     
                     let winnerInfo = '';
-                    if (displayStatus === 'Finalizado' && bolao.scoreTeam1 !== undefined && bolao.scoreTeam2 !== undefined) {
-                        if (bolao.scoreTeam1 > bolao.scoreTeam2) {
+                    // CORREÇÃO: Usando os campos corretos `finalScoreTeam1` e `finalScoreTeam2`
+                    if (displayStatus === 'Finalizado' && bolao.finalScoreTeam1 !== undefined && bolao.finalScoreTeam2 !== undefined) {
+                        if (bolao.finalScoreTeam1 > bolao.finalScoreTeam2) {
                             winnerInfo = `Vencedor: ${getTeamName(bolao.teamAId)}`;
-                        } else if (bolao.scoreTeam2 > bolao.scoreTeam1) {
+                        } else if (bolao.finalScoreTeam2 > bolao.finalScoreTeam1) {
                             winnerInfo = `Vencedor: ${getTeamName(bolao.teamBId)}`;
                         } else {
                             winnerInfo = 'Empate';
@@ -231,7 +232,7 @@ export default function BoloesPage() {
                             <TableCell>
                             {displayStatus === 'Finalizado' ? (
                                 <div>
-                                    <span className="font-bold">{`${bolao.scoreTeam1} x ${bolao.scoreTeam2}`}</span>
+                                    <span className="font-bold">{`${bolao.finalScoreTeam1} x ${bolao.finalScoreTeam2}`}</span>
                                     <p className="text-xs text-muted-foreground">{winnerInfo}</p>
                                 </div>
                             ) : (

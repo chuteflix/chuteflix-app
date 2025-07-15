@@ -26,8 +26,9 @@ export interface Bolao {
   initialPrize: number 
   status: "Disponível" | "Chutes Encerrados" | "Finalizado"
   closingTime: string;
-  scoreTeam1?: number;
-  scoreTeam2?: number;
+  // Campos do resultado final
+  finalScoreTeam1?: number;
+  finalScoreTeam2?: number;
 }
 
 const fromFirestore = (doc: DocumentData): Bolao => {
@@ -45,8 +46,9 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     initialPrize: data.initialPrize || 0, 
     status: data.status,
     closingTime: data.closingTime,
-    scoreTeam1: data.scoreTeam1,
-    scoreTeam2: data.scoreTeam2,
+    // Mapeando os novos campos
+    finalScoreTeam1: data.finalScoreTeam1,
+    finalScoreTeam2: data.finalScoreTeam2,
   }
 }
 

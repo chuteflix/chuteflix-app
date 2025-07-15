@@ -17,22 +17,21 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Bolao } from "@/services/boloes"
-import { updateBolao } from "@/services/boloes"
-import { getPalpitesByBolaoId } from "@/services/palpites"
-import { createTransaction, updateTransactionStatusByPalpiteId } from "@/services/transactions"
-import { updateUserBalance } from "@/services/users"
+// Importa a função centralizada que faz todo o trabalho pesado
+import { setResultAndProcessPalpites } from "@/services/palpites" 
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
 const resultSchema = z.object({
-    scoreTeam1: z.number().min(0),
-    scoreTeam2: z.number().min(0),
+    scoreTeam1: z.number().min(0, "O placar deve ser um número positivo."),
+    scoreTeam2: z.number().min(0, "O placar deve ser um número positivo."),
 });
 
 type ResultFormValues = z.infer<typeof resultSchema>;
 
 interface ResultFormModalProps {
-  bolao: Bolao & { teamA: string; teamB: string }
+  // Apenas o ID do bolão é necessário, mas manteremos o objeto para os nomes dos times
+  bolao: Bolao & { teamA: string; teamB: string } 
   onResultSubmitted: () => void
   children: React.ReactNode
 }
@@ -50,66 +49,31 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
     },
   });
 
+  // A lógica de onSubmit foi drasticamente simplificada
   const onSubmit = async (values: ResultFormValues) => {
     setIsSubmitting(true)
-
     try {
-      await updateBolao(bolao.id, {
-        scoreTeam1: values.scoreTeam1,
-        scoreTeam2: values.scoreTeam2,
-        status: "Finalizado",
-      })
+      // 1. Delega toda a lógica para a função de serviço
+      await setResultAndProcessPalpites(bolao.id, values.scoreTeam1, values.scoreTeam2);
+      
+      // 2. Exibe uma mensagem de sucesso genérica
+      toast({
+        title: "Operação Concluída!",
+        description: "O resultado do bolão foi registrado e os prêmios foram processados.",
+        variant: "success",
+      });
 
-      const approvedPalpites = await getPalpitesByBolaoId(bolao.id, "Aprovado")
-      if (approvedPalpites.length === 0) {
-        toast({ title: "Resultado Registrado!", description: "Nenhum palpite aprovado para este bolão.", variant: "info" })
-        onResultSubmitted()
-        setOpen(false)
-        return
-      }
+      // 3. Fecha o modal e atualiza a lista de bolões
+      onResultSubmitted();
+      setOpen(false);
 
-      const winners = approvedPalpites.filter(
-        p => p.scoreTeam1 === values.scoreTeam1 && p.scoreTeam2 === values.scoreTeam2
-      )
-
-      if (winners.length > 0) {
-        const totalCollected = bolao.fee * approvedPalpites.length
-        const totalPrize = (bolao.initialPrize || 0) + totalCollected * 0.9
-        const prizePerWinner = totalPrize / winners.length
-
-        for (const winner of winners) {
-          await updateTransactionStatusByPalpiteId(winner.id, "completed");
-          await createTransaction({
-            uid: winner.userId,
-            type: "prize_winning",
-            amount: prizePerWinner,
-            description: `Prêmio do bolão: ${bolao.name}`,
-            status: "completed",
-            metadata: { bolaoId: bolao.id, palpiteId: winner.id },
-          })
-          await updateUserBalance(winner.userId, prizePerWinner)
-        }
-        
-        toast({
-            title: "Resultado Registrado!",
-            description: `${winners.length} ganhador(es) foram premiados com R$ ${prizePerWinner.toFixed(2)} cada.`,
-            variant: "success",
-        })
-
-      } else {
-        toast({
-            title: "Resultado Registrado!",
-            description: "Nenhum ganhador para este bolão.",
-            variant: "info",
-        })
-      }
-
-      onResultSubmitted()
-      setOpen(false)
-
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao registrar resultado: ", error)
-      toast({ title: "Erro ao Salvar", description: "Não foi possível registrar o resultado. Tente novamente.", variant: "destructive" })
+      toast({ 
+        title: "Erro ao Salvar", 
+        description: error.message || "Não foi possível registrar o resultado. Tente novamente.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsSubmitting(false)
     }
@@ -124,11 +88,17 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="flex items-center justify-around space-x-4">
                     <FormField control={form.control} name="scoreTeam1" render={({ field }) => (
-                        <FormItem className="flex-1 text-center"><FormLabel>{bolao.teamA}</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
+                        <FormItem className="flex-1 text-center">
+                            <FormLabel className="font-semibold">{bolao.teamA}</FormLabel>
+                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
+                        </FormItem>
                     )}/>
-                    <div className="pt-8">X</div>
+                    <div className="pt-8 font-bold">X</div>
                     <FormField control={form.control} name="scoreTeam2" render={({ field }) => (
-                        <FormItem className="flex-1 text-center"><FormLabel>{bolao.teamB}</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl></FormItem>
+                        <FormItem className="flex-1 text-center">
+                            <FormLabel className="font-semibold">{bolao.teamB}</FormLabel>
+                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
+                        </FormItem>
                     )}/>
                 </div>
                 <DialogFooter>
