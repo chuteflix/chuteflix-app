@@ -1,0 +1,41 @@
+{
+  "rules": {
+    "version": "2",
+    "service": "firebase.storage",
+    "match": {
+      "b": "{bucket}",
+      "o": {
+        "match": {
+          "allPaths": "**",
+          "allow": "read, write: if false;"
+        },
+        "users": {
+          "match": {
+            "{userId}": {
+              "fileName": "{fileName}",
+              "allow": "read; write: if request.auth != null && request.auth.uid == userId && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');"
+            }
+          }
+        },
+        "receipts": {
+          "deposits": {
+            "match": {
+              "{userId}": {
+                "fileName": "{fileName}",
+                "allow": "read; write: if request.auth != null && request.auth.uid == userId && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');"
+              }
+            }
+          }
+        },
+        "teams": {
+          "match": {
+            "{teamId}": {
+              "fileName": "{fileName}",
+              "allow": "read; write: if request.auth != null && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');"
+            }
+          }
+        }
+      }
+    }
+  }
+}

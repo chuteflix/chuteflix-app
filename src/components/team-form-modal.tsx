@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -20,20 +21,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Team } from "@/services/teams"
+import { Team, TeamData } from "@/services/teams" // Importar TeamData
 import { getStates, getCitiesByState, IBGEState, IBGECity } from "@/services/ibge"
+import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
+import Image from "next/image"
 
 interface TeamFormModalProps {
   team?: Team | null
-  onSave: (data: Omit<Team, "id">, id?: string) => void
+  onSave: (data: TeamData, id?: string) => void // Assinatura atualizada
   children: React.ReactNode
 }
 
-const initialFormData: Omit<Team, "id"> = {
+// O tipo do estado do formulário agora é TeamData
+const initialFormData: TeamData = {
   name: "",
-  shieldUrl: "",
   state: "",
   city: "",
+  shieldFile: null,
 }
 
 export function TeamFormModal({
@@ -42,10 +47,13 @@ export function TeamFormModal({
   children,
 }: TeamFormModalProps) {
   const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState<Omit<Team, "id">>(initialFormData)
+  const [formData, setFormData] = useState<TeamData>(initialFormData)
+  const [currentShieldUrl, setCurrentShieldUrl] = useState<string | undefined>(team?.shieldUrl)
   const [states, setStates] = useState<IBGEState[]>([])
   const [cities, setCities] = useState<IBGECity[]>([])
   const [loadingCities, setLoadingCities] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const { toast } = useToast()
 
   const isEditing = !!team
 
@@ -60,12 +68,14 @@ export function TeamFormModal({
       if (isEditing && team) {
         setFormData({
             name: team.name,
-            shieldUrl: team.shieldUrl,
-            state: team.state,
-            city: team.city,
+            state: team.state || "",
+            city: team.city || "",
+            shieldFile: null,
         })
+        setCurrentShieldUrl(team.shieldUrl)
       } else {
         setFormData(initialFormData)
+        setCurrentShieldUrl(undefined)
       }
     }
   }, [open, isEditing, team])
@@ -74,24 +84,49 @@ export function TeamFormModal({
     if (formData.state) {
       const loadCities = async () => {
         setLoadingCities(true)
-        const ibgeCities = await getCitiesByState(formData.state!)
+        const ibgeCities = await getCitiesByState(formData.state)
         setCities(ibgeCities)
+        // Se estiver editando, não redefine a cidade
+        if (!isEditing || (isEditing && team?.state !== formData.state)) {
+            setFormData(prev => ({ ...prev, city: "" }))
+        }
         setLoadingCities(false)
       }
       loadCities()
     } else {
       setCities([])
     }
-  }, [formData.state])
+  }, [formData.state, isEditing, team?.state])
 
   const handleChange = (id: string, value: string) => {
     setFormData(prev => ({ ...prev, [id]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      setFormData(prev => ({ ...prev, shieldFile: file }))
+      // Preview da imagem selecionada
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setCurrentShieldUrl(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData, isEditing ? team.id : undefined)
-    setOpen(false)
+    setIsSaving(true)
+    try {
+      // O onSave agora lida com a lógica de upload
+      onSave(formData, isEditing ? team.id : undefined)
+      setOpen(false)
+    } catch (error) {
+      toast({ title: "Erro ao salvar o time", variant: "destructive" })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -101,16 +136,24 @@ export function TeamFormModal({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{isEditing ? "Editar Time" : "Adicionar Time"}</DialogTitle>
+            <DialogDescription>
+                Preencha as informações abaixo para {isEditing ? "editar o" : "adicionar um novo"} time.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Label>Nome do Time</Label>
-            <Input value={formData.name} onChange={e => handleChange("name", e.target.value)} />
+            <div className="flex items-center gap-4">
+              {currentShieldUrl && <Image src={currentShieldUrl} alt="Escudo" width={64} height={64} className="rounded-full" />}
+              <div className="grid gap-2 w-full">
+                <Label>Escudo do Time</Label>
+                <Input type="file" onChange={handleFileChange} />
+              </div>
+            </div>
 
-            <Label>URL do Escudo</Label>
-            <Input value={formData.shieldUrl} onChange={e => handleChange("shieldUrl", e.target.value)} />
+            <Label>Nome do Time</Label>
+            <Input value={formData.name} onChange={e => handleChange("name", e.target.value)} required />
             
             <Label>Estado</Label>
-            <Select onValueChange={value => handleChange("state", value)} value={formData.state}>
+            <Select onValueChange={value => handleChange("state", value)} value={formData.state} required>
               <SelectTrigger><SelectValue placeholder="Selecione um estado" /></SelectTrigger>
               <SelectContent>
                 {states.map(s => <SelectItem key={s.id} value={s.sigla}>{s.nome}</SelectItem>)}
@@ -118,7 +161,7 @@ export function TeamFormModal({
             </Select>
             
             <Label>Cidade</Label>
-            <Select onValueChange={value => handleChange("city", value)} value={formData.city} disabled={!formData.state || loadingCities}>
+            <Select onValueChange={value => handleChange("city", value)} value={formData.city} disabled={!formData.state || loadingCities} required>
               <SelectTrigger><SelectValue placeholder={loadingCities ? "Carregando..." : "Selecione uma cidade"} /></SelectTrigger>
               <SelectContent>
                 {cities.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
@@ -127,7 +170,10 @@ export function TeamFormModal({
 
           </div>
           <DialogFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

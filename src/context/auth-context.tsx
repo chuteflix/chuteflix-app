@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { User as AppUser } from '@/types'; // Importando nosso tipo de usuário
+import { User as AppUser } from '@/types';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -20,33 +20,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (!user) {
-        setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Se o usuário estiver logado, busca o perfil dele.
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
+          if (doc.exists()) {
+            setUserProfile({ id: doc.id, ...doc.data() } as AppUser);
+          } else {
+            setUserProfile(null);
+          }
+          setUser(firebaseUser);
+          // Só para de carregar DEPOIS de verificar o usuário e buscar o perfil.
+          setLoading(false); 
+        });
+        return unsubscribeFirestore;
+      } else {
+        // Se não houver usuário, encerra o carregamento.
+        setUser(null);
         setUserProfile(null);
+        setLoading(false);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      const userDocRef = doc(db, 'users', user.uid);
-      const unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
-          setUserProfile({ id: doc.id, ...doc.data() } as AppUser);
-        }
-        setLoading(false);
-      });
-      return () => unsubscribeFirestore();
-    }
-  }, [user]);
+  const value = { user, userProfile, loading };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {/* Garante que o app só será renderizado após o fim do carregamento */}
+      {!loading ? children : null}
     </AuthContext.Provider>
   );
 };

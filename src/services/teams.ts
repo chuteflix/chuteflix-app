@@ -5,12 +5,14 @@ import {
   addDoc,
   getDocs,
   doc,
-  getDoc, // Importar getDoc
+  getDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp,
   DocumentData,
+  setDoc,
 } from "firebase/firestore"
+import { uploadFile } from "./storage"
 
 export interface Team {
   id: string
@@ -18,6 +20,14 @@ export interface Team {
   shieldUrl?: string
   state?: string
   city?: string
+}
+
+// Tipos para os dados do formulário, incluindo o arquivo
+export type TeamData = {
+  name: string
+  state: string
+  city: string
+  shieldFile?: File | null
 }
 
 // Função para converter dados do Firestore
@@ -32,18 +42,32 @@ const fromFirestore = (doc: DocumentData): Team => {
   }
 }
 
-export const addTeam = async (data: Omit<Team, "id">): Promise<Team> => {
+// Adiciona um novo time com upload de escudo
+export const addTeam = async (data: TeamData): Promise<Team> => {
   try {
-    const docRef = await addDoc(collection(db, "teams"), {
-      ...data,
-      createdAt: serverTimestamp(),
-    })
-    return {
-      id: docRef.id,
-      ...data,
+    const { shieldFile, ...teamData } = data
+    let shieldUrl = ""
+
+    // 1. Gera uma referência de documento para obter um ID único
+    const newTeamRef = doc(collection(db, "teams"))
+    const teamId = newTeamRef.id
+
+    // 2. Se um escudo foi fornecido, faz o upload para o Storage
+    if (shieldFile) {
+      const path = `teams/${teamId}/shield.png`
+      shieldUrl = await uploadFile(shieldFile, path)
     }
+
+    // 3. Cria o documento no Firestore com os dados e a URL do escudo
+    const newTeam = {
+      ...teamData,
+      shieldUrl,
+      createdAt: serverTimestamp(),
+    }
+    await setDoc(newTeamRef, newTeam)
+
+    return { id: teamId, ...teamData, shieldUrl }
   } catch (error) {
-    console.error("Erro ao adicionar time: ", error)
     throw new Error("Não foi possível adicionar o time.")
   }
 }
@@ -53,12 +77,10 @@ export const getTeams = async (): Promise<Team[]> => {
     const querySnapshot = await getDocs(collection(db, "teams"))
     return querySnapshot.docs.map(fromFirestore)
   } catch (error) {
-    console.error("Erro ao buscar times: ", error)
     throw new Error("Não foi possível buscar os times.")
   }
 }
 
-// Nova função para buscar um time pelo ID
 export const getTeamById = async (id: string): Promise<Team | undefined> => {
     if (!id) return undefined;
     try {
@@ -69,20 +91,28 @@ export const getTeamById = async (id: string): Promise<Team | undefined> => {
       }
       return undefined;
     } catch (error) {
-      console.error("Erro ao buscar time pelo ID: ", error);
       throw new Error("Não foi possível buscar os dados do time.");
     }
 };
 
+// Atualiza um time, com upload de um novo escudo se fornecido
 export const updateTeam = async (
   id: string,
-  data: Partial<Omit<Team, "id">>
+  data: Partial<TeamData>
 ): Promise<void> => {
   try {
+    const { shieldFile, ...teamData } = data
+    const finalData: Partial<Team> = { ...teamData }
+
+    // Se um novo escudo foi fornecido, faz o upload
+    if (shieldFile) {
+      const path = `teams/${id}/shield.png`
+      finalData.shieldUrl = await uploadFile(shieldFile, path)
+    }
+
     const teamRef = doc(db, "teams", id)
-    await updateDoc(teamRef, data)
+    await updateDoc(teamRef, finalData)
   } catch (error) {
-    console.error("Erro ao atualizar time: ", error)
     throw new Error("Não foi possível atualizar o time.")
   }
 }
@@ -95,7 +125,6 @@ export const deleteTeam = async (id: string): Promise<void> => {
     const teamRef = doc(db, "teams", id)
     await deleteDoc(teamRef)
   } catch (error) {
-    console.error("Erro ao deletar o time: ", error)
     throw new Error("Não foi possível deletar o time.")
   }
 }

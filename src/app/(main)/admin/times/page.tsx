@@ -8,6 +8,7 @@ import {
   updateTeam,
   deleteTeam,
   Team,
+  TeamData, // Importar TeamData
 } from "@/services/teams"
 
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
+  CardDescription,
 } from "@/components/ui/card"
 import {
   Table,
@@ -40,11 +41,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Pencil, Trash2 } from "lucide-react"
 import { TeamFormModal } from "@/components/team-form-modal"
+import { useToast } from "@/hooks/use-toast"
 
 export default function TimesPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const fetchData = async () => {
     setLoading(true)
@@ -52,7 +54,11 @@ export default function TimesPage() {
       const teamsData = await getTeams()
       setTeams(teamsData)
     } catch (err) {
-      setError("Falha ao buscar dados.")
+      toast({
+        title: "Erro ao buscar times",
+        description: (err as Error).message,
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -62,25 +68,37 @@ export default function TimesPage() {
     fetchData()
   }, [])
 
-  const handleSave = async (data: Omit<Team, "id">, id?: string) => {
+  // A função de salvar agora usa TeamData
+  const handleSaveTeam = async (data: TeamData, id?: string) => {
     try {
       if (id) {
         await updateTeam(id, data)
+        toast({ title: "Sucesso", description: "Time atualizado com sucesso." })
       } else {
         await addTeam(data)
+        toast({ title: "Sucesso", description: "Time adicionado com sucesso." })
       }
-      fetchData()
+      fetchData() // Recarrega os dados após salvar
     } catch (err) {
-      setError("Falha ao salvar time.")
+      toast({
+        title: "Erro ao salvar time",
+        description: (err as Error).message,
+        variant: "destructive",
+      })
     }
   }
 
   const handleDelete = async (id: string) => {
     try {
       await deleteTeam(id)
-      fetchData()
+      toast({ title: "Sucesso", description: "Time deletado com sucesso." })
+      fetchData() // Recarrega os dados após deletar
     } catch (err) {
-      setError("Falha ao deletar time.")
+      toast({
+        title: "Erro ao deletar time",
+        description: (err as Error).message,
+        variant: "destructive",
+      })
     }
   }
 
@@ -95,7 +113,8 @@ export default function TimesPage() {
             Adicione, edite e visualize os times da plataforma.
           </p>
         </div>
-        <TeamFormModal onSave={handleSave}>
+        {/* Passa a nova função para o modal */}
+        <TeamFormModal onSave={handleSaveTeam}>
           <Button>Adicionar Time</Button>
         </TeamFormModal>
       </div>
@@ -116,9 +135,11 @@ export default function TimesPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={3} className="text-center">Carregando...</TableCell></TableRow>
-              ) : error ? (
-                <TableRow><TableCell colSpan={3} className="text-center text-red-500">{error}</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
               ) : teams.length > 0 ? (
                 teams.map(team => (
                   <TableRow key={team.id}>
@@ -129,23 +150,34 @@ export default function TimesPage() {
                       </Avatar>
                       {team.name}
                     </TableCell>
-                    <TableCell>{team.city ? `${team.city}, ${team.state}` : team.state || 'N/A'}</TableCell>
+                    <TableCell>
+                      {team.city ? `${team.city}, ${team.state}` : team.state || "N/A"}
+                    </TableCell>
                     <TableCell className="text-right">
-                      <TeamFormModal team={team} onSave={handleSave}>
-                        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+                      {/* O modal de edição também usa a nova função */}
+                      <TeamFormModal team={team} onSave={handleSaveTeam}>
+                        <Button variant="ghost" size="icon">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TeamFormModal>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+                            <AlertDialogDescription>
+                              Essa ação não pode ser desfeita.
+                            </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(team.id)}>Deletar</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(team.id)}>
+                              Deletar
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -153,7 +185,11 @@ export default function TimesPage() {
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={3} className="text-center">Nenhum time encontrado.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center">
+                    Nenhum time encontrado.
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

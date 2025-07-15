@@ -2,9 +2,8 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Regra para fotos de perfil:
-    // O usuário só pode escrever em sua própria pasta (ex: /users/USER_ID/profile.jpg)
-    // O arquivo deve ser uma imagem e ter menos de 5MB.
+
+    // Usuários só podem alterar a própria foto
     match /users/{userId}/{fileName} {
       allow read;
       allow write: if request.auth != null && request.auth.uid == userId
@@ -12,18 +11,23 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
 
-    // Regra para comprovantes de depósito:
+    // Usuários só podem enviar comprovantes para si mesmos
     match /receipts/deposits/{userId}/{fileName} {
-        allow read; // Administradores terão acesso via back-end
+        allow read;
         allow write: if request.auth != null && request.auth.uid == userId
                    && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
 
-    // Regras futuras para escudos de times, etc.
-    // ...
+    // Apenas administradores podem adicionar ou alterar escudos de times
+    match /teams/{teamId}/{fileName} {
+        allow read;
+        allow write: if request.auth != null && request.auth.token.admin == true
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
 
-    // Bloqueia todo o resto por padrão
+    // Nenhuma outra rota é acessível por padrão
     match /{allPaths=**} {
       allow read, write: if false;
     }
