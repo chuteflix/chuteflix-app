@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getPalpitesByStatus, Palpite, updatePalpiteStatus } from '@/services/palpites';
 import { getUserProfile, UserProfile } from '@/services/users';
 import { getBolaoById, Bolao } from '@/services/boloes';
 import { getTeamById, Team } from '@/services/teams';
 import { getChampionshipById, Championship } from '@/services/championships';
-import { Eye, Check, X } from 'lucide-react';
+import { Ban, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -18,15 +18,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type PalpiteComDetalhes = Palpite & {
@@ -38,23 +43,27 @@ type PalpiteComDetalhes = Palpite & {
   };
 };
 
-const statusParaFiltro = {
-  pendentes: "Pendente",
-  aprovados: "Aprovado",
-  recusados: "Recusado",
+const statusMap = {
+  "em-aberto": { label: "Em Aberto", variant: "secondary" },
+  "ganho": { label: "Ganhos", variant: "success" },
+  "perdido": { label: "Perdidos", variant: "destructive" },
+  "anulado": { label: "Anulados", variant: "warning" },
 };
+type StatusKey = keyof typeof statusMap;
 
 export default function AdminChutesPage() {
   const [palpites, setPalpites] = useState<PalpiteComDetalhes[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pendentes");
+  const [statusFilter, setStatusFilter] = useState<StatusKey>("em-aberto");
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   const fetchPalpites = async () => {
     setLoading(true);
     try {
-      const status = statusParaFiltro[activeTab as keyof typeof statusParaFiltro];
+      const status = statusMap[statusFilter].label as Palpite['status'];
       const palpitesData = await getPalpitesByStatus(status);
+      
       const palpitesComDetalhes = await Promise.all(
         palpitesData.map(async (palpite) => {
           const [user, bolao] = await Promise.all([
@@ -88,52 +97,75 @@ export default function AdminChutesPage() {
 
   useEffect(() => {
     fetchPalpites();
-  }, [activeTab, toast]);
+  }, [statusFilter, toast]);
 
-  const handleUpdateStatus = async (id: string, newStatus: "Aprovado" | "Recusado") => {
+  const handleAnular = async (id: string) => {
     try {
-      await updatePalpiteStatus(id, newStatus);
+      await updatePalpiteStatus(id, "Anulado");
       toast({
-        title: "Status atualizado!",
-        description: `O palpite foi ${newStatus === "Aprovado" ? "aprovado" : "recusado"}.`,
+        title: "Palpite Anulado!",
+        description: "O palpite foi anulado e o valor estornado ao usuário.",
         variant: "success",
       });
-      fetchPalpites(); // Recarrega os dados para refletir a mudança
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
+      fetchPalpites();
+    } catch (error: any) {
+      console.error("Erro ao anular palpite:", error);
       toast({
-        title: "Erro ao atualizar status",
-        description: "Não foi possível atualizar o palpite. Tente novamente.",
+        title: "Erro ao anular",
+        description: error.message || "Não foi possível anular o palpite.",
         variant: "destructive",
       });
     }
   };
   
+  // CORREÇÃO: A função foi movida para ANTES de ser usada.
   const getFullName = (user?: UserProfile) => {
-    if (!user) return "N/A";
-    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
-    return user.displayName || user.email || "Usuário desconhecido";
+    if (!user) return "Usuário Inválido";
+    return user.displayName || user.email || "Usuário Desconhecido";
   };
 
+  const filteredPalpites = useMemo(() => {
+    return palpites.filter(p =>
+      getFullName(p.user).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [palpites, searchTerm]);
 
   return (
     <div className="container mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Gerenciamento de Chutes</h1>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
-          <TabsTrigger value="aprovados">Aprovados</TabsTrigger>
-          <TabsTrigger value="recusados">Recusados</TabsTrigger>
-        </TabsList>
-        <TabsContent value={activeTab}>
-          <ChutesTable
-            palpites={palpites}
-            loading={loading}
-            onUpdateStatus={handleUpdateStatus}
-            getFullName={getFullName}
-          />
-        </TabsContent>
-      </Tabs>
+      <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Histórico de Chutes</h1>
+            <p className="text-muted-foreground">Monitore, audite e gerencie os palpites da plataforma.</p>
+          </div>
+      </div>
+      <div className="flex items-center gap-4 mb-4">
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusKey)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por status" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(statusMap).map(([key, {label}]) => (
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+                placeholder="Buscar por usuário ou email..." 
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+      </div>
+      <ChutesTable
+        palpites={filteredPalpites}
+        loading={loading}
+        onAnular={handleAnular}
+        getFullName={getFullName}
+      />
     </div>
   );
 }
@@ -141,14 +173,23 @@ export default function AdminChutesPage() {
 function ChutesTable({
   palpites,
   loading,
-  onUpdateStatus,
+  onAnular,
   getFullName,
 }: {
   palpites: PalpiteComDetalhes[];
   loading: boolean;
-  onUpdateStatus: (id: string, status: "Aprovado" | "Recusado") => void;
+  onAnular: (id: string) => void;
   getFullName: (user?: UserProfile) => string;
 }) {
+  const getStatusVariant = (status: PalpiteStatus) => {
+    switch (status) {
+      case 'Ganho': return 'success';
+      case 'Perdido': return 'destructive';
+      case 'Anulado': return 'warning';
+      default: return 'secondary';
+    }
+  }
+
   if (loading) {
     return (
         <Table>
@@ -157,8 +198,9 @@ function ChutesTable({
                     <TableHead>Usuário</TableHead>
                     <TableHead>Bolão</TableHead>
                     <TableHead>Palpite</TableHead>
-                    <TableHead>Comprovante</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -167,8 +209,9 @@ function ChutesTable({
                         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-20" /></TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -177,7 +220,7 @@ function ChutesTable({
   }
 
   if (palpites.length === 0) {
-    return <div className="text-center text-muted-foreground py-12">Nenhum chute encontrado nesta categoria.</div>;
+    return <div className="text-center text-muted-foreground py-12">Nenhum chute encontrado para os filtros selecionados.</div>;
   }
 
   return (
@@ -187,51 +230,44 @@ function ChutesTable({
           <TableHead>Usuário</TableHead>
           <TableHead>Bolão</TableHead>
           <TableHead>Palpite</TableHead>
-          <TableHead>Comprovante</TableHead>
-          <TableHead>Ações</TableHead>
+          <TableHead>Valor</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {palpites.map((palpite) => (
           <TableRow key={palpite.id}>
-            <TableCell>{getFullName(palpite.user)}</TableCell>
+            <TableCell className="font-medium">{getFullName(palpite.user)}</TableCell>
             <TableCell>{palpite.bolao?.name || "N/A"}</TableCell>
             <TableCell>
               {palpite.bolao?.teamA?.name} {palpite.scoreTeam1} x {palpite.scoreTeam2} {palpite.bolao?.teamB?.name}
             </TableCell>
+            <TableCell>R$ {palpite.amount.toFixed(2)}</TableCell>
             <TableCell>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={!palpite.receiptUrl}>
-                    <Eye className="mr-2 h-4 w-4" /> Ver
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Comprovante de Pagamento</DialogTitle>
-                  </DialogHeader>
-                  {palpite.receiptUrl ? (
-                    <img src={palpite.receiptUrl} alt="Comprovante" className="w-full" />
-                  ) : (
-                    <p>Nenhum comprovante enviado.</p>
-                  )}
-                </DialogContent>
-              </Dialog>
+                <Badge variant={getStatusVariant(palpite.status)}>
+                    {palpite.status}
+                </Badge>
             </TableCell>
-            <TableCell>
-              {palpite.status === 'Pendente' && (
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onUpdateStatus(palpite.id, "Aprovado")}>
-                    <Check className="mr-2 h-4 w-4" /> Aprovar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => onUpdateStatus(palpite.id, "Recusado")}
-                  >
-                    <X className="mr-2 h-4 w-4" /> Recusar
-                  </Button>
-                </div>
+            <TableCell className="text-right">
+              {(palpite.status === 'Em Aberto' || palpite.status === 'Aprovado') && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm"><Ban className="mr-2 h-4 w-4" /> Anular</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Anular este palpite?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. O valor de R$ {palpite.amount.toFixed(2)} será estornado ao saldo do usuário.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onAnular(palpite.id)}>Confirmar Anulação</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </TableCell>
           </TableRow>

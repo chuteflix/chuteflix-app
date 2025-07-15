@@ -7,8 +7,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useAuth } from "@/context/auth-context"
-import { functions } from "@/lib/firebase"
-import { httpsCallable } from "firebase/functions"
+import { placeChute } from "@/services/palpites"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -59,15 +58,13 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
 
     setIsSubmitting(true)
     try {
-      const placeChute = httpsCallable(functions, 'placeChute');
-      await placeChute({
-        bolaoId: bolao.id,
-        scoreTeam1: values.scoreTeam1,
-        scoreTeam2: values.scoreTeam2,
-        comment: values.comment,
-        fee: bolao.fee,
-        bolaoName: bolao.name,
-      });
+      // Corrigido: `bolao.fee` é passado como o quarto argumento, que a função `placeChute` espera como `amount`.
+      await placeChute(
+        bolao.id,
+        values.scoreTeam1,
+        values.scoreTeam2,
+        bolao.fee 
+      );
 
       toast({
         title: "Chute Realizado com Sucesso!",
@@ -76,6 +73,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
       })
       
       onClose()
+      form.reset();
       
     } catch (error: any) {
       console.error("Erro ao realizar o chute:", error)
