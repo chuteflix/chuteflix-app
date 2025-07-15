@@ -37,22 +37,23 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      const fullName = `${firstName} ${lastName}`;
+
       // Atualiza o perfil de autenticação do usuário
       await updateProfile(user, {
-        displayName: `${firstName} ${lastName}`
+        displayName: fullName
       });
 
       // Salva os dados adicionais no Firestore
       await setDoc(doc(db, "users", user.uid), {
         firstName,
         lastName,
+        name: fullName,
         phone,
         cpf,
         email: user.email,
         balance: 0,
       });
-      
-      localStorage.setItem('userFirstName', firstName);
 
       toast({
         title: "Conta criada com sucesso!",

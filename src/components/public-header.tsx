@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
@@ -20,25 +20,11 @@ import {
 import { LogOut, User as UserIcon, LayoutDashboard, Wallet } from "lucide-react"
 
 export function PublicHeader() {
-  const { user, loading, balance } = useAuth()
+  const { user, userProfile, loading } = useAuth()
   const router = useRouter()
-  const [firstName, setFirstName] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (user) {
-      const nameFromAuth = user.displayName?.split(" ")[0]
-      if (nameFromAuth) {
-        setFirstName(nameFromAuth)
-      } else {
-        const nameFromStorage = localStorage.getItem("userFirstName")
-        setFirstName(nameFromStorage)
-      }
-    }
-  }, [user])
 
   const handleLogout = async () => {
     await auth.signOut()
-    localStorage.removeItem("userFirstName")
     router.push("/login")
   }
   
@@ -49,6 +35,8 @@ export function PublicHeader() {
       element.scrollIntoView({ behavior: 'smooth' })
     }
   }
+  
+  const firstName = userProfile?.name?.split(" ")[0] || "";
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
@@ -71,13 +59,13 @@ export function PublicHeader() {
         
         {loading ? (
             <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse" />
-        ) : user ? (
+        ) : userProfile ? (
             <div className="flex items-center gap-4">
-                {balance !== null && (
+                {userProfile.balance !== null && (
                     <div className="flex items-center gap-2">
                         <Wallet className="h-5 w-5 text-primary" />
                         <span className="text-sm font-semibold text-foreground">
-                            {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {userProfile.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </span>
                     </div>
                 )}
@@ -85,13 +73,13 @@ export function PublicHeader() {
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                             <Avatar className="h-9 w-9">
-                                <AvatarImage src={user.photoURL || ""} alt={user.displayName || ""} />
-                                <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                                <AvatarImage src={userProfile.photoURL || ""} alt={userProfile.name || ""} />
+                                <AvatarFallback>{firstName.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                        <DropdownMenuLabel>{firstName}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                             <Link href="/inicio">

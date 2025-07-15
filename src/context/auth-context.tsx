@@ -1,31 +1,30 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { User as AppUser } from '@/types'; // Importando nosso tipo de usuário
 
 interface AuthContextType {
-  user: User | null;
+  user: FirebaseUser | null;
+  userProfile: AppUser | null;
   loading: boolean;
-  balance: number | null;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true, balance: null });
+const AuthContext = createContext<AuthContextType>({ user: null, userProfile: null, loading: true });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (!user) {
         setLoading(false);
-        setBalance(null);
+        setUserProfile(null);
       }
     });
 
@@ -37,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userDocRef = doc(db, 'users', user.uid);
       const unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
-          setBalance(doc.data().balance);
+          setUserProfile({ id: doc.id, ...doc.data() } as AppUser);
         }
         setLoading(false);
       });
@@ -46,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, balance }}>
+    <AuthContext.Provider value={{ user, userProfile, loading }}>
       {children}
     </AuthContext.Provider>
   );

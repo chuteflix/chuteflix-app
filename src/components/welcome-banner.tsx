@@ -8,22 +8,38 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function WelcomeBanner() {
-  const { user, balance, loading } = useAuth();
+  const { userProfile, loading } = useAuth();
 
-  const firstName = user?.displayName?.split(" ")[0] || "";
-
-  if (loading) {
+  // Programação defensiva final
+  if (loading || !userProfile) {
     return (
-        <div className="flex items-center gap-4">
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-8 w-32" />
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
+            </div>
+            <div className="flex items-center gap-2">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-28" />
+            </div>
         </div>
+        <div className="p-6 rounded-lg bg-card border border-border">
+            <div className="flex items-center gap-4">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div>
+                    <Skeleton className="h-4 w-24 mb-2" />
+                    <Skeleton className="h-8 w-32" />
+                </div>
+            </div>
+        </div>
+      </div>
     );
   }
-
-  if (!user) {
-    return null;
-  }
+  
+  // Acessa o nome de forma segura
+  const firstName = userProfile.name ? userProfile.name.split(" ")[0] : "Usuário";
+  const balance = userProfile.balance ?? 0;
 
   return (
     <div className="w-full">
@@ -56,7 +72,7 @@ export function WelcomeBanner() {
                 <div>
                     <p className="text-sm text-muted-foreground">Saldo disponível</p>
                     <p className="text-3xl font-bold text-foreground">
-                        {balance !== null ? balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : <Skeleton className="h-8 w-32" />}
+                        {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </p>
                 </div>
             </div>

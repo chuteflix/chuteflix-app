@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -23,7 +23,7 @@ import {
   Wallet,
   DollarSign,
   Banknote,
-  Send, // Ícone para saques
+  Send,
 } from 'lucide-react';
 
 import {
@@ -51,33 +51,20 @@ import { Logo } from '@/components/icons';
 import { ToastProvider } from '@/components/toast-provider';
 import { useAuth } from '@/context/auth-context';
 import { auth } from '@/lib/firebase';
-import { WelcomeBanner } from '@/components/welcome-banner';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, balance } = useAuth();
-  const [userFullName, setUserFullName] = useState<string | null>(null);
+  const { user, userProfile, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
-    } else if (user) {
-        if (user.displayName) {
-            setUserFullName(user.displayName);
-        } else {
-            const storedName = localStorage.getItem('userFullName');
-            if (storedName) {
-                setUserFullName(storedName);
-            }
-        }
     }
   }, [user, loading, router]);
 
   const handleLogout = async () => {
     await auth.signOut();
-    localStorage.removeItem('userFirstName');
-    localStorage.removeItem('userFullName');
     router.push('/login');
   };
 
@@ -117,7 +104,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return activeItem?.label || 'ChuteFlix';
   }
 
-  if (loading || !user) {
+  if (loading || !userProfile) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -155,11 +142,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <h2 className="text-xl font-semibold hidden sm:block">{getHeaderTitle()}</h2>
               </div>
               <div className="flex items-center gap-4">
-                {balance !== null && !isAdminPage && (
+                {userProfile.balance !== null && !isAdminPage && (
                     <div className="flex items-center gap-2">
                         <Wallet className="h-5 w-5 text-primary" />
                         <span className="text-sm font-semibold text-foreground">
-                            {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {userProfile.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </span>
                     </div>
                 )}
@@ -168,15 +155,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-muted">
                       <Avatar className="h-9 w-9 border-2 border-transparent group-hover:border-primary">
-                        <AvatarImage src={user.photoURL || ""} alt={user.displayName || ""} />
-                        <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={userProfile.photoURL || ""} alt={userProfile.name || ""} />
+                        <AvatarFallback>{userProfile.name?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56 bg-card border-border text-foreground" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{userFullName || 'Usuário'}</p>
+                        <p className="text-sm font-medium leading-none">{userProfile.name || 'Usuário'}</p>
                         <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                       </div>
                     </DropdownMenuLabel>
