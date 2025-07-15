@@ -18,15 +18,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Check, X, Loader2 } from 'lucide-react';
 import { getUserProfile, UserProfile } from '@/services/users';
+import { Transaction } from '@/services/transactions';
 
-interface WithdrawalRequest {
-  id: string;
-  userId: string;
-  amount: number;
-  pixKey: string;
-  status: 'pendente' | 'concluido' | 'recusado';
-  createdAt: any;
-  user?: UserProfile;
+type WithdrawalRequest = Transaction & {
+    user?: UserProfile;
 }
 
 export default function AdminWithdrawalsPage() {
@@ -36,13 +31,17 @@ export default function AdminWithdrawalsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collection(db, "withdrawals"), where("status", "==", "pendente"));
+    const q = query(
+        collection(db, "transactions"), 
+        where("type", "==", "withdrawal"),
+        where("status", "==", "pending")
+    );
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       setLoading(true);
       const requestsData = await Promise.all(
         querySnapshot.docs.map(async (doc) => {
           const data = doc.data() as WithdrawalRequest;
-          const user = await getUserProfile(data.userId);
+          const user = await getUserProfile(data.uid);
           return { ...data, id: doc.id, user };
         })
       );
@@ -58,9 +57,7 @@ export default function AdminWithdrawalsPage() {
     try {
       const confirmWithdrawal = httpsCallable(functions, 'confirmWithdrawal');
       await confirmWithdrawal({
-        withdrawalId: req.id,
-        userId: req.userId,
-        amount: req.amount,
+        transactionId: req.id,
       });
       toast({ title: "Saque confirmado com sucesso!", variant: "success" });
     } catch (error: any) {
@@ -73,11 +70,11 @@ export default function AdminWithdrawalsPage() {
   const handleDecline = async (id: string) => {
     setSubmitting(id);
     try {
-        const requestRef = doc(db, "withdrawals", id);
-        await updateDoc(requestRef, { status: 'recusado' });
+        const declineTransaction = httpsCallable(functions, 'declineTransaction');
+        await declineTransaction({ transactionId: id });
         toast({ title: "Solicitação recusada.", variant: "info" });
-    } catch(error) {
-        toast({ title: "Erro ao recusar solicitação.", variant: "destructive" });
+    } catch(error: any) {
+        toast({ title: "Erro ao recusar solicitação.", description: error.message, variant: "destructive" });
     } finally {
         setSubmitting(null);
     }
@@ -107,9 +104,9 @@ export default function AdminWithdrawalsPage() {
               ) : requests.length > 0 ? (
                 requests.map((req) => (
                   <TableRow key={req.id}>
-                    <TableCell>{req.user?.displayName || req.user?.email || req.userId}</TableCell>
-                    <TableCell>{req.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
-                    <TableCell>{req.pixKey}</TableCell>
+                    <TableCell>{req.user?.name || req.user?.email || req.uid}</TableCell>
+                    <TableCell>{Math.abs(req.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
+                    <TableCell>{req.metadata?.pixKey}</TableCell>
                     <TableCell className="flex gap-2">
                       <Button size="sm" onClick={() => handleConfirm(req)} disabled={submitting === req.id}>
                         {submitting === req.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} Concluído

@@ -4,8 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { getSettings, Settings } from "@/services/settings";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { createTransaction } from "@/services/transactions";
 import { uploadFile } from "@/services/storage";
 
 import { Button } from "@/components/ui/button";
@@ -51,7 +50,6 @@ export default function RechargePage() {
       toast({ title: "Você precisa estar logado.", variant: "destructive" });
       return;
     }
-    console.log("Iniciando envio para o usuário:", user.uid); // Log de diagnóstico
     if (!receiptFile || !amount) {
       toast({ title: "Preencha o valor e anexe o comprovante.", variant: "destructive" });
       return;
@@ -61,12 +59,13 @@ export default function RechargePage() {
     try {
       const receiptUrl = await uploadFile(receiptFile, `receipts/deposits/${user.uid}/${Date.now()}_${receiptFile.name}`);
 
-      await addDoc(collection(db, "deposits"), {
-        userId: user.uid,
+      await createTransaction({
+        uid: user.uid,
+        type: "deposit",
         amount: parseFloat(amount),
-        receiptUrl,
-        status: "pendente",
-        createdAt: serverTimestamp(),
+        description: "Depósito via PIX",
+        status: "pending",
+        metadata: { receiptUrl },
       });
 
       toast({

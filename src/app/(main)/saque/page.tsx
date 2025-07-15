@@ -3,8 +3,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/context/auth-context";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,26 +35,21 @@ export default function WithdrawPage() {
 
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, "withdrawals"), {
-        userId: user.uid,
-        amount: parseFloat(amount),
-        pixKey,
-        status: "pendente",
-        createdAt: serverTimestamp(),
-      });
+      const requestWithdrawal = httpsCallable(functions, 'requestWithdrawal');
+      await requestWithdrawal({ amount: parseFloat(amount), pixKey });
 
       toast({
         title: "Solicitação Enviada!",
         description: "Sua solicitação de saque foi enviada e será processada em breve.",
         variant: "success",
       });
-
+      
       setAmount("");
       setPixKey("");
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao enviar solicitação de saque:", error);
-      toast({ title: "Erro ao enviar solicitação.", variant: "destructive" });
+      toast({ title: "Erro ao enviar solicitação.", description: error.message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

@@ -25,14 +25,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { getUserProfile, UserProfile } from '@/services/users';
+import { Transaction } from '@/services/transactions';
 
-interface DepositRequest {
-  id: string;
-  userId: string;
-  amount: number;
-  receiptUrl: string;
-  status: 'pendente' | 'aprovado' | 'recusado';
-  createdAt: any;
+type DepositRequest = Transaction & {
   user?: UserProfile;
 }
 
@@ -43,13 +38,17 @@ export default function AdminDepositsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collection(db, "deposits"), where("status", "==", "pendente"));
+    const q = query(
+      collection(db, "transactions"), 
+      where("type", "==", "deposit"),
+      where("status", "==", "pending")
+    );
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       setLoading(true);
       const requestsData = await Promise.all(
         querySnapshot.docs.map(async (doc) => {
           const data = doc.data() as DepositRequest;
-          const user = await getUserProfile(data.userId);
+          const user = await getUserProfile(data.uid);
           return { ...data, id: doc.id, user };
         })
       );
@@ -65,9 +64,8 @@ export default function AdminDepositsPage() {
     try {
       const approveDeposit = httpsCallable(functions, 'approveDeposit');
       await approveDeposit({
-        depositId: req.id,
-        userId: req.userId,
-        amount: req.amount,
+        transactionId: req.id,
+        userId: req.uid,
       });
       toast({ title: "Depósito aprovado com sucesso!", variant: "success" });
     } catch (error: any) {
@@ -80,8 +78,8 @@ export default function AdminDepositsPage() {
   const handleDecline = async (id: string) => {
     setSubmitting(id);
     try {
-        const requestRef = doc(db, "deposits", id);
-        await updateDoc(requestRef, { status: 'recusado' });
+        const requestRef = doc(db, "transactions", id);
+        await updateDoc(requestRef, { status: 'failed' });
         toast({ title: "Solicitação recusada.", variant: "info" });
     } catch(error) {
         toast({ title: "Erro ao recusar solicitação.", variant: "destructive" });
@@ -114,14 +112,14 @@ export default function AdminDepositsPage() {
               ) : requests.length > 0 ? (
                 requests.map((req) => (
                   <TableRow key={req.id}>
-                    <TableCell>{req.user?.displayName || req.user?.email || req.userId}</TableCell>
+                    <TableCell>{req.user?.name || req.user?.email || req.uid}</TableCell>
                     <TableCell>{req.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                     <TableCell>
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4" /> Ver</Button>
                         </DialogTrigger>
-                        <DialogContent><DialogHeader><DialogTitle>Comprovante</DialogTitle></DialogHeader><img src={req.receiptUrl} alt="Comprovante" /></DialogContent>
+                        <DialogContent><DialogHeader><DialogTitle>Comprovante</DialogTitle></DialogHeader><img src={req.metadata?.receiptUrl} alt="Comprovante" /></DialogContent>
                       </Dialog>
                     </TableCell>
                     <TableCell className="flex gap-2">
