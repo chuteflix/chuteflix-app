@@ -1,6 +1,6 @@
 
 import { db, functions } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc, DocumentData, getCountFromServer, orderBy, limit, writeBatch } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, DocumentData, getCountFromServer, orderBy, limit, writeBatch } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { getBolaoById, Bolao } from "./boloes";
 import { getTeamById, Team } from "./teams";
