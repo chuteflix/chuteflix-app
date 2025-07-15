@@ -8,7 +8,7 @@ import { useAuth } from "@/context/auth-context"
 import { getBolaoById, Bolao } from "@/services/boloes"
 import { getTeamById, Team } from "@/services/teams"
 import { getChampionshipById, Championship } from "@/services/championships"
-import { getLatestPalpitesWithUserData, getParticipantCount, PalpiteComDetalhes } from "@/services/palpites"
+import { getPalpitesByBolaoId, getParticipantCount, PalpiteComDetalhes } from "@/services/palpites"
 import { PalpiteModal } from "@/components/palpite-modal"
 
 import { Button } from "@/components/ui/button"
@@ -53,7 +53,7 @@ export default function BolaoPage() {
         getTeamById(bolaoDoc.teamAId),
         getTeamById(bolaoDoc.teamBId),
         getChampionshipById(bolaoDoc.championshipId),
-        getLatestPalpitesWithUserData(id),
+        getPalpitesByBolaoId(id),
         getParticipantCount(id)
       ])
 

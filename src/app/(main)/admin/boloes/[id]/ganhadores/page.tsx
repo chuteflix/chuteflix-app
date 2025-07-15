@@ -5,8 +5,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { getBolaoById, Bolao } from "@/services/boloes"
-import { getPalpitesByBolaoId, Palpite } from "@/services/palpites"
-import { getUserProfile, UserProfile } from "@/services/users"
+import { getPalpitesByBolaoId, PalpiteComDetalhes } from "@/services/palpites"
 import {
   Table,
   TableBody,
@@ -21,18 +20,13 @@ import { ArrowLeft, Trophy } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-type Winner = {
-  user: UserProfile;
-  palpite: Palpite;
-};
-
 export default function GanhadoresPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
 
   const [bolao, setBolao] = useState<Bolao | null>(null)
-  const [winners, setWinners] = useState<Winner[]>([])
+  const [winners, setWinners] = useState<PalpiteComDetalhes[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -47,21 +41,13 @@ export default function GanhadoresPage() {
         }
         setBolao(bolaoData);
 
-        const palpites = await getPalpitesByBolaoId(id, "Aprovado");
+        const palpites = await getPalpitesByBolaoId(id);
         
         const winnerPalpites = palpites.filter(
-          p => p.scoreTeam1 === bolaoData.scoreTeam1 && p.scoreTeam2 === bolaoData.scoreTeam2
+          p => p.status === "Ganho"
         );
 
-        const winnersData: Winner[] = await Promise.all(
-          winnerPalpites.map(async palpite => {
-            const user = await getUserProfile(palpite.userId);
-            if (!user) throw new Error(`Usuário não encontrado para o palpite ${palpite.id}`);
-            return { user, palpite };
-          })
-        );
-        
-        setWinners(winnersData);
+        setWinners(winnerPalpites);
 
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -98,7 +84,7 @@ export default function GanhadoresPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Trophy /> Ganhadores do Bolão</CardTitle>
           <CardDescription>
-            Relação de todos os usuários que acertaram o placar de {bolao?.scoreTeam1} x {bolao?.scoreTeam2} no bolão "{bolao?.name}".
+            Relação de todos os usuários que acertaram o placar de {bolao?.finalScoreTeam1} x {bolao?.finalScoreTeam2} no bolão "{bolao?.name}".
           </CardDescription>
           <div className="pt-4">
             <p><strong>Prêmio Total:</strong> {totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
@@ -117,11 +103,11 @@ export default function GanhadoresPage() {
             </TableHeader>
             <TableBody>
               {winners.length > 0 ? (
-                winners.map(({ user, palpite }) => (
-                  <TableRow key={user.uid}>
-                    <TableCell>{user.displayName || `${user.firstName} ${user.lastName}`}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.pixKey || "Não cadastrada"}</TableCell>
+                winners.map((palpite) => (
+                  <TableRow key={palpite.id}>
+                    <TableCell>{palpite.user?.name}</TableCell>
+                    <TableCell>{palpite.user?.email}</TableCell>
+                    <TableCell>{palpite.user?.pixKey || "Não cadastrada"}</TableCell>
                     <TableCell>{`${palpite.scoreTeam1} x ${palpite.scoreTeam2}`}</TableCell>
                   </TableRow>
                 ))

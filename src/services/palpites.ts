@@ -105,23 +105,35 @@ export const setResultAndProcessPalpites = async (bolaoId: string, scoreTeam1: n
     const palpitesQuery = query(collection(db, collectionName), where('bolaoId', '==', bolaoId), where('status', 'in', ['Em Aberto', 'Aprovado']));
     const palpitesSnapshot = await getDocs(palpitesQuery);
 
-    const winnerPromises: Promise<any>[] = [];
+    const winners: Palpite[] = [];
+    let totalBetAmount = 0;
 
     palpitesSnapshot.forEach(palpiteDoc => {
         const palpite = fromFirestore(palpiteDoc);
-        const palpiteRef = palpiteDoc.ref;
-
+        totalBetAmount += palpite.amount;
         if (palpite.scoreTeam1 === scoreTeam1 && palpite.scoreTeam2 === scoreTeam2) {
-            batch.update(palpiteRef, { status: 'Ganho' });
-            const payWinnerFunction = httpsCallable(functions, 'payWinner');
-            winnerPromises.push(payWinnerFunction({ userId: palpite.userId, bolaoId: bolaoId }));
+            winners.push(palpite);
         } else {
-            batch.update(palpiteRef, { status: 'Perdido' });
+            batch.update(palpiteDoc.ref, { status: 'Perdido' });
         }
     });
+
+    if (winners.length > 0) {
+        const bolaoDoc = await getDoc(bolaoRef);
+        const bolaoData = bolaoDoc.data() as Bolao;
+        const totalPrize = (bolaoData.initialPrize || 0) + (totalBetAmount * 0.9);
+        const prizePerWinner = totalPrize / winners.length;
+
+        const payWinnerFunction = httpsCallable(functions, 'payWinner');
+        const winnerPromises = winners.map(winner => {
+            batch.update(doc(db, collectionName, winner.id), { status: 'Ganho' });
+            return payWinnerFunction({ userId: winner.userId, bolaoId: bolaoId, prizeAmount: prizePerWinner });
+        });
+        
+        await Promise.all(winnerPromises);
+    }
     
     await batch.commit();
-    await Promise.all(winnerPromises);
 };
 
 
@@ -157,14 +169,13 @@ export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteCom
     return palpitesComDetalhes;
 }
 
-export const getLatestPalpitesWithUserData = async (bolaoId: string): Promise<PalpiteComDetalhes[]> => {
+export const getPalpitesByBolaoId = async (bolaoId: string): Promise<PalpiteComDetalhes[]> => {
     if (!bolaoId) return [];
     try {
         const q = query(
             collection(db, "chutes"), // Corrigido
             where("bolaoId", "==", bolaoId),
-            orderBy("createdAt", "desc"),
-            limit(10)
+            orderBy("createdAt", "desc")
         );
 
         const querySnapshot = await getDocs(q);

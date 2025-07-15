@@ -21,11 +21,20 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
     }
 
     const userRef = db.collection('users').doc(userId);
-    const palpiteRef = db.collection(CHUTES_COLLECTION).doc(); // Corrigido
-    const transactionRef = db.collection('transactions').doc();
     const bolaoRef = db.collection('boloes').doc(bolaoId);
 
     return db.runTransaction(async (transaction) => {
+        const palpiteQuery = db.collection(CHUTES_COLLECTION)
+            .where('userId', '==', userId)
+            .where('bolaoId', '==', bolaoId)
+            .where('scoreTeam1', '==', scoreTeam1)
+            .where('scoreTeam2', '==', scoreTeam2);
+            
+        const existingPalpite = await transaction.get(palpiteQuery);
+        if (!existingPalpite.empty) {
+            throw new functions.https.HttpsError('already-exists', 'Você já fez uma aposta com este placar para este bolão.');
+        }
+
         const [userDoc, bolaoDoc] = await Promise.all([
             transaction.get(userRef),
             transaction.get(bolaoRef)
@@ -45,6 +54,7 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
         const newBalance = currentBalance - amount;
         transaction.update(userRef, { balance: newBalance });
 
+        const palpiteRef = db.collection(CHUTES_COLLECTION).doc();
         transaction.set(palpiteRef, {
             id: palpiteRef.id,
             userId,
@@ -53,9 +63,10 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
             scoreTeam2,
             amount,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            status: "Em Aberto", // Status correto
+            status: "Em Aberto", 
         });
         
+        const transactionRef = db.collection('transactions').doc();
         transaction.set(transactionRef, {
             uid: userId,
             type: 'bet_placement',
@@ -81,7 +92,7 @@ exports.anularChute = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('invalid-argument', 'O ID do palpite é obrigatório.');
     }
 
-    const palpiteRef = db.collection(CHUTES_COLLECTION).doc(palpiteId); // Corrigido
+    const palpiteRef = db.collection(CHUTES_COLLECTION).doc(palpiteId); 
 
     return db.runTransaction(async (transaction) => {
         const palpiteDoc = await transaction.get(palpiteRef);
@@ -90,7 +101,7 @@ exports.anularChute = functions.https.onCall(async (data, context) => {
         }
 
         const palpiteData = palpiteDoc.data()!;
-        if (palpiteData.status !== "Em Aberto" && palpiteData.status !== "Aprovado") { // Retrocompatibilidade
+        if (palpiteData.status !== "Em Aberto" && palpiteData.status !== "Aprovado") { 
             throw new functions.https.HttpsError('failed-precondition', `Não é possível anular um palpite com status "${palpiteData.status}".`);
         }
         
@@ -124,36 +135,27 @@ exports.payWinner = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('permission-denied', 'Operação restrita.');
     }
     
-    const { userId, bolaoId } = data;
-    const bolaoRef = db.collection('boloes').doc(bolaoId);
+    const { userId, bolaoId, prizeAmount } = data;
     const userRef = db.collection('users').doc(userId);
     const transactionRef = db.collection('transactions').doc();
     
     return db.runTransaction(async (transaction) => {
-        const [bolaoDoc, userDoc] = await Promise.all([
-            transaction.get(bolaoRef),
-            transaction.get(userRef),
-        ]);
+        const userDoc = await transaction.get(userRef);
 
-        if (!bolaoDoc.exists || !userDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Bolão ou usuário não encontrado.');
-        }
-        
-        const prize = bolaoDoc.data()?.prize;
-        if (typeof prize !== 'number' || prize <= 0) {
-            throw new functions.https.HttpsError('internal', 'O valor do prêmio é inválido.');
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Usuário não encontrado.');
         }
         
         const currentBalance = userDoc.data()?.balance || 0;
-        const newBalance = currentBalance + prize;
+        const newBalance = currentBalance + prizeAmount;
         
         transaction.update(userRef, { balance: newBalance });
         
         transaction.set(transactionRef, {
             uid: userId,
             type: 'prize_payment',
-            amount: prize,
-            description: `Prêmio do bolão: ${bolaoDoc.data()?.name || 'N/A'}`,
+            amount: prizeAmount,
+            description: `Prêmio do bolão: ${bolaoId}`,
             status: 'completed',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             metadata: { bolaoId },
