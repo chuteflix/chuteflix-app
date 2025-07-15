@@ -14,12 +14,13 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Loader2, Upload } from "lucide-react";
+import { NumericFormat } from "react-number-format";
 
 export default function RechargePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +55,10 @@ export default function RechargePage() {
       toast({ title: "Preencha o valor e anexe o comprovante.", variant: "destructive" });
       return;
     }
+    if (settings?.minDeposit && amount < settings.minDeposit) {
+      toast({ title: `O valor mínimo para depósito é de R$ ${settings.minDeposit.toFixed(2)}`, variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -62,7 +67,7 @@ export default function RechargePage() {
       await createTransaction({
         uid: user.uid,
         type: "deposit",
-        amount: parseFloat(amount),
+        amount: amount,
         description: "Depósito via PIX",
         status: "pending",
         metadata: { receiptUrl },
@@ -74,7 +79,7 @@ export default function RechargePage() {
         variant: "success",
       });
 
-      setAmount("");
+      setAmount(undefined);
       setReceiptFile(null);
 
     } catch (error) {
@@ -125,12 +130,14 @@ export default function RechargePage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="amount">Valor da Recarga (R$)</Label>
-              <Input
+              <NumericFormat
                 id="amount"
-                type="number"
-                placeholder="Ex: 50,00"
+                customInput={Input}
+                thousandSeparator="."
+                decimalSeparator=","
+                prefix="R$ "
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onValueChange={(values) => setAmount(values.floatValue)}
               />
             </div>
             <div className="space-y-2">

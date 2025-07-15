@@ -1,23 +1,42 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
+import { getSettings, Settings } from "@/services/settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
+import { NumericFormat } from "react-number-format";
 
 export default function WithdrawPage() {
-  const { user, balance } = useAuth();
+  const { user, balance, refreshBalance } = useAuth();
   const { toast } = useToast();
-  const [amount, setAmount] = useState("");
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [pixKey, setPixKey] = useState("");
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setIsLoadingSettings(true);
+      try {
+        const settingsData = await getSettings();
+        setSettings(settingsData);
+      } catch (error) {
+        toast({ title: "Erro ao carregar configurações.", variant: "destructive" });
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    };
+    fetchSettings();
+  }, [toast]);
 
   const handleSubmitRequest = async () => {
     if (!user) {
@@ -28,15 +47,19 @@ export default function WithdrawPage() {
       toast({ title: "Preencha o valor e sua chave PIX.", variant: "destructive" });
       return;
     }
-    if (balance === null || parseFloat(amount) > balance) {
+    if (balance === null || amount > balance) {
         toast({ title: "Saldo insuficiente.", variant: "destructive" });
         return;
+    }
+    if (settings?.minWithdrawal && amount < settings.minWithdrawal) {
+      toast({ title: `O valor mínimo para saque é de R$ ${settings.minWithdrawal.toFixed(2)}`, variant: "destructive" });
+      return;
     }
 
     setIsSubmitting(true);
     try {
       const requestWithdrawal = httpsCallable(functions, 'requestWithdrawal');
-      await requestWithdrawal({ amount: parseFloat(amount), pixKey });
+      await requestWithdrawal({ amount, pixKey });
 
       toast({
         title: "Solicitação Enviada!",
@@ -44,7 +67,7 @@ export default function WithdrawPage() {
         variant: "success",
       });
       
-      setAmount("");
+      setAmount(undefined);
       setPixKey("");
 
     } catch (error: any) {
@@ -68,12 +91,14 @@ export default function WithdrawPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Valor do Saque (R$)</Label>
-            <Input
+            <NumericFormat
               id="amount"
-              type="number"
-              placeholder="Ex: 50,00"
+              customInput={Input}
+              thousandSeparator="."
+              decimalSeparator=","
+              prefix="R$ "
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onValueChange={(values) => setAmount(values.floatValue)}
             />
           </div>
           <div className="space-y-2">
@@ -86,7 +111,7 @@ export default function WithdrawPage() {
               onChange={(e) => setPixKey(e.target.value)}
             />
           </div>
-          <Button onClick={handleSubmitRequest} disabled={isSubmitting} className="w-full">
+          <Button onClick={handleSubmitRequest} disabled={isSubmitting || isLoadingSettings} className="w-full">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             {isSubmitting ? "Enviando..." : "Enviar Solicitação de Saque"}
           </Button>

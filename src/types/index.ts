@@ -57,4 +57,6 @@ export interface Settings {
   pixKey: string;
   qrCodeUrl: string;
   whatsappNumber: string;
+  minDeposit: number;
+  minWithdrawal: number;
 }

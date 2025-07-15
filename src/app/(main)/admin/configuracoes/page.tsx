@@ -22,10 +22,13 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { IMaskInput } from "react-imask";
+import { NumericFormat } from "react-number-format";
 
 const settingsSchema = z.object({
   pixKey: z.string().min(1, "A chave PIX é obrigatória."),
   whatsappNumber: z.string().min(1, "O número de WhatsApp é obrigatório."),
+  minDeposit: z.number().min(0, "O valor mínimo de depósito deve ser positivo."),
+  minWithdrawal: z.number().min(0, "O valor mínimo de saque deve ser positivo."),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -48,6 +51,8 @@ export default function SettingsPage() {
         if (settings) {
           setValue("pixKey", settings.pixKey);
           setValue("whatsappNumber", settings.whatsappNumber);
+          setValue("minDeposit", settings.minDeposit || 0);
+          setValue("minWithdrawal", settings.minWithdrawal || 0);
           if (settings.qrCodeUrl) {
             setQrCodePreview(settings.qrCodeUrl);
           }
@@ -128,6 +133,44 @@ export default function SettingsPage() {
                 {errors.whatsappNumber && <p className="text-red-500 text-sm">{errors.whatsappNumber.message}</p>}
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="minDeposit">Depósito Mínimo (R$)</Label>
+                <Controller
+                  name="minDeposit"
+                  control={control}
+                  render={({ field }) => (
+                    <NumericFormat
+                      customInput={Input}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="R$ "
+                      value={field.value}
+                      onValueChange={(values) => field.onChange(values.floatValue)}
+                    />
+                  )}
+                />
+                {errors.minDeposit && <p className="text-red-500 text-sm">{errors.minDeposit.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="minWithdrawal">Saque Mínimo (R$)</Label>
+                <Controller
+                  name="minWithdrawal"
+                  control={control}
+                  render={({ field }) => (
+                    <NumericFormat
+                      customInput={Input}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="R$ "
+                      value={field.value}
+                      onValueChange={(values) => field.onChange(values.floatValue)}
+                    />
+                  )}
+                />
+                {errors.minWithdrawal && <p className="text-red-500 text-sm">{errors.minWithdrawal.message}</p>}
+              </div>
+            </div>
 
             <div className="grid gap-2">
               <Label htmlFor="qrCode">QR Code</Label>
