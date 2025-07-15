@@ -105,7 +105,7 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
 });
 
 exports.approveDeposit = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.admin) { // Assumindo que você tem um custom claim 'admin'
+    if (!context.auth || !context.auth.token.admin) { 
         throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem aprovar depósitos.');
     }
 
@@ -137,5 +137,45 @@ exports.approveDeposit = functions.https.onCall(async (data, context) => {
         });
 
         return { success: true, message: "Depósito aprovado com sucesso!" };
+    });
+});
+
+exports.confirmWithdrawal = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.admin) {
+        throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem confirmar saques.');
+    }
+
+    const { withdrawalId, userId, amount } = data;
+
+    const withdrawalRef = db.collection('withdrawals').doc(withdrawalId);
+    const userRef = db.collection('users').doc(userId);
+    const transactionRef = db.collection('transactions').doc();
+
+    return db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Usuário não encontrado.');
+        }
+
+        const currentBalance = userDoc.data()?.balance || 0;
+        if (currentBalance < amount) {
+            throw new functions.https.HttpsError('failed-precondition', 'Saldo insuficiente para este saque.');
+        }
+
+        const newBalance = currentBalance - amount;
+
+        transaction.update(withdrawalRef, { status: 'concluido' });
+        transaction.update(userRef, { balance: newBalance });
+        transaction.set(transactionRef, {
+            uid: userId,
+            type: 'withdrawal',
+            amount: -amount,
+            description: `Saque confirmado`,
+            status: 'completed',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            metadata: { withdrawalId },
+        });
+
+        return { success: true, message: "Saque confirmado com sucesso!" };
     });
 });

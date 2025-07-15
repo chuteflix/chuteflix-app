@@ -22,7 +22,8 @@ import {
   TicketCheck,
   Wallet,
   DollarSign,
-  Banknote, // Ícone para depósitos
+  Banknote,
+  Send, // Ícone para saques
 } from 'lucide-react';
 
 import {
@@ -84,6 +85,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { href: '/inicio', label: 'Início', icon: Home, exact: true },
     { href: '/meus-chutes', label: 'Meus Chutes', icon: History },
     { href: '/recarga', label: 'Recarregar', icon: DollarSign },
+    { href: '/saque', label: 'Sacar', icon: Send },
     { href: '/transacoes', label: 'Minhas Transações', icon: ArrowRightLeft },
     { href: '/settings', label: 'Chave PIX', icon: KeyRound },
   ];
@@ -92,7 +94,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { href: '/admin', label: 'Dashboard', icon: LayoutGrid, exact: true },
     { href: '/admin/boloes', label: 'Bolões', icon: Shield },
     { href: '/admin/chutes', label: 'Chutes', icon: TicketCheck },
-    { href: '/admin/depositos', label: 'Depósitos', icon: Banknote }, // Novo item de menu
+    { href: '/admin/depositos', label: 'Depósitos', icon: Banknote },
+    { href: '/admin/saques', label: 'Saques', icon: Send },
     { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy },
     { href: '/admin/times', label: 'Times', icon: Flag },
     { href: '/admin/usuarios', label: 'Usuários', icon: UsersIcon },

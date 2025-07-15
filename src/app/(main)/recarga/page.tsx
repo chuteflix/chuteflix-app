@@ -51,6 +51,7 @@ export default function RechargePage() {
       toast({ title: "Você precisa estar logado.", variant: "destructive" });
       return;
     }
+    console.log("Iniciando envio para o usuário:", user.uid); // Log de diagnóstico
     if (!receiptFile || !amount) {
       toast({ title: "Preencha o valor e anexe o comprovante.", variant: "destructive" });
       return;
