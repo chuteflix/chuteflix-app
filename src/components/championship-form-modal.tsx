@@ -102,7 +102,6 @@ export function ChampionshipFormModal({
     const newFormData: any = { ...formData, [id]: value }
 
     if (id === "competitionType") {
-      // Reset fields that depend on competitionType
       delete newFormData.type
       delete newFormData.scope
       delete newFormData.series
@@ -116,7 +115,6 @@ export function ChampionshipFormModal({
     }
 
     if (id === "type") {
-      // Reset fields that depend on type
       delete newFormData.scope
       delete newFormData.series
       if(value === 'professional') {
@@ -125,16 +123,17 @@ export function ChampionshipFormModal({
       }
     }
     if (id === "scope") {
-        // Reset fields that depend on scope
         delete newFormData.state
         delete newFormData.city
+        // Garante que a série só exista para escopo nacional
+        if (value !== 'national') {
+            delete newFormData.series
+        }
     }
     if (id === "state") {
-        // Reset city when state changes
         delete newFormData.city
     }
     if (id === "continent") {
-        // Reset country when continent changes
         delete newFormData.country
     }
 
@@ -150,9 +149,9 @@ export function ChampionshipFormModal({
   const showNationalFields = formData.competitionType === 'national';
   const showInternationalFields = formData.competitionType === 'international';
   const showProfessionalFields = formData.type === 'professional';
+  const showSeriesField = showProfessionalFields && formData.scope === 'national';
   const showStateField = showNationalFields && (formData.type === 'amateur' || (showProfessionalFields && (formData.scope === 'state' || formData.scope === 'municipal')));
   const showCityField = showNationalFields && (formData.type === 'amateur' || (showProfessionalFields && formData.scope === 'municipal'));
-
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -197,18 +196,22 @@ export function ChampionshipFormModal({
                         <SelectItem value="municipal">Municipal</SelectItem>
                       </SelectContent>
                     </Select>
-
-                    <Label>Série</Label>
-                    <Select onValueChange={value => handleChange("series", value)} value={formData.series}>
-                      <SelectTrigger><SelectValue placeholder="Selecione a série"/></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A">Série A</SelectItem>
-                        <SelectItem value="B">Série B</SelectItem>
-                        <SelectItem value="C">Série C</SelectItem>
-                        <SelectItem value="D">Série D</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </>
+                )}
+
+                {showSeriesField && (
+                    <>
+                        <Label>Série</Label>
+                        <Select onValueChange={value => handleChange("series", value)} value={formData.series}>
+                        <SelectTrigger><SelectValue placeholder="Selecione a série"/></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="A">Série A</SelectItem>
+                            <SelectItem value="B">Série B</SelectItem>
+                            <SelectItem value="C">Série C</SelectItem>
+                            <SelectItem value="D">Série D</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    </>
                 )}
 
                 {showStateField && (

@@ -26,9 +26,9 @@ export interface Bolao {
   initialPrize: number 
   status: "Disponível" | "Chutes Encerrados" | "Finalizado"
   closingTime: string;
-  // Campos do resultado final
   finalScoreTeam1?: number;
   finalScoreTeam2?: number;
+  createdAt: any; // Adicionado
 }
 
 const fromFirestore = (doc: DocumentData): Bolao => {
@@ -46,14 +46,14 @@ const fromFirestore = (doc: DocumentData): Bolao => {
     initialPrize: data.initialPrize || 0, 
     status: data.status,
     closingTime: data.closingTime,
-    // Mapeando os novos campos
     finalScoreTeam1: data.finalScoreTeam1,
     finalScoreTeam2: data.finalScoreTeam2,
+    createdAt: data.createdAt, // Adicionado
   }
 }
 
 export const addBolao = async (
-  data: Omit<Bolao, "id" | "status">
+  data: Omit<Bolao, "id" | "status" | "createdAt">
 ): Promise<Bolao> => {
   try {
     const docRef = await addDoc(collection(db, "boloes"), {
@@ -65,6 +65,7 @@ export const addBolao = async (
       id: docRef.id,
       ...data,
       status: "Disponível",
+      createdAt: new Date(), // Simulação do timestamp
     }
   } catch (error) {
     console.error("Erro ao adicionar bolão: ", error)
@@ -99,7 +100,7 @@ export const getBolaoById = async (id: string): Promise<Bolao | undefined> => {
 
 export const updateBolao = async (
   id: string,
-  data: Partial<Omit<Bolao, "id">>
+  data: Partial<Omit<Bolao, "id" | "createdAt">>
 ): Promise<void> => {
   try {
     const bolaoRef = doc(db, "boloes", id)
