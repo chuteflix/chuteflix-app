@@ -242,7 +242,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           isMobileSidebarOpen={isMobileSidebarOpen}
           setIsMobileSidebarOpen={setIsMobileSidebarOpen}
         />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold hidden sm:block">{getHeaderTitle()}</h2>

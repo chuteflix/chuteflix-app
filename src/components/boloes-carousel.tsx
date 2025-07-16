@@ -38,11 +38,11 @@ export function BoloesCarousel({ title, boloes }: BoloesCarouselProps) {
         }}
         className="w-full"
       >
-        <CarouselContent className="-ml-2">
+        <CarouselContent className="p-1">
           {boloes.map(bolao => (
-            <CarouselItem key={bolao.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4 pl-2">
-              <Link href={`/boloes/${bolao.id}`} className="block hover:scale-[1.02] transition-transform duration-200">
-                <div className="p-1">
+            <CarouselItem key={bolao.id} className="basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4 p-2">
+              <Link href={`/boloes/${bolao.id}`} className="block h-full hover:scale-[1.02] transition-transform duration-200">
+                <div className="p-1 h-full">
                   <BolaoCard 
                     bolao={bolao}
                     teamA={bolao.teamADetails}

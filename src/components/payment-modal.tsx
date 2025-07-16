@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
-import { Loader2 } from "lucide-react"
+import { Loader2, Copy } from "lucide-react"
 
 interface PaymentModalProps {
   onClose: () => void
@@ -82,6 +82,13 @@ Meu ID de palpite é: ${palpiteId}`
     window.open(whatsappUrl, "_blank")
   }
 
+  const handleCopy = () => {
+    if (settings?.pixKey) {
+      navigator.clipboard.writeText(settings.pixKey)
+      toast({ title: "Chave Pix copiada!" })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-40">
@@ -101,6 +108,10 @@ Meu ID de palpite é: ${palpiteId}`
   return (
     <>
         <div className="my-4 flex flex-col items-center gap-4">
+            <div className="text-center">
+                <p className="font-semibold">Solicitação Criada!</p>
+                <p className="text-muted-foreground">Transfira exatamente o valor de R$ {bolao.fee.toFixed(2)}</p>
+            </div>
             {settings.qrCodeUrl && (
               <Image 
                   src={settings.qrCodeUrl}
@@ -111,7 +122,12 @@ Meu ID de palpite é: ${palpiteId}`
             )}
             <div className="text-center">
                 <p className="font-semibold">Chave Pix (CNPJ):</p>
-                <p className="text-muted-foreground">{settings.pixKey}</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-muted-foreground">{settings.pixKey}</p>
+                    <Button variant="ghost" size="icon" onClick={handleCopy}>
+                        <Copy className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
         </div>
 
