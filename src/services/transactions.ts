@@ -7,10 +7,12 @@ import {
   getDocs,
   orderBy,
   doc,
-  updateDoc, // 1. Importar a função updateDoc
+  updateDoc,
   DocumentData,
+  serverTimestamp, // 1. Importar serverTimestamp
 } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { db, functions } from "@/lib/firebase"
+import { httpsCallable } from "firebase/functions"
 import { getUserProfile, UserProfile } from "./users"
 
 export type TransactionStatus = "pending" | "completed" | "failed"
@@ -50,7 +52,7 @@ export const createTransaction = async (
   try {
     const docRef = await addDoc(collection(db, "transactions"), {
       ...data,
-      createdAt: new Date(),
+      createdAt: serverTimestamp(), // 2. Usar o timestamp do servidor
     })
     return docRef.id
   } catch (error) {
@@ -59,7 +61,6 @@ export const createTransaction = async (
   }
 }
 
-// 2. Criar a função updateTransaction
 export const updateTransaction = async (
   id: string,
   data: Partial<Omit<Transaction, "id" | "user">>
@@ -73,6 +74,17 @@ export const updateTransaction = async (
   }
 }
 
+export const requestWithdrawal = async ({ amount, pixKey }: { amount: number; pixKey: string; }) => {
+    try {
+        const requestWithdrawalFunction = httpsCallable(functions, 'requestWithdrawal');
+        // 3. Retornar explicitamente o resultado da função
+        const result = await requestWithdrawalFunction({ amount, pixKey });
+        return result.data;
+    } catch (error) {
+        console.error("Erro ao solicitar saque:", error);
+        throw error;
+    }
+};
 
 export const getTransactions = async (
   filters: Partial<{ uid: string; type: TransactionType; status: TransactionStatus }>
@@ -87,7 +99,6 @@ export const getTransactions = async (
     const querySnapshot = await getDocs(q)
     const transactions = querySnapshot.docs.map(fromFirestore)
 
-    // Opcional: buscar dados do usuário para cada transação
     const transactionsWithUsers = await Promise.all(
       transactions.map(async transaction => {
         const user = await getUserProfile(transaction.uid)

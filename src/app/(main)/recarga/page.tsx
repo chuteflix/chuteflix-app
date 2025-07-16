@@ -4,18 +4,22 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { getSettings, Settings } from "@/services/settings";
-import { createTransaction, updateTransaction } from "@/services/transactions";
+import { createTransaction, updateTransaction, Transaction } from "@/services/transactions";
 import { uploadFile } from "@/services/storage";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, History, Eye } from "lucide-react";
 import { NumericFormat } from "react-number-format";
 import { PaymentModal } from "@/components/payment-modal";
 import { ProofOfPaymentModal } from "@/components/proof-of-payment-modal";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import Link from 'next/link';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function RechargePage() {
   const { user } = useAuth();
@@ -29,6 +33,40 @@ export default function RechargePage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null);
+  
+  const [deposits, setDeposits] = useState<Transaction[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setLoadingHistory(false);
+      return;
+    }
+    
+    setLoadingHistory(true);
+    const q = query(
+      collection(db, "transactions"),
+      where("uid", "==", user.uid),
+      where("type", "==", "deposit"),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const userDeposits = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      setDeposits(userDeposits);
+      setLoadingHistory(false);
+    }, (error) => {
+      console.error("Erro no listener de depósitos:", error);
+      toast({
+        title: "Erro ao carregar histórico",
+        description: "Não foi possível buscar suas recargas. Tente recarregar a página.",
+        variant: "destructive",
+      });
+      setLoadingHistory(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, toast]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -120,13 +158,10 @@ Meu ID de Transação é: ${currentTransactionId}`;
 
     setIsUploading(true);
     try {
-      // Corrigindo o caminho para corresponder às regras de segurança do Storage
       const filePath = `receipts/deposits/${user.uid}/${currentTransactionId}-${file.name}`;
       const receiptUrl = await uploadFile(file, filePath);
       await updateTransaction(currentTransactionId, { metadata: { receiptUrl } });
-      
       handleProofModalClose();
-
     } catch (error) {
       console.error("Erro ao enviar comprovante:", error);
       toast({
@@ -139,40 +174,107 @@ Meu ID de Transação é: ${currentTransactionId}`;
       setIsUploading(false);
     }
   };
+  
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+        case 'completed': return 'bg-green-100 text-green-800';
+        case 'failed': return 'bg-red-100 text-red-800';
+        default: return 'bg-yellow-100 text-yellow-800';
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+        case 'completed': return 'Concluído';
+        case 'failed': return 'Recusado';
+        default: return 'Pendente';
+    }
+  }
 
   return (
     <>
-      <div className="container mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Recarregar Saldo</h1>
+      <div className="container mx-auto space-y-8">
+        <h1 className="text-3xl font-bold">Recarregar Saldo</h1>
         
-        <Card className="max-w-md mx-auto">
-            <CardHeader>
-                <CardTitle>Passo 1: Informe o Valor</CardTitle>
-                <CardDescription>
-                Digite o valor que você deseja adicionar ao seu saldo.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                <Label htmlFor="amount">Valor da Recarga (R$)</Label>
-                <NumericFormat
-                    id="amount"
-                    customInput={Input}
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    prefix="R$ "
-                    value={amount}
-                    onValueChange={(values) => setAmount(values.floatValue)}
-                    placeholder="R$ 0,00"
-                    className="h-12 text-lg"
-                />
-                </div>
-                <Button onClick={handleRequestRecharge} disabled={isSubmitting || isLoadingSettings} className="w-full h-12 text-lg">
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-                {isSubmitting ? "Processando..." : "Continuar para Pagamento"}
-                </Button>
-            </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Passo 1: Informe o Valor</CardTitle>
+                    <CardDescription>
+                    Digite o valor que você deseja adicionar ao seu saldo.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                    <Label htmlFor="amount">Valor da Recarga (R$)</Label>
+                    <NumericFormat
+                        id="amount"
+                        customInput={Input}
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        prefix="R$ "
+                        value={amount}
+                        onValueChange={(values) => setAmount(values.floatValue)}
+                        placeholder="R$ 0,00"
+                        className="h-12 text-lg"
+                    />
+                    </div>
+                    <Button onClick={handleRequestRecharge} disabled={isSubmitting || isLoadingSettings} className="w-full h-12 text-lg">
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+                    {isSubmitting ? "Processando..." : "Continuar para Pagamento"}
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><History /> Histórico de Recargas</CardTitle>
+                    <CardDescription>Acompanhe o status das suas recargas.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Data</TableHead>
+                                <TableHead>Valor</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Comprovante</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loadingHistory ? (
+                                <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow>
+                            ) : deposits.length > 0 ? (
+                                deposits.map(d => (
+                                    <TableRow key={d.id}>
+                                        <TableCell>{d.createdAt ? format(new Date(d.createdAt.seconds * 1000), "dd/MM/yyyy") : 'N/A'}</TableCell>
+                                        <TableCell>{d.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
+                                        <TableCell>
+                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusVariant(d.status)}`}>
+                                                {getStatusLabel(d.status)}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                        {d.metadata?.receiptUrl ? (
+                                            <Button asChild variant="outline" size="icon">
+                                                <Link href={d.metadata.receiptUrl} target="_blank">
+                                                    <Eye className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">-</span>
+                                        )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={4} className="h-24 text-center">Nenhuma recarga realizada.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
       </div>
 
       {isPaymentModalOpen && amount && (
@@ -188,8 +290,8 @@ Meu ID de Transação é: ${currentTransactionId}`;
         <ProofOfPaymentModal
             isOpen={isProofModalOpen}
             onClose={handleProofModalClose}
-            onWhatsappRedirect={handleWhatsappRedirect}
             onFileSelect={handleFileSelect}
+            onWhatsappRedirect={handleWhatsappRedirect}
             isUploading={isUploading}
         />
       )}
