@@ -86,6 +86,11 @@ export default function RechargePage() {
   
   const handleProofModalClose = () => {
     setIsProofModalOpen(false);
+    toast({
+        title: "Solicitação em análise",
+        description: "Sua recarga está sendo processada. O saldo será atualizado em breve.",
+        variant: "success"
+    })
     setAmount(undefined);
     setCurrentTransactionId(null);
   };
@@ -102,6 +107,7 @@ Estou enviando o comprovante para agilizar a aprovação.
 Meu ID de Transação é: ${currentTransactionId}`;
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${settings.whatsappNumber.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
+    handleProofModalClose();
   };
 
   return (
@@ -148,11 +154,12 @@ Meu ID de Transação é: ${currentTransactionId}`;
           />
       )}
 
-      {isProofModalOpen && (
+      {isProofModalOpen && currentTransactionId && (
         <ProofOfPaymentModal
             isOpen={isProofModalOpen}
             onClose={handleProofModalClose}
             onWhatsappRedirect={handleWhatsappRedirect}
+            transactionId={currentTransactionId}
         />
       )}
     </>

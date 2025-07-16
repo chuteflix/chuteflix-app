@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 interface PaymentModalProps {
   isOpen: boolean
   onClose: () => void;
-  onPaymentConfirmed: () => void; // Nova prop para notificar a confirmação
+  onPaymentConfirmed: () => void;
   amount: number
 }
 
@@ -94,11 +94,8 @@ export function PaymentModal({ isOpen, onClose, onPaymentConfirmed, amount }: Pa
           </div>
         )}
 
-        <DialogFooter className="flex flex-col gap-2 sm:flex-row">
-           <Button onClick={onClose} variant="outline" className="w-full">
-            Fechar
-          </Button>
-          <Button onClick={onPaymentConfirmed} className="w-full">
+        <DialogFooter>
+          <Button onClick={onPaymentConfirmed} className="w-full h-12 text-lg">
             Já Paguei, Enviar Comprovante
           </Button>
         </DialogFooter>

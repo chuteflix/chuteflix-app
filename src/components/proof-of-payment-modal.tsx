@@ -1,27 +1,65 @@
 
 "use client"
 
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Paperclip, MessageCircle } from "lucide-react"
+import { Paperclip, MessageCircle, Loader2 } from "lucide-react"
+import { uploadFile } from "@/services/storage" // 1. Corrigido para usar uploadFile
+import { updateTransaction } from "@/services/transactions"
+import { useAuth } from "@/context/auth-context" // Importar useAuth
 
 interface ProofOfPaymentModalProps {
   isOpen: boolean
   onClose: () => void
   onWhatsappRedirect: () => void
+  transactionId: string
 }
 
-export function ProofOfPaymentModal({ isOpen, onClose, onWhatsappRedirect }: ProofOfPaymentModalProps) {
+export function ProofOfPaymentModal({ isOpen, onClose, onWhatsappRedirect, transactionId }: ProofOfPaymentModalProps) {
+  const { user } = useAuth() // Obter o usuário autenticado
   const { toast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
-  const handleAttachReceipt = () => {
-    // A lógica de upload de arquivo pode ser adicionada aqui no futuro.
-    // Por enquanto, podemos usar um input de arquivo ou apenas notificar o usuário.
-    toast({
-      title: "Função em desenvolvimento",
-      description: "Por enquanto, por favor, envie seu comprovante pelo WhatsApp.",
-    })
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user) {
+      toast({ title: "Erro", description: "Usuário não autenticado ou nenhum arquivo selecionado.", variant: "destructive" })
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      // 2. Criar um caminho único para o comprovante
+      const filePath = `receipts/${user.uid}/${transactionId}-${file.name}`
+      const receiptUrl = await uploadFile(file, filePath)
+      
+      // 3. Atualizar a transação com a URL do comprovante
+      await updateTransaction(transactionId, { metadata: { receiptUrl } })
+
+      toast({
+        title: "Comprovante Enviado!",
+        description: "Seu comprovante foi anexado com sucesso e será analisado em breve.",
+        variant: "success",
+      })
+      onClose();
+
+    } catch (error) {
+      console.error("Erro ao enviar comprovante:", error)
+      toast({
+        title: "Erro ao Enviar",
+        description: "Não foi possível enviar o comprovante. Tente novamente ou use o WhatsApp.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleAttachReceiptClick = () => {
+    fileInputRef.current?.click()
   }
 
   return (
@@ -39,9 +77,22 @@ export function ProofOfPaymentModal({ isOpen, onClose, onWhatsappRedirect }: Pro
                 <MessageCircle className="mr-2 h-6 w-6" />
                 Enviar pelo WhatsApp
             </Button>
-            <Button onClick={handleAttachReceipt} variant="outline" size="lg" className="h-14 text-lg">
+            
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              className="hidden"
+              accept="image/png, image/jpeg, image/gif, application/pdf"
+            />
+            
+            <Button onClick={handleAttachReceiptClick} variant="outline" size="lg" className="h-14 text-lg" disabled={isUploading}>
+              {isUploading ? (
+                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+              ) : (
                 <Paperclip className="mr-2 h-6 w-6" />
-                Anexar Comprovante
+              )}
+              {isUploading ? "Enviando..." : "Anexar Comprovante"}
             </Button>
         </div>
 
