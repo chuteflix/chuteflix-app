@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { getSettings, Settings } from "@/services/settings";
-import { createTransaction } from "@/services/transactions";
+import { createTransaction, updateTransaction } from "@/services/transactions";
+import { uploadFile } from "@/services/storage";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ export default function RechargePage() {
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
@@ -110,6 +112,34 @@ Meu ID de Transação é: ${currentTransactionId}`;
     handleProofModalClose();
   };
 
+  const handleFileSelect = async (file: File) => {
+    if (!user || !currentTransactionId) {
+      toast({ title: "Erro", description: "Usuário não autenticado ou transação não encontrada.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Corrigindo o caminho para corresponder às regras de segurança do Storage
+      const filePath = `receipts/deposits/${user.uid}/${currentTransactionId}-${file.name}`;
+      const receiptUrl = await uploadFile(file, filePath);
+      await updateTransaction(currentTransactionId, { metadata: { receiptUrl } });
+      
+      handleProofModalClose();
+
+    } catch (error) {
+      console.error("Erro ao enviar comprovante:", error);
+      toast({
+        title: "Erro ao Enviar",
+        description: "Não foi possível enviar o comprovante. Tente novamente ou use o WhatsApp.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <>
       <div className="container mx-auto">
@@ -159,7 +189,8 @@ Meu ID de Transação é: ${currentTransactionId}`;
             isOpen={isProofModalOpen}
             onClose={handleProofModalClose}
             onWhatsappRedirect={handleWhatsappRedirect}
-            transactionId={currentTransactionId}
+            onFileSelect={handleFileSelect}
+            isUploading={isUploading}
         />
       )}
     </>
