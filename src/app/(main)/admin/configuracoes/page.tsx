@@ -41,6 +41,12 @@ export default function SettingsPage() {
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      pixKey: "",
+      whatsappNumber: "",
+      minDeposit: 0,
+      minWithdrawal: 0,
+    }
   });
 
   useEffect(() => {
@@ -77,10 +83,11 @@ export default function SettingsPage() {
   const onSubmit = async (data: SettingsFormValues) => {
     setIsLoading(true);
     try {
-      await saveSettings(data);
-
       if (qrCodeFile) {
-        await uploadQrCode(qrCodeFile);
+        const qrCodeUrl = await uploadQrCode(qrCodeFile);
+        await saveSettings({ ...data, qrCodeUrl });
+      } else {
+        await saveSettings(data);
       }
 
       toast({ title: "Configurações salvas com sucesso!", variant: "success" });
