@@ -11,8 +11,6 @@ interface AuthContextType {
   userProfile: AppUser | null;
   loading: boolean;
   balance: number | null;
-  pixKey?: string;
-  pixKeyType?: string;
 }
 
 const AuthContext = createContext<AuthContextType>({ user: null, userProfile: null, loading: true, balance: null });
@@ -23,9 +21,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Se o usuário estiver logado, busca o perfil dele.
+        await firebaseUser.getIdToken(true); 
+        
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
@@ -34,12 +33,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUserProfile(null);
           }
           setUser(firebaseUser);
-          // Só para de carregar DEPOIS de verificar o usuário e buscar o perfil.
           setLoading(false); 
         });
         return unsubscribeFirestore;
       } else {
-        // Se não houver usuário, encerra o carregamento.
         setUser(null);
         setUserProfile(null);
         setLoading(false);
@@ -50,15 +47,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const balance = userProfile?.balance || null;
-  const pixKey = userProfile?.pixKey;
-  const pixKeyType = userProfile?.pixKeyType;
-
-  const value = { user, userProfile, loading, balance, pixKey, pixKeyType };
+  const value = { user, userProfile, loading, balance };
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Garante que o app só será renderizado após o fim do carregamento */}
-      {!loading ? children : null}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

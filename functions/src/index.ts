@@ -10,13 +10,37 @@ const TRANSACTIONS_COLLECTION = 'transactions';
 const USERS_COLLECTION = 'users';
 const BOLOES_COLLECTION = 'boloes';
 
+// Função para definir um usuário como admin (ou remover o status)
+exports.setUserRole = functions.https.onCall(async (data, context) => {
+    if (!context.auth?.token.admin) {
+        throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem alterar permissões.');
+    }
+
+    const { targetUserId, isAdmin } = data;
+    if (!targetUserId || typeof isAdmin !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'Argumentos inválidos.');
+    }
+
+    try {
+        await admin.auth().setCustomUserClaims(targetUserId, { admin: isAdmin });
+        const userRef = db.collection(USERS_COLLECTION).doc(targetUserId);
+        await userRef.update({ isAdmin });
+
+        return { success: true, message: `Permissões do usuário atualizadas com sucesso.` };
+    } catch (error) {
+        console.error("Erro ao definir permissão de usuário:", error);
+        throw new functions.https.HttpsError('internal', 'Ocorreu um erro ao definir a permissão.');
+    }
+});
+
+
 // Função para fazer um palpite (transação atômica)
 exports.placeChute = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para fazer um chute.');
     }
 
-    const { bolaoId, scoreTeam1, scoreTeam2, amount, comment } = data; // 1. Receber o comentário
+    const { bolaoId, scoreTeam1, scoreTeam2, amount, comment } = data; 
     const userId = context.auth.uid;
 
     if (typeof amount !== 'number' || amount <= 0) {
@@ -59,7 +83,6 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
 
         const palpiteRef = db.collection(CHUTES_COLLECTION).doc();
         
-        // 2. Preparar os dados do palpite, incluindo o comentário se ele existir
         const palpiteData = {
             userId,
             bolaoId,
@@ -68,7 +91,7 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
             amount,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             status: "Em Aberto",
-            ...(comment && { comment }), // Adiciona o campo de comentário apenas se ele não for nulo ou vazio
+            ...(comment && { comment }),
         };
         transaction.set(palpiteRef, palpiteData);
         
@@ -88,10 +111,6 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
 });
 
 exports.payWinner = functions.https.onCall(async (data, context) => {
-    // Apenas admins podem chamar esta função diretamente (embora ela seja chamada pelo sistema)
-    // if (!context.auth || !context.auth.token.admin) { 
-    //     throw new functions.https.HttpsError('permission-denied', 'Apenas o sistema pode pagar os vencedores.');
-    // }
 
     const { userId, bolaoId, prizeAmount } = data;
 
@@ -113,10 +132,8 @@ exports.payWinner = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('not-found', `Bolão ${bolaoId} não encontrado.`);
         }
 
-        // Credita o prêmio ao saldo do usuário
         transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(prizeAmount) });
 
-        // Cria um registro da transação de ganho
         const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
         transaction.set(transactionRef, {
             uid: userId,
@@ -160,15 +177,13 @@ exports.requestWithdrawal = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('failed-precondition', 'Saldo insuficiente para realizar o saque.');
         }
 
-        // Debita o saldo imediatamente
         transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-amount) });
 
-        // Cria a transação de saque com status pendente
         const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
         transaction.set(transactionRef, {
             uid: userId,
             type: 'withdrawal',
-            amount: -amount, // Valor negativo para representar saída
+            amount: -amount,
             description: `Solicitação de saque para a chave PIX: ${pixKey}`,
             status: 'pending',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -179,7 +194,6 @@ exports.requestWithdrawal = functions.https.onCall(async (data, context) => {
     });
 });
 
-// Funções de depósito e saque
 exports.approveDeposit = functions.https.onCall(async (data, context) => {
     if (!context.auth || !context.auth.token.admin) { 
         throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem aprovar depósitos.');
@@ -237,10 +251,8 @@ exports.declineTransaction = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('failed-precondition', 'Esta transação já foi processada.');
         }
         
-        // Se for um saque recusado, estorna o valor para o usuário
         if(transactionData.type === 'withdrawal') {
             const userRef = db.collection(USERS_COLLECTION).doc(transactionData.uid);
-             // O valor é negativo, então incrementar com -(-valor) = +valor
             transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-transactionData.amount) });
         }
 

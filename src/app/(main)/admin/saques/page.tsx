@@ -16,11 +16,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Check, X, Loader2, Paperclip, Eye } from 'lucide-react';
+import { Check, X, Loader2, Eye } from 'lucide-react';
 import { getUserProfile, UserProfile } from '@/services/users';
 import { Transaction } from '@/services/transactions';
-import { WithdrawalProofModal } from '@/components/withdrawal-proof-modal';
 import Link from 'next/link';
+import { format } from 'date-fns';
 
 type WithdrawalRequest = Transaction & {
     user?: UserProfile;
@@ -33,9 +33,6 @@ export default function AdminWithdrawalsPage() {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const { toast } = useToast();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
-
   useEffect(() => {
     const pendingQuery = query(
         collection(db, "transactions"), 
@@ -48,8 +45,8 @@ export default function AdminWithdrawalsPage() {
         where("status", "in", ["completed", "failed"])
     );
 
-    const fetchAndSetRequests = (query: any, setter: React.Dispatch<React.SetStateAction<WithdrawalRequest[]>>) => {
-        return onSnapshot(query, async (querySnapshot) => {
+    const fetchAndSetRequests = (q: any, setter: React.Dispatch<React.SetStateAction<WithdrawalRequest[]>>) => {
+        return onSnapshot(q, async (querySnapshot) => {
             setLoading(true);
             const requestsData = await Promise.all(
                 querySnapshot.docs.map(async (doc) => {
@@ -71,6 +68,19 @@ export default function AdminWithdrawalsPage() {
         unsubscribeCompleted();
     };
   }, []);
+  
+  const handleConfirm = async (transactionId: string) => {
+      setSubmitting(transactionId);
+      try {
+          const confirmWithdrawal = httpsCallable(functions, 'confirmWithdrawal');
+          await confirmWithdrawal({ transactionId });
+          toast({ title: "Saque confirmado com sucesso!", variant: "success" });
+      } catch (error: any) {
+          toast({ title: "Erro ao confirmar saque.", description: error.message, variant: "destructive" });
+      } finally {
+          setSubmitting(null);
+      }
+  }
 
   const handleDecline = async (id: string) => {
     setSubmitting(id);
@@ -85,16 +95,10 @@ export default function AdminWithdrawalsPage() {
     }
   }
 
-  const handleOpenModal = (req: WithdrawalRequest) => {
-    setSelectedRequest(req);
-    setIsModalOpen(true);
-  }
-
   return (
     <div className="container mx-auto space-y-8">
       <h1 className="text-3xl font-bold">Gerenciamento de Saques</h1>
       
-      {/* Tabela de Saques Pendentes */}
       <Card>
         <CardHeader>
           <CardTitle>Saques Pendentes</CardTitle>
@@ -120,7 +124,7 @@ export default function AdminWithdrawalsPage() {
                     <TableCell>{Math.abs(req.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                     <TableCell>{req.metadata?.pixKey}</TableCell>
                     <TableCell className="flex gap-2">
-                      <Button size="sm" onClick={() => handleOpenModal(req)} disabled={submitting === req.id}>
+                      <Button size="sm" onClick={() => handleConfirm(req.id)} disabled={submitting === req.id}>
                         {submitting === req.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} Concluir
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => handleDecline(req.id)} disabled={submitting === req.id}>
@@ -137,7 +141,6 @@ export default function AdminWithdrawalsPage() {
         </CardContent>
       </Card>
 
-      {/* Tabela de Histórico de Saques */}
       <Card>
         <CardHeader>
           <CardTitle>Histórico de Saques</CardTitle>
@@ -147,6 +150,7 @@ export default function AdminWithdrawalsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Data</TableHead>
                 <TableHead>Usuário</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
@@ -155,10 +159,11 @@ export default function AdminWithdrawalsPage() {
             </TableHeader>
             <TableBody>
                 {loading ? (
-                    <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : completedRequests.length > 0 ? (
                     completedRequests.map((req) => (
                     <TableRow key={req.id}>
+                        <TableCell>{req.createdAt ? format(new Date(req.createdAt.seconds * 1000), "dd/MM/yyyy") : 'N/A'}</TableCell>
                         <TableCell>{req.user?.name || req.user?.email || req.uid}</TableCell>
                         <TableCell>{Math.abs(req.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                         <TableCell>
@@ -180,21 +185,12 @@ export default function AdminWithdrawalsPage() {
                     </TableRow>
                     ))
                 ) : (
-                    <TableRow><TableCell colSpan={4} className="h-24 text-center">Nenhum saque no histórico.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Nenhum saque no histórico.</TableCell></TableRow>
                 )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-      
-      {isModalOpen && selectedRequest && (
-        <WithdrawalProofModal 
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            transactionId={selectedRequest.id}
-            userId={selectedRequest.uid}
-        />
-      )}
     </div>
   );
 }

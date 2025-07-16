@@ -35,7 +35,6 @@ export default function AdminDepositsPage() {
 
   useEffect(() => {
     const baseQuery = query(collection(db, "transactions"), where("type", "==", "deposit"));
-
     const pendingQuery = query(baseQuery, where("status", "==", "pending"), orderBy("createdAt", "desc"));
     const completedQuery = query(baseQuery, where("status", "in", ["completed", "failed"]), orderBy("createdAt", "desc"));
 
@@ -96,13 +95,13 @@ export default function AdminDepositsPage() {
         default: return 'bg-yellow-100 text-yellow-800';
     }
   }
-  
+
   const getStatusLabel = (status: string) => {
-      switch (status) {
-          case 'completed': return 'Concluído';
-          case 'failed': return 'Recusado';
-          default: return 'Pendente';
-      }
+    switch (status) {
+        case 'completed': return 'Concluído';
+        case 'failed': return 'Recusado';
+        default: return 'Pendente';
+    }
   }
 
   return (
@@ -148,7 +147,7 @@ export default function AdminDepositsPage() {
                       )}
                     </TableCell>
                     <TableCell className="flex gap-2">
-                      <Button size="sm" onClick={() => handleApprove(req.id)} disabled={submitting === req.id || !req.metadata?.receiptUrl}>
+                      <Button size="sm" onClick={() => handleApprove(req.id)} disabled={submitting === req.id}>
                         {submitting === req.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} Aprovar
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => handleDecline(req.id)} disabled={submitting === req.id}>

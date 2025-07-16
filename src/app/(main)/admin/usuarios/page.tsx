@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getAllUsers, UserProfile, updateUserProfile } from "@/services/users";
+import { getAllUsers, UserProfile } from "@/services/users";
 import {
   Card,
   CardContent,
@@ -28,15 +28,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Search, Users } from "lucide-react"; // 1. Importar o ícone Users
+import { MoreHorizontal, Pencil, Search, Users, Loader2 } from "lucide-react";
 import { UserEditModal } from "@/components/user-edit-modal";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 export default function UsuariosPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const { toast } = useToast();
@@ -49,8 +51,7 @@ export default function UsuariosPage() {
       fetchedUsers.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setUsers(fetchedUsers);
     } catch (err) {
-      setError("Falha ao buscar usuários.");
-      console.error(err);
+      toast({ title: "Erro ao buscar usuários.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -73,20 +74,33 @@ export default function UsuariosPage() {
   }, [searchTerm, users]);
 
   const handleAdminStatusChange = async (uid: string, isAdmin: boolean) => {
+    setIsSubmitting(uid);
     try {
-      await updateUserProfile(uid, { isAdmin });
+      const setUserRole = httpsCallable(functions, 'setUserRole');
+      await setUserRole({ targetUserId: uid, isAdmin: isAdmin });
+
       setUsers(prevUsers =>
         prevUsers.map(u => (u.uid === uid ? { ...u, isAdmin } : u))
       );
-      toast({
-        title: "Sucesso!",
-        description: `Usuário ${
-          isAdmin ? "promovido a" : "rebaixado para"
-        } ${isAdmin ? "Admin" : "Usuário"}.`,
-      });
-    } catch (err) {
-      setError("Falha ao atualizar o status do usuário.");
-      console.error(err);
+      
+      if (isAdmin) {
+        toast({
+            title: "Usuário Promovido!",
+            description: "Peça para que ele(a) faça logout e login novamente para ativar as permissões de admin.",
+            duration: 7000, 
+        });
+      } else {
+        toast({
+            title: "Usuário Rebaixado.",
+            description: "As permissões de admin foram removidas.",
+            variant: "info",
+        });
+      }
+
+    } catch (err: any) {
+      toast({ title: "Erro ao alterar permissão.", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(null);
     }
   };
 
@@ -120,7 +134,6 @@ export default function UsuariosPage() {
 
       <Card>
         <CardHeader>
-            {/* 2. Adicionar o card de total de usuários */}
             <div className="flex items-center justify-between">
                 <div>
                     <CardTitle>Usuários Cadastrados</CardTitle>
@@ -165,7 +178,7 @@ export default function UsuariosPage() {
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center h-24">
-                      Carregando...
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.length > 0 ? (
@@ -180,10 +193,12 @@ export default function UsuariosPage() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell className="text-right">{(user.balance || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                       <TableCell className="text-center">
-                        {user.isAdmin ? (
-                          <Badge variant="success">Admin</Badge>
+                        {isSubmitting === user.uid ? (
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                         ) : (
-                          <Badge variant="outline">Usuário</Badge>
+                          <Badge variant={user.isAdmin ? "success" : "outline"}>
+                            {user.isAdmin ? "Admin" : "Usuário"}
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -192,12 +207,13 @@ export default function UsuariosPage() {
                           size="icon"
                           onClick={() => handleEditUser(user)}
                           aria-label="Editar Usuário"
+                          disabled={isSubmitting === user.uid}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Mais Ações">
+                            <Button variant="ghost" size="icon" aria-label="Mais Ações" disabled={isSubmitting === user.uid}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -209,6 +225,7 @@ export default function UsuariosPage() {
                                 onClick={() =>
                                   handleAdminStatusChange(user.uid, false)
                                 }
+                                disabled={isSubmitting === user.uid}
                               >
                                 Rebaixar para Usuário
                               </DropdownMenuItem>
@@ -217,6 +234,7 @@ export default function UsuariosPage() {
                                 onClick={() =>
                                   handleAdminStatusChange(user.uid, true)
                                 }
+                                disabled={isSubmitting === user.uid}
                               >
                                 Promover a Admin
                               </DropdownMenuItem>
