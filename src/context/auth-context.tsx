@@ -10,9 +10,12 @@ interface AuthContextType {
   user: FirebaseUser | null;
   userProfile: AppUser | null;
   loading: boolean;
+  balance: number | null;
+  pixKey?: string;
+  pixKeyType?: string;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, userProfile: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ user: null, userProfile: null, loading: true, balance: null });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -46,7 +49,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const value = { user, userProfile, loading };
+  const balance = userProfile?.balance || null;
+  const pixKey = userProfile?.pixKey;
+  const pixKeyType = userProfile?.pixKeyType;
+
+  const value = { user, userProfile, loading, balance, pixKey, pixKeyType };
 
   return (
     <AuthContext.Provider value={value}>

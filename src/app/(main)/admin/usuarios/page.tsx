@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pencil } from "lucide-react"
 import { UserEditModal } from "@/components/user-edit-modal"
 import { useToast } from "@/hooks/use-toast"
+import { format } from "date-fns"
 
 export default function UsuariosPage() {
   const [users, setUsers] = useState<UserProfile[]>([])
@@ -109,88 +110,90 @@ export default function UsuariosPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    Carregando...
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Data de Cadastro</TableHead>
+                  <TableHead>Saldo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : users.length > 0 ? (
-                users.map(user => (
-                  <TableRow key={user.uid}>
-                    <TableCell className="font-medium">
-                      {getFullName(user)}
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.cpf || "N/A"}</TableCell>
-                    <TableCell>{user.phone || "N/A"}</TableCell>
-                    <TableCell>
-                      {user.isAdmin ? (
-                        <Badge>Admin</Badge>
-                      ) : (
-                        <Badge variant="outline">Usuário</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditUser(user)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {user.isAdmin ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleAdminStatusChange(user.uid, false)
-                              }
-                            >
-                              Rebaixar para Usuário
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleAdminStatusChange(user.uid, true)
-                              }
-                            >
-                              Promover a Admin
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      Carregando...
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    Nenhum usuário encontrado.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ) : users.length > 0 ? (
+                  users.map(user => (
+                    <TableRow key={user.uid}>
+                      <TableCell className="font-medium">
+                        {getFullName(user)}
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.createdAt ? format(new Date(user.createdAt.seconds * 1000), "dd/MM/yyyy HH:mm") : 'N/A'}</TableCell>
+                      <TableCell>{(user.balance || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
+                      <TableCell>
+                        {user.isAdmin ? (
+                          <Badge>Admin</Badge>
+                        ) : (
+                          <Badge variant="outline">Usuário</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {user.isAdmin ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleAdminStatusChange(user.uid, false)
+                                }
+                              >
+                                Rebaixar para Usuário
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleAdminStatusChange(user.uid, true)
+                                }
+                              >
+                                Promover a Admin
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      Nenhum usuário encontrado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
       <UserEditModal
