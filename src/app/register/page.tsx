@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"; // Importar updateProfile
-import { doc, setDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // 1. Importar serverTimestamp
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { IMaskInput } from 'react-imask';
@@ -39,12 +39,11 @@ export default function RegisterPage() {
 
       const fullName = `${firstName} ${lastName}`;
 
-      // Atualiza o perfil de autenticação do usuário
       await updateProfile(user, {
         displayName: fullName
       });
 
-      // Salva os dados adicionais no Firestore
+      // 2. Adicionar o campo createdAt ao criar o documento do usuário
       await setDoc(doc(db, "users", user.uid), {
         firstName,
         lastName,
@@ -53,13 +52,14 @@ export default function RegisterPage() {
         cpf,
         email: user.email,
         balance: 0,
+        createdAt: serverTimestamp(), // Adiciona a data de criação do usuário
       });
 
       toast({
         title: "Conta criada com sucesso!",
         description: "Você já pode fazer seus palpites.",
       });
-      router.push('/inicio'); // Redireciona para a nova página de início
+      router.push('/inicio');
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",

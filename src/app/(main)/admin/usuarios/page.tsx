@@ -1,15 +1,14 @@
+"use client";
 
-"use client"
-
-import { useState, useEffect } from "react"
-import { getAllUsers, UserProfile, updateUserProfile } from "@/services/users"
+import { useState, useEffect, useMemo } from "react";
+import { getAllUsers, UserProfile, updateUserProfile } from "@/services/users";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -17,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,73 +24,90 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Pencil } from "lucide-react"
-import { UserEditModal } from "@/components/user-edit-modal"
-import { useToast } from "@/hooks/use-toast"
-import { format } from "date-fns"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Pencil, Search, Users } from "lucide-react"; // 1. Importar o ícone Users
+import { UserEditModal } from "@/components/user-edit-modal";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState<UserProfile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
-  const { toast } = useToast()
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const fetchedUsers = await getAllUsers();
+      fetchedUsers.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setUsers(fetchedUsers);
+    } catch (err) {
+      setError("Falha ao buscar usuários.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true)
-      try {
-        const fetchedUsers = await getAllUsers()
-        setUsers(fetchedUsers)
-      } catch (err) {
-        setError("Falha ao buscar usuários.")
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+    fetchUsers();
+  }, []);
+  
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm) {
+      return users;
     }
-    fetchUsers()
-  }, [])
+    return users.filter(user => {
+      const name = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+      const email = user.email.toLowerCase();
+      const term = searchTerm.toLowerCase();
+      return name.includes(term) || email.includes(term);
+    });
+  }, [searchTerm, users]);
 
   const handleAdminStatusChange = async (uid: string, isAdmin: boolean) => {
     try {
-      await updateUserProfile(uid, { isAdmin })
+      await updateUserProfile(uid, { isAdmin });
       setUsers(prevUsers =>
         prevUsers.map(u => (u.uid === uid ? { ...u, isAdmin } : u))
-      )
+      );
       toast({
         title: "Sucesso!",
         description: `Usuário ${
           isAdmin ? "promovido a" : "rebaixado para"
         } ${isAdmin ? "Admin" : "Usuário"}.`,
-      })
+      });
     } catch (err) {
-      setError("Falha ao atualizar o status do usuário.")
-      console.error(err)
+      setError("Falha ao atualizar o status do usuário.");
+      console.error(err);
     }
-  }
+  };
 
   const handleEditUser = (user: UserProfile) => {
-    setSelectedUser(user)
-    setIsModalOpen(true)
-  }
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
 
   const handleUserUpdate = (updatedUser: UserProfile) => {
     setUsers(prevUsers =>
       prevUsers.map(u => (u.uid === updatedUser.uid ? updatedUser : u))
-    )
-  }
+    );
+    fetchUsers();
+  };
 
   const getFullName = (user: UserProfile) => {
     if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`
+      return `${user.firstName} ${user.lastName}`;
     }
-    return user.displayName || "N/A"
-  }
+    return user.displayName || "N/A";
+  };
 
   return (
     <div className="container mx-auto">
@@ -104,43 +120,68 @@ export default function UsuariosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Usuários Cadastrados</CardTitle>
-          <CardDescription>
-            Lista de todos os usuários no sistema.
-          </CardDescription>
+            {/* 2. Adicionar o card de total de usuários */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle>Usuários Cadastrados</CardTitle>
+                    <CardDescription>
+                        Abaixo está a lista de todos os usuários registrados no sistema.
+                    </CardDescription>
+                </div>
+                <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-lg">
+                    <Users className="h-8 w-8 text-primary" />
+                    <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Total de Usuários</p>
+                        <p className="text-2xl font-bold">{users.length}</p>
+                    </div>
+                </div>
+            </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input 
+                placeholder="Pesquisar por nome ou e-mail..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[180px]">Data de Cadastro</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
-                  <TableHead>Data de Cadastro</TableHead>
-                  <TableHead>Saldo</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Saldo</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={6} className="text-center h-24">
                       Carregando...
                     </TableCell>
                   </TableRow>
-                ) : users.length > 0 ? (
-                  users.map(user => (
+                ) : filteredUsers.length > 0 ? (
+                  filteredUsers.map(user => (
                     <TableRow key={user.uid}>
+                      <TableCell>
+                        {user.createdAt ? format(new Date(user.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {getFullName(user)}
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.createdAt ? format(new Date(user.createdAt.seconds * 1000), "dd/MM/yyyy HH:mm") : 'N/A'}</TableCell>
-                      <TableCell>{(user.balance || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">{(user.balance || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
+                      <TableCell className="text-center">
                         {user.isAdmin ? (
-                          <Badge>Admin</Badge>
+                          <Badge variant="success">Admin</Badge>
                         ) : (
                           <Badge variant="outline">Usuário</Badge>
                         )}
@@ -150,12 +191,13 @@ export default function UsuariosPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleEditUser(user)}
+                          aria-label="Editar Usuário"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" aria-label="Mais Ações">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -186,7 +228,7 @@ export default function UsuariosPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={6} className="text-center h-24">
                       Nenhum usuário encontrado.
                     </TableCell>
                   </TableRow>
@@ -203,5 +245,5 @@ export default function UsuariosPage() {
         onUserUpdate={handleUserUpdate}
       />
     </div>
-  )
+  );
 }
