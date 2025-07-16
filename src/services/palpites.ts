@@ -1,6 +1,6 @@
 
 import { db, functions } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, DocumentData, getCountFromServer, orderBy, limit, writeBatch } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, DocumentData, getCountFromServer, orderBy, limit, writeBatch, deleteDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { getBolaoById, Bolao } from "./boloes";
 import { getTeamById, Team } from "./teams";
@@ -54,6 +54,11 @@ export const placeChute = async (bolaoId: string, scoreTeam1: number, scoreTeam2
         console.error("Erro ao registrar o chute:", error);
         throw error;
     }
+};
+
+export const deletePalpite = async (id: string): Promise<void> => {
+  const palpiteRef = doc(db, "chutes", id);
+  await deleteDoc(palpiteRef);
 };
 
 // Função de busca por status corrigida

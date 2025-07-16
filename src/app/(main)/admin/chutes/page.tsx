@@ -2,12 +2,12 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getPalpitesByStatus, Palpite, updatePalpiteStatus } from '@/services/palpites';
+import { getPalpitesByStatus, Palpite, updatePalpiteStatus, deletePalpite } from '@/services/palpites';
 import { getUserProfile, UserProfile } from '@/services/users';
 import { getBolaoById, Bolao } from '@/services/boloes';
 import { getTeamById, Team } from '@/services/teams';
 import { getChampionshipById, Championship } from '@/services/championships';
-import { Ban, Search } from 'lucide-react';
+import { Ban, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 type PalpiteComDetalhes = Palpite & {
   user?: UserProfile;
@@ -117,8 +118,26 @@ export default function AdminChutesPage() {
       });
     }
   };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deletePalpite(id);
+      toast({
+        title: "Palpite Excluído!",
+        description: "O palpite foi excluído com sucesso.",
+        variant: "success",
+      });
+      fetchPalpites();
+    } catch (error: any) {
+      console.error("Erro ao excluir palpite:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Não foi possível excluir o palpite.",
+        variant: "destructive",
+      });
+    }
+  }
   
-  // CORREÇÃO: A função foi movida para ANTES de ser usada.
   const getFullName = (user?: UserProfile) => {
     if (!user) return "Usuário Inválido";
     return user.displayName || user.email || "Usuário Desconhecido";
@@ -164,6 +183,7 @@ export default function AdminChutesPage() {
         palpites={filteredPalpites}
         loading={loading}
         onAnular={handleAnular}
+        onDelete={handleDelete}
         getFullName={getFullName}
       />
     </div>
@@ -174,11 +194,13 @@ function ChutesTable({
   palpites,
   loading,
   onAnular,
+  onDelete,
   getFullName,
 }: {
   palpites: PalpiteComDetalhes[];
   loading: boolean;
   onAnular: (id: string) => void;
+  onDelete: (id: string) => void;
   getFullName: (user?: UserProfile) => string;
 }) {
   const getStatusVariant = (status: PalpiteStatus) => {
@@ -196,6 +218,7 @@ function ChutesTable({
             <TableHeader>
                 <TableRow>
                     <TableHead>Usuário</TableHead>
+                    <TableHead>Data</TableHead>
                     <TableHead>Bolão</TableHead>
                     <TableHead>Palpite</TableHead>
                     <TableHead>Valor</TableHead>
@@ -207,6 +230,7 @@ function ChutesTable({
                 {Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -228,6 +252,7 @@ function ChutesTable({
       <TableHeader>
         <TableRow>
           <TableHead>Usuário</TableHead>
+          <TableHead>Data</TableHead>
           <TableHead>Bolão</TableHead>
           <TableHead>Palpite</TableHead>
           <TableHead>Valor</TableHead>
@@ -239,6 +264,7 @@ function ChutesTable({
         {palpites.map((palpite) => (
           <TableRow key={palpite.id}>
             <TableCell className="font-medium">{getFullName(palpite.user)}</TableCell>
+            <TableCell>{format(palpite.createdAt.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
             <TableCell>{palpite.bolao?.name || "N/A"}</TableCell>
             <TableCell>
               {palpite.bolao?.teamA?.name} {palpite.scoreTeam1} x {palpite.scoreTeam2} {palpite.bolao?.teamB?.name}
@@ -249,11 +275,11 @@ function ChutesTable({
                     {palpite.status}
                 </Badge>
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell className="text-right space-x-2">
               {(palpite.status === 'Em Aberto' || palpite.status === 'Aprovado') && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm"><Ban className="mr-2 h-4 w-4" /> Anular</Button>
+                    <Button variant="outline" size="sm"><Ban className="mr-2 h-4 w-4" /> Anular</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -269,6 +295,23 @@ function ChutesTable({
                   </AlertDialogContent>
                 </AlertDialog>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Excluir</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir este palpite?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Esta ação não pode ser desfeita e o palpite será removido permanentemente.
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onDelete(palpite.id)}>Confirmar Exclusão</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </TableCell>
           </TableRow>
         ))}
