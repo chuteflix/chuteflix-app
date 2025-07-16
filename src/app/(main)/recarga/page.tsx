@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowRight } from "lucide-react";
 import { NumericFormat } from "react-number-format";
-import { PaymentDetails } from "@/components/payment-details";
+import { PaymentModal } from "@/components/payment-modal";
+import { ProofOfPaymentModal } from "@/components/proof-of-payment-modal";
 
 export default function RechargePage() {
   const { user } = useAuth();
@@ -23,7 +24,8 @@ export default function RechargePage() {
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [step, setStep] = useState<'request' | 'payment'>('request');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function RechargePage() {
       return;
     }
     if (settings?.minDeposit && amount < settings.minDeposit) {
-      toast({ title: `O valor mínimo para depósito é de R$ ${settings.minDeposit.toFixed(2)}`, variant: "destructive" });
+      toast({ title: `O valor mínimo para depósito é de ${settings.minDeposit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, variant: "destructive" });
       return;
     }
 
@@ -67,7 +69,7 @@ export default function RechargePage() {
       });
 
       setCurrentTransactionId(transactionId);
-      setStep('payment');
+      setIsPaymentModalOpen(true);
 
     } catch (error) {
       console.error("Erro ao criar solicitação:", error);
@@ -78,16 +80,35 @@ export default function RechargePage() {
   };
 
   const handlePaymentConfirmed = () => {
-      setStep('request');
-      setAmount(undefined);
-      setCurrentTransactionId(null);
-  }
+    setIsPaymentModalOpen(false);
+    setIsProofModalOpen(true);
+  };
+  
+  const handleProofModalClose = () => {
+    setIsProofModalOpen(false);
+    setAmount(undefined);
+    setCurrentTransactionId(null);
+  };
+
+  const handleWhatsappRedirect = () => {
+    if (!settings?.whatsappNumber || !amount || !currentTransactionId) {
+      toast({ title: "Não foi possível gerar o link do WhatsApp.", variant: "destructive" });
+      return;
+    }
+    const message = `Olá! Acabei de fazer uma recarga de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.
+
+Estou enviando o comprovante para agilizar a aprovação.
+
+Meu ID de Transação é: ${currentTransactionId}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${settings.whatsappNumber.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+  };
 
   return (
-    <div className="container mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Recarregar Saldo</h1>
-      
-      {step === 'request' && (
+    <>
+      <div className="container mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Recarregar Saldo</h1>
+        
         <Card className="max-w-md mx-auto">
             <CardHeader>
                 <CardTitle>Passo 1: Informe o Valor</CardTitle>
@@ -107,24 +128,33 @@ export default function RechargePage() {
                     value={amount}
                     onValueChange={(values) => setAmount(values.floatValue)}
                     placeholder="R$ 0,00"
+                    className="h-12 text-lg"
                 />
                 </div>
-                <Button onClick={handleRequestRecharge} disabled={isSubmitting || isLoadingSettings} className="w-full">
+                <Button onClick={handleRequestRecharge} disabled={isSubmitting || isLoadingSettings} className="w-full h-12 text-lg">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
                 {isSubmitting ? "Processando..." : "Continuar para Pagamento"}
                 </Button>
             </CardContent>
         </Card>
-      )}
+      </div>
 
-      {step === 'payment' && settings && currentTransactionId && (
-          <PaymentDetails 
-            settings={settings}
-            transactionId={currentTransactionId}
+      {isPaymentModalOpen && amount && (
+          <PaymentModal 
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
             onPaymentConfirmed={handlePaymentConfirmed}
+            amount={amount}
           />
       )}
 
-    </div>
+      {isProofModalOpen && (
+        <ProofOfPaymentModal
+            isOpen={isProofModalOpen}
+            onClose={handleProofModalClose}
+            onWhatsappRedirect={handleWhatsappRedirect}
+        />
+      )}
+    </>
   );
 }

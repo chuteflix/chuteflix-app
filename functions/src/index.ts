@@ -16,7 +16,7 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para fazer um chute.');
     }
 
-    const { bolaoId, scoreTeam1, scoreTeam2, amount } = data;
+    const { bolaoId, scoreTeam1, scoreTeam2, amount, comment } = data; // 1. Receber o comentário
     const userId = context.auth.uid;
 
     if (typeof amount !== 'number' || amount <= 0) {
@@ -58,15 +58,19 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
         transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-amount) });
 
         const palpiteRef = db.collection(CHUTES_COLLECTION).doc();
-        transaction.set(palpiteRef, {
+        
+        // 2. Preparar os dados do palpite, incluindo o comentário se ele existir
+        const palpiteData = {
             userId,
             bolaoId,
             scoreTeam1,
             scoreTeam2,
             amount,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            status: "Em Aberto", 
-        });
+            status: "Em Aberto",
+            ...(comment && { comment }), // Adiciona o campo de comentário apenas se ele não for nulo ou vazio
+        };
+        transaction.set(palpiteRef, palpiteData);
         
         const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
         transaction.set(transactionRef, {

@@ -2,151 +2,107 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bolao } from "@/services/boloes"
 import { getSettings, Settings } from "@/services/settings"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
-import { Loader2, Copy } from "lucide-react"
+import { Loader2, Copy, AlertTriangle, Info } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 interface PaymentModalProps {
-  onClose: () => void
-  bolao: Bolao
-  palpiteId: string
-  teamAName: string
-  teamBName: string
-  championshipName: string
-  scoreTeam1: number
-  scoreTeam2: number
+  isOpen: boolean
+  onClose: () => void;
+  onPaymentConfirmed: () => void; // Nova prop para notificar a confirmação
+  amount: number
 }
 
-export function PaymentModal({ 
-    onClose, 
-    bolao, 
-    palpiteId,
-    teamAName,
-    teamBName,
-    championshipName,
-    scoreTeam1,
-    scoreTeam2
-}: PaymentModalProps) {
-  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+export function PaymentModal({ isOpen, onClose, onPaymentConfirmed, amount }: PaymentModalProps) {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      setIsLoading(true)
-      try {
-        const settingsData = await getSettings()
-        setSettings(settingsData)
-      } catch (error) {
-        toast({ title: "Erro ao carregar dados de pagamento.", variant: "destructive"})
-      } finally {
-        setIsLoading(false)
-      }
+    if (isOpen) {
+      const fetchSettings = async () => {
+        setIsLoading(true);
+        try {
+          const settingsData = await getSettings();
+          setSettings(settingsData);
+        } catch (error) {
+          toast({ title: "Erro ao carregar dados de pagamento.", variant: "destructive" });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchSettings();
     }
-    fetchSettings()
-  }, [toast])
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setReceiptFile(event.target.files[0])
-    }
-  }
-
-  const handleUploadReceipt = async () => {
-    if (!receiptFile) {
-      toast({ title: "Nenhum arquivo selecionado.", variant: "destructive" })
-      return
-    }
-    // Lógica para fazer upload do comprovante
-    toast({ title: "Comprovante enviado com sucesso!", variant: "success" })
-    onClose()
-  }
-
-  const handleWhatsappRedirect = () => {
-    if (!settings?.whatsappNumber) {
-      toast({ title: "Número do WhatsApp não configurado.", variant: "destructive" })
-      return
-    }
-    const message = `Acabei de apostar o placar ${scoreTeam1} ${teamAName} vs ${scoreTeam2} ${teamBName} no ${championshipName}.
-
-Estou enviando o comprovante de pagamento do bolão.
-
-Meu ID de palpite é: ${palpiteId}`
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${settings.whatsappNumber.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, "_blank")
-  }
+  }, [isOpen, toast]);
 
   const handleCopy = () => {
     if (settings?.pixKey) {
-      navigator.clipboard.writeText(settings.pixKey)
-      toast({ title: "Chave Pix copiada!" })
+      navigator.clipboard.writeText(settings.pixKey);
+      toast({ title: "Chave Pix copiada!" });
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-40">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-  
-  if (!settings) {
-    return (
-      <div className="text-center h-40">
-        <p>Não foi possível carregar as informações de pagamento. Tente novamente mais tarde.</p>
-      </div>
-    )
-  }
+  };
 
   return (
-    <>
-        <div className="my-4 flex flex-col items-center gap-4">
-            <div className="text-center">
-                <p className="font-semibold">Solicitação Criada!</p>
-                <p className="text-muted-foreground">Transfira exatamente o valor de R$ {bolao.fee.toFixed(2)}</p>
-            </div>
-            {settings.qrCodeUrl && (
-              <Image 
-                  src={settings.qrCodeUrl}
-                  alt="QR Code para pagamento" 
-                  width={150} 
-                  height={150} 
-              />
-            )}
-            <div className="text-center">
-                <p className="font-semibold">Chave Pix (CNPJ):</p>
-                <div className="flex items-center gap-2">
-                    <p className="text-muted-foreground">{settings.pixKey}</p>
-                    <Button variant="ghost" size="icon" onClick={handleCopy}>
-                        <Copy className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-center text-2xl">Realize o Pagamento</DialogTitle>
+          <DialogDescription className="text-center">
+            Para confirmar sua recarga, transfira exatamente o valor de <strong>{amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="receipt-upload">Anexar Comprovante</Label>
-            <Input id="receipt-upload" type="file" onChange={handleFileChange} />
+        {isLoading ? (
+          <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
+        ) : !settings ? (
+          <div className="text-center h-40"><p>Não foi possível carregar as informações de pagamento.</p></div>
+        ) : (
+          <div className="my-4 flex flex-col items-center gap-4">
+            {settings.qrCodeUrl && <Image src={settings.qrCodeUrl} alt="QR Code para pagamento" width={180} height={180} />}
+            <div className="text-center">
+              <p className="font-semibold">Chave Pix (CNPJ):</p>
+              <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                <code className="text-muted-foreground">{settings.pixKey}</code>
+                <Button variant="ghost" size="icon" onClick={handleCopy}><Copy className="h-4 w-4" /></Button>
+              </div>
+            </div>
+            
+            <div className="w-full p-3 bg-blue-950/80 border border-blue-700 rounded-lg text-sm mt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="h-5 w-5 text-blue-400" />
+                <h4 className="font-semibold text-white">Como proceder</h4>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-blue-200">
+                <li>Copie a chave PIX ou escaneie o QR Code.</li>
+                <li>Faça a transferência no app do seu banco.</li>
+                <li>Clique no botão abaixo para enviar o comprovante.</li>
+              </ol>
+            </div>
+            
+            <div className="w-full p-3 bg-amber-950/80 border border-amber-700 rounded-lg text-sm">
+               <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                  <h4 className="font-semibold text-white">Aviso Importante</h4>
+              </div>
+              <p className="text-amber-200">
+                  O saldo pode levar <strong>até 2 horas</strong> para ser creditado (das 06:00 às 23:00).
+              </p>
+            </div>
           </div>
-          <Button onClick={handleUploadReceipt} className="w-full" disabled={!receiptFile}>
-            Enviar Comprovante
-          </Button>
-        </div>
+        )}
 
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground mb-2">Ou, se preferir</p>
-          <Button onClick={handleWhatsappRedirect} variant="success" className="w-full">
-            Enviar Comprovante pelo WhatsApp
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+           <Button onClick={onClose} variant="outline" className="w-full">
+            Fechar
           </Button>
-        </div>
-    </>
+          <Button onClick={onPaymentConfirmed} className="w-full">
+            Já Paguei, Enviar Comprovante
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

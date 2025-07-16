@@ -111,6 +111,16 @@ export default function BolaoPage() {
       )
     }
   }
+  
+  const getBettingLine = (palpite: PalpiteComDetalhes) => {
+    let line = `${palpite.user?.firstName || palpite.user?.displayName || "Anônimo"} apostou ${palpite.scoreTeam1} x ${palpite.scoreTeam2}`;
+    if (palpite.scoreTeam1 > palpite.scoreTeam2) {
+        line += ` para o ${bolao?.teamADetails?.name}`;
+    } else if (palpite.scoreTeam2 > palpite.scoreTeam1) {
+        line += ` para o ${bolao?.teamBDetails?.name}`;
+    }
+    return line;
+  }
 
   if (loading || authLoading) {
     return (
@@ -229,9 +239,7 @@ export default function BolaoPage() {
                           <AvatarFallback>{p.user?.firstName?.charAt(0) || 'U'}</AvatarFallback>
                       </Avatar>
                       <div>
-                          <p className="font-semibold">
-                            {p.user?.firstName || p.user?.displayName || "Anônimo"} <span className="font-normal text-muted-foreground">apostou</span> {p.scoreTeam1} x {p.scoreTeam2}
-                          </p>
+                          <p className="font-semibold" dangerouslySetInnerHTML={{ __html: getBettingLine(p) }} />
                           {p.comment && <p className="text-muted-foreground bg-muted/50 p-2 rounded-md mt-1">"{p.comment}"</p>}
                       </div>
                     </div>

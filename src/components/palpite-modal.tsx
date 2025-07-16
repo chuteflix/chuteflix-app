@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useAuth } from "@/context/auth-context"
-import { placeChute } from "@/services/palpites"
+import { placeChute as placeChuteService } from "@/services/palpites" // Renomeado para evitar conflito
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,8 @@ import { Loader2 } from "lucide-react"
 import { Bolao } from "@/services/boloes"
 import { Team } from "@/services/teams"
 import { Championship } from "@/services/championships"
+import { httpsCallable } from "firebase/functions"
+import { functions } from "@/lib/firebase"
 
 const palpiteSchema = z.object({
   scoreTeam1: z.number().min(0, "O placar deve ser no mínimo 0."),
@@ -58,13 +60,15 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
 
     setIsSubmitting(true)
     try {
-      // Corrigido: `bolao.fee` é passado como o quarto argumento, que a função `placeChute` espera como `amount`.
-      await placeChute(
-        bolao.id,
-        values.scoreTeam1,
-        values.scoreTeam2,
-        bolao.fee 
-      );
+      // Chamar a Cloud Function diretamente do frontend
+      const placeChuteFunction = httpsCallable(functions, 'placeChute');
+      await placeChuteFunction({
+        bolaoId: bolao.id,
+        scoreTeam1: values.scoreTeam1,
+        scoreTeam2: values.scoreTeam2,
+        amount: bolao.fee,
+        comment: values.comment, // Enviando o comentário
+      });
 
       toast({
         title: "Chute Realizado com Sucesso!",
