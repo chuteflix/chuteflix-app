@@ -57,7 +57,7 @@ import { ToastProvider } from '@/components/toast-provider';
 import { useAuth } from '@/context/auth-context';
 import { auth } from '@/lib/firebase';
 
-const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarCollapsed, isAdminPage, pathname, isActive, handleLogout, user, userProfile }) => (
+const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarCollapsed, isAdminPage, pathname, isActive, handleLogout, user, userProfile, isMobileSidebarOpen, setIsMobileSidebarOpen }) => (
   <>
     <div className={cn('hidden md:flex flex-col transition-all duration-300 ease-in-out', isUserSidebarCollapsed ? 'w-20' : 'w-64', isAdminPage ? 'w-64' : '')}>
       <Sidebar>
@@ -97,7 +97,7 @@ const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarC
       </Sidebar>
     </div>
     <div className='md:hidden'>
-    <Sheet>
+    <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
           <Menu />
@@ -116,6 +116,7 @@ const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarC
                     asChild 
                     isActive={isActive(item.href, item.exact)} 
                     className="data-[active=true]:bg-primary/10 data-[active=true]:text-primary hover:bg-muted"
+                    onClick={() => setIsMobileSidebarOpen(false)}
                   >
                     <Link href={item.href}>
                       <item.icon className="h-5 w-5" />
@@ -144,10 +145,10 @@ const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarC
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuItem asChild className="hover:bg-muted focus:bg-muted">
+                <DropdownMenuItem asChild className="hover:bg-muted focus:bg-muted" onClick={() => setIsMobileSidebarOpen(false)}>
                   <Link href="/profile"><UserIcon className="mr-2 h-4 w-4" /><span>Editar Perfil</span></Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-secondary hover:bg-secondary/10 hover:text-secondary focus:bg-secondary/10 focus:text-secondary">
+                <DropdownMenuItem onClick={() => { handleLogout(); setIsMobileSidebarOpen(false); }} className="text-secondary hover:bg-secondary/10 hover:text-secondary focus:bg-secondary/10 focus:text-secondary">
                   <LogOut className="mr-2 h-4 w-4" /><span>Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -176,12 +177,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       router.push('/login');
     }
   }, [user, loading, router]);
-
-  useEffect(() => {
-    if (isMobileSidebarOpen) {
-      setIsMobileSidebarOpen(false);
-    }
-  }, [pathname]);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -244,6 +239,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           handleLogout={handleLogout} 
           user={user} 
           userProfile={userProfile} 
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          setIsMobileSidebarOpen={setIsMobileSidebarOpen}
         />
         <div className="flex-1 flex flex-col">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">

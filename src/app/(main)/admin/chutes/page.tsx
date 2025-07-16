@@ -34,6 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { Card, CardContent } from '@/components/ui/card';
 
 type PalpiteComDetalhes = Palpite & {
   user?: UserProfile;
@@ -179,13 +180,19 @@ export default function AdminChutesPage() {
             />
         </div>
       </div>
-      <ChutesTable
-        palpites={filteredPalpites}
-        loading={loading}
-        onAnular={handleAnular}
-        onDelete={handleDelete}
-        getFullName={getFullName}
-      />
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <ChutesTable
+              palpites={filteredPalpites}
+              loading={loading}
+              onAnular={handleAnular}
+              onDelete={handleDelete}
+              getFullName={getFullName}
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
