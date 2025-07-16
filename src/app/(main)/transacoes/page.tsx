@@ -17,7 +17,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, Minus, CircleDollarSign, Send } from "lucide-react"
+import { format } from "date-fns"
 
 const fromFirestore = (doc: DocumentData): Transaction => {
     const data = doc.data();
@@ -33,29 +34,45 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (user) {
-      const transactionsRef = collection(db, "transactions")
-      const q = query(
-        transactionsRef,
-        where("uid", "==", user.uid),
-        orderBy("createdAt", "desc")
-      )
+    if (!user) {
+        setLoading(false);
+        return;
+    };
 
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const userTransactions = querySnapshot.docs.map(fromFirestore)
-        setTransactions(userTransactions)
-        setLoading(false)
-      });
+    const transactionsRef = collection(db, "transactions")
+    const q = query(
+      transactionsRef,
+      where("uid", "==", user.uid),
+      orderBy("createdAt", "desc")
+    )
 
-      return () => unsubscribe();
-    }
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const userTransactions = querySnapshot.docs.map(fromFirestore)
+      setTransactions(userTransactions)
+      setLoading(false)
+    }, (error) => {
+        console.error("Erro ao buscar transações:", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user])
 
-  const getTransactionTypeDetails = (type: Transaction['type']) => {
+  const getTransactionTypeDetails = (type: Transaction['type'], amount: number) => {
     switch(type) {
-      case 'bet_placement': return { label: 'Aposta', icon: <ArrowDownLeft className="h-4 w-4 text-destructive" />, color: 'text-destructive' };
-      case 'prize_winning': return { label: 'Prêmio', icon: <ArrowUpRight className="h-4 w-4 text-success" />, color: 'text-success' };
-      default: return { label: type, icon: null, color: '' };
+      case 'deposit': return { label: 'Depósito', icon: <ArrowUpRight className="h-4 w-4 text-success" />, color: 'text-success' };
+      case 'withdrawal': return { label: 'Saque', icon: <ArrowDownLeft className="h-4 w-4 text-destructive" />, color: 'text-destructive' };
+      case 'bet_placement': return { label: 'Aposta', icon: <Send className="h-4 w-4 text-blue-500" />, color: 'text-blue-500' };
+      case 'prize_winning': return { label: 'Prêmio', icon: <CircleDollarSign className="h-4 w-4 text-amber-500" />, color: 'text-amber-500' };
+      default: return { label: type, icon: <Minus className="h-4 w-4 text-muted-foreground"/>, color: '' };
+    }
+  }
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+        case 'completed': return 'success';
+        case 'failed': return 'destructive';
+        default: return 'secondary';
     }
   }
 
@@ -91,14 +108,15 @@ export default function TransactionsPage() {
                 ))
               ) : transactions.length > 0 ? (
                 transactions.map(tx => {
-                  const typeDetails = getTransactionTypeDetails(tx.type);
+                  const typeDetails = getTransactionTypeDetails(tx.type, tx.amount);
                   return (
                     <TableRow key={tx.id}>
-                      <TableCell>{tx.createdAt.toDate().toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{tx.createdAt ? format(new Date(tx.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
                       <TableCell className="flex items-center gap-2">{typeDetails.icon} {typeDetails.label}</TableCell>
                       <TableCell>{tx.description}</TableCell>
-                      <TableCell><Badge variant={tx.status === 'completed' ? 'success' : 'secondary'}>{tx.status}</Badge></TableCell>
+                      <TableCell><Badge variant={getStatusVariant(tx.status)}>{tx.status}</Badge></TableCell>
                       <TableCell className={`text-right font-bold ${typeDetails.color}`}>
+                        {tx.amount < 0 ? "" : "+"}
                         {tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </TableCell>
                     </TableRow>

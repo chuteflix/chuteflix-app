@@ -2,7 +2,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getAllTransactions, Transaction } from "@/services/transactions"
+import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Transaction } from "@/services/transactions"
 import { getUserProfile, UserProfile } from "@/services/users"
 import {
   Table,
@@ -15,7 +17,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, Minus, CircleDollarSign, Send } from "lucide-react"
+import { format } from 'date-fns';
 
 type TransactionWithUser = Transaction & { user?: UserProfile };
 
@@ -24,26 +27,42 @@ export default function AdminTransactionsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true)
-      const allTransactions = await getAllTransactions();
-      const transactionsWithUsers = await Promise.all(
-        allTransactions.map(async (tx) => {
-          const user = await getUserProfile(tx.uid);
-          return { ...tx, user };
-        })
-      );
-      setTransactions(transactionsWithUsers);
-      setLoading(false)
-    }
-    fetchTransactions()
+    setLoading(true);
+    const q = query(collection(db, "transactions"), orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const transactionsPromises = snapshot.docs.map(async (doc): Promise<TransactionWithUser> => {
+            const txData = { id: doc.id, ...doc.data() } as Transaction;
+            const user = await getUserProfile(txData.uid);
+            return { ...txData, user };
+        });
+
+        const transactionsWithUsers = await Promise.all(transactionsPromises);
+        setTransactions(transactionsWithUsers);
+        setLoading(false);
+    }, (error) => {
+        console.error("Erro ao buscar transações:", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [])
 
   const getTransactionTypeDetails = (type: Transaction['type']) => {
     switch(type) {
-      case 'bet_placement': return { label: 'Aposta', icon: <ArrowDownLeft className="h-4 w-4 text-destructive" />, color: 'text-destructive' };
-      case 'prize_winning': return { label: 'Prêmio', icon: <ArrowUpRight className="h-4 w-4 text-success" />, color: 'text-success' };
-      default: return { label: type, icon: null, color: '' };
+      case 'deposit': return { label: 'Depósito', icon: <ArrowUpRight className="h-4 w-4 text-success" />, color: 'text-success' };
+      case 'withdrawal': return { label: 'Saque', icon: <ArrowDownLeft className="h-4 w-4 text-destructive" />, color: 'text-destructive' };
+      case 'bet_placement': return { label: 'Aposta', icon: <Send className="h-4 w-4 text-blue-500" />, color: 'text-blue-500' };
+      case 'prize_winning': return { label: 'Prêmio', icon: <CircleDollarSign className="h-4 w-4 text-amber-500" />, color: 'text-amber-500' };
+      default: return { label: type, icon: <Minus className="h-4 w-4 text-muted-foreground"/>, color: '' };
+    }
+  }
+  
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+        case 'completed': return 'success';
+        case 'failed': return 'destructive';
+        default: return 'secondary';
     }
   }
 
@@ -84,13 +103,13 @@ export default function AdminTransactionsPage() {
                   const typeDetails = getTransactionTypeDetails(tx.type);
                   return (
                     <TableRow key={tx.id}>
-                      <TableCell>{tx.createdAt.toDate().toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>{tx.user?.displayName || tx.uid}</TableCell>
+                      <TableCell>{tx.createdAt ? format(new Date(tx.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
+                      <TableCell>{tx.user?.name || tx.user?.email || tx.uid}</TableCell>
                       <TableCell className="flex items-center gap-2">{typeDetails.icon} {typeDetails.label}</TableCell>
                       <TableCell>{tx.description}</TableCell>
-                      <TableCell><Badge variant={tx.status === 'completed' ? 'success' : 'secondary'}>{tx.status}</Badge></TableCell>
+                      <TableCell><Badge variant={getStatusVariant(tx.status)}>{tx.status}</Badge></TableCell>
                       <TableCell className={`text-right font-bold ${typeDetails.color}`}>
-                        {tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        {tx.type === 'bet_placement' ? `-${Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </TableCell>
                     </TableRow>
                   )
