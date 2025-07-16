@@ -15,7 +15,7 @@ import { Transaction } from '@/services/transactions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore'; // 1. Importar o necessário
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore'; // 1. Importar limit
 import { db } from '@/lib/firebase';
 
 export default function WithdrawPage() {
@@ -33,7 +33,6 @@ export default function WithdrawPage() {
     }
   }, [userProfile]);
 
-  // 2. Substituir a busca única por um listener em tempo real
   useEffect(() => {
     if (!user) {
       setLoadingHistory(false);
@@ -45,7 +44,8 @@ export default function WithdrawPage() {
       collection(db, "transactions"),
       where("uid", "==", user.uid),
       where("type", "==", "withdrawal"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(10) // 2. Limitar a 10 registros
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -54,7 +54,7 @@ export default function WithdrawPage() {
       setLoadingHistory(false);
     });
 
-    return () => unsubscribe(); // Limpa o listener ao desmontar o componente
+    return () => unsubscribe();
   }, [user]);
 
   const handleRequestWithdrawal = async () => {
@@ -80,7 +80,6 @@ export default function WithdrawPage() {
       await requestWithdrawal({ amount, pixKey });
       toast({ title: "Solicitação de saque enviada com sucesso!", description: "Sua solicitação será processada em breve.", variant: "success" });
       setAmount(undefined);
-      // O histórico já atualiza sozinho, não precisa de re-fetch manual
     } catch (error: any) {
       toast({ title: "Erro ao solicitar saque.", description: error.message, variant: "destructive" });
     } finally {
@@ -148,7 +147,7 @@ export default function WithdrawPage() {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><History /> Histórico de Saques</CardTitle>
-                <CardDescription>Acompanhe o status dos seus saques.</CardDescription>
+                <CardDescription>Acompanhe o status dos seus 10 saques mais recentes.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>

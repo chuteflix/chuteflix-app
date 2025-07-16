@@ -18,7 +18,7 @@ import { ProofOfPaymentModal } from "@/components/proof-of-payment-modal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore'; // 1. Importar limit
 import { db } from '@/lib/firebase';
 
 export default function RechargePage() {
@@ -48,7 +48,8 @@ export default function RechargePage() {
       collection(db, "transactions"),
       where("uid", "==", user.uid),
       where("type", "==", "deposit"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(10) // 2. Limitar a 10 registros
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -229,7 +230,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><History /> Histórico de Recargas</CardTitle>
-                    <CardDescription>Acompanhe o status das suas recargas.</CardDescription>
+                    <CardDescription>Acompanhe o status das suas 10 recargas mais recentes.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
