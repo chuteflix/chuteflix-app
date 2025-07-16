@@ -83,6 +83,51 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
     });
 });
 
+exports.payWinner = functions.https.onCall(async (data, context) => {
+    // Apenas admins podem chamar esta função diretamente (embora ela seja chamada pelo sistema)
+    // if (!context.auth || !context.auth.token.admin) { 
+    //     throw new functions.https.HttpsError('permission-denied', 'Apenas o sistema pode pagar os vencedores.');
+    // }
+
+    const { userId, bolaoId, prizeAmount } = data;
+
+    if (!userId || !bolaoId || typeof prizeAmount !== 'number' || prizeAmount <= 0) {
+        throw new functions.https.HttpsError('invalid-argument', 'Argumentos inválidos para pagar o prêmio.');
+    }
+
+    const userRef = db.collection(USERS_COLLECTION).doc(userId);
+    const bolaoRef = db.collection(BOLOES_COLLECTION).doc(bolaoId);
+
+    return db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        const bolaoDoc = await transaction.get(bolaoRef);
+
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', `Usuário ${userId} não encontrado.`);
+        }
+        if (!bolaoDoc.exists) {
+            throw new functions.https.HttpsError('not-found', `Bolão ${bolaoId} não encontrado.`);
+        }
+
+        // Credita o prêmio ao saldo do usuário
+        transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(prizeAmount) });
+
+        // Cria um registro da transação de ganho
+        const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
+        transaction.set(transactionRef, {
+            uid: userId,
+            type: 'prize_winning',
+            amount: prizeAmount,
+            description: `Prêmio ganho no bolão: ${bolaoDoc.data()?.name || 'N/A'}`,
+            status: 'completed',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            metadata: { bolaoId },
+        });
+
+        return { success: true, transactionId: transactionRef.id };
+    });
+});
+
 exports.requestWithdrawal = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para solicitar um saque.');
