@@ -25,10 +25,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Search, Users, Loader2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Search, Users, Loader2, Phone } from "lucide-react";
 import { UserEditModal } from "@/components/user-edit-modal";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -122,6 +128,15 @@ export default function UsuariosPage() {
     }
     return user.displayName || "N/A";
   };
+  
+  const handleWhatsAppClick = (phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone) {
+      window.open(`https://wa.me/${cleanPhone}`, '_blank');
+    } else {
+      toast({ title: "Número de telefone inválido.", variant: "warning" });
+    }
+  };
 
   return (
     <div className="container mx-auto">
@@ -171,13 +186,14 @@ export default function UsuariosPage() {
                   <TableHead>E-mail</TableHead>
                   <TableHead className="text-right">Saldo</TableHead>
                   <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">WhatsApp</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={7} className="text-center h-24">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
@@ -200,6 +216,33 @@ export default function UsuariosPage() {
                             {user.isAdmin ? "Admin" : "Usuário"}
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                          {user.phone ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <span className="font-mono text-sm">{user.phone}</span>
+                                <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleWhatsAppClick(user.phone!)}
+                                            aria-label="Contatar no WhatsApp"
+                                            disabled={isSubmitting === user.uid}
+                                        >
+                                            <Phone className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Contatar via WhatsApp</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                          ) : (
+                              <span className="text-xs text-muted-foreground">Não cadastrado</span>
+                          )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -246,7 +289,7 @@ export default function UsuariosPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={7} className="text-center h-24">
                       Nenhum usuário encontrado.
                     </TableCell>
                   </TableRow>
