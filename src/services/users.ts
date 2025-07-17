@@ -9,6 +9,7 @@ import {
   increment,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { uploadFile } from "./storage"
 
 export interface UserProfile {
   uid: string
@@ -22,12 +23,31 @@ export interface UserProfile {
   pixKeyType?: string
   isAdmin?: boolean
   balance?: number
+  photoURL?: string
+  role?: string // Adicionando a propriedade role
+}
+
+export const uploadProfilePicture = async (uid: string, file: File): Promise<string> => {
+  try {
+    if (!uid) throw new Error("UID do usuário é necessário para o upload.");
+    if (!file) throw new Error("Nenhum arquivo selecionado.");
+
+    const path = `profile-pictures/${uid}/profile.jpg`
+    const photoURL = await uploadFile(file, path)
+
+    await updateUserProfile(uid, { photoURL })
+    
+    return photoURL
+  } catch (error) {
+    console.error("Erro ao fazer upload da foto de perfil:", error)
+    throw new Error("Não foi possível fazer o upload da imagem.")
+  }
 }
 
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
     const usersCollectionRef = collection(db, "users")
-    const querySnapshot = await getDocs(usersCollectionRef)
+    const querySnapshot = await getDocs(usersCollectionrRef)
     const users: UserProfile[] = []
     querySnapshot.forEach(doc => {
       users.push({ uid: doc.id, ...doc.data() } as UserProfile)

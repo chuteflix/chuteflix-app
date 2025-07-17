@@ -1,38 +1,45 @@
 
-import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import * as functions from "firebase-functions";
 
 admin.initializeApp();
 const db = admin.firestore();
 
-const CHUTES_COLLECTION = 'chutes';
 const TRANSACTIONS_COLLECTION = 'transactions';
 const USERS_COLLECTION = 'users';
 const BOLOES_COLLECTION = 'boloes';
+const CHUTES_COLLECTION = 'chutes';
 
-// Função para definir um usuário como admin (ou remover o status)
-exports.setUserRole = functions.https.onCall(async (data, context) => {
-    if (!context.auth?.token.admin) {
-        throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem alterar permissões.');
-    }
+/**
+ * Define uma 'custom claim' de função (role) para um usuário.
+ * Apenas administradores autenticados podem chamar esta função.
+ */
+export const setUserRole = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "A requisição deve ser feita por um usuário autenticado.");
+  }
+  
+  const callerRole = context.auth.token.role;
+  if (callerRole !== "admin") {
+    throw new functions.https.HttpsError("permission-denied", "Apenas administradores podem definir funções de usuário.");
+  }
 
-    const { targetUserId, isAdmin } = data;
-    if (!targetUserId || typeof isAdmin !== 'boolean') {
-        throw new functions.https.HttpsError('invalid-argument', 'Argumentos inválidos.');
-    }
+  const { uid, role } = data;
+  if (typeof uid !== "string" || typeof role !== "string") {
+    throw new functions.https.HttpsError("invalid-argument", "Os dados devem incluir um 'uid' e uma 'role' do tipo string.");
+  }
 
-    try {
-        await admin.auth().setCustomUserClaims(targetUserId, { admin: isAdmin });
-        const userRef = db.collection(USERS_COLLECTION).doc(targetUserId);
-        await userRef.update({ isAdmin });
-
-        return { success: true, message: `Permissões do usuário atualizadas com sucesso.` };
-    } catch (error) {
-        console.error("Erro ao definir permissão de usuário:", error);
-        throw new functions.https.HttpsError('internal', 'Ocorreu um erro ao definir a permissão.');
-    }
+  try {
+    await admin.auth().setCustomUserClaims(uid, { role: role });
+    // Adicionalmente, vamos salvar a role no documento do usuário para facilitar as buscas no frontend
+    await db.collection(USERS_COLLECTION).doc(uid).set({ role: role }, { merge: true });
+    
+    return { result: `Sucesso! O usuário ${uid} agora tem a função de ${role}.` };
+  } catch (error) {
+    console.error("Erro ao definir custom claim:", error);
+    throw new functions.https.HttpsError("internal", "Ocorreu um erro interno ao tentar definir a função do usuário.");
+  }
 });
-
 
 // Função para fazer um palpite (transação atômica)
 exports.placeChute = functions.https.onCall(async (data, context) => {
@@ -40,7 +47,7 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para fazer um chute.');
     }
 
-    const { bolaoId, scoreTeam1, scoreTeam2, amount, comment } = data; 
+    const { bolaoId, scoreTeam1, scoreTeam2, amount, comment } = data;
     const userId = context.auth.uid;
 
     if (typeof amount !== 'number' || amount <= 0) {
@@ -62,19 +69,9 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('already-exists', 'Você já fez uma aposta com este placar para este bolão.');
         }
 
-        const [userDoc, bolaoDoc] = await Promise.all([
-            transaction.get(userRef),
-            transaction.get(bolaoRef)
-        ]);
-        
-        if (!userDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Usuário não encontrado.');
-        }
-        if (!bolaoDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Bolão não encontrado.');
-        }
-
+        const userDoc = await transaction.get(userRef);
         const currentBalance = userDoc.data()?.balance || 0;
+
         if (currentBalance < amount) {
             throw new functions.https.HttpsError('failed-precondition', 'Saldo insuficiente.');
         }
@@ -82,7 +79,6 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
         transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-amount) });
 
         const palpiteRef = db.collection(CHUTES_COLLECTION).doc();
-        
         const palpiteData = {
             userId,
             bolaoId,
@@ -100,18 +96,17 @@ exports.placeChute = functions.https.onCall(async (data, context) => {
             uid: userId,
             type: 'bet_placement',
             amount: -amount,
-            description: `Aposta no bolão: ${bolaoDoc.data()?.name || 'N/A'}`,
+            description: `Aposta no bolão: ${bolaoRef.id}`,
             status: 'completed',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             metadata: { bolaoId, palpiteId: palpiteRef.id },
         });
 
-        return { success: true, message: "Chute realizado com sucesso!" };
+        return { success: true, transactionId: transactionRef.id, palpiteId: palpiteRef.id };
     });
 });
 
 exports.payWinner = functions.https.onCall(async (data, context) => {
-
     const { userId, bolaoId, prizeAmount } = data;
 
     if (!userId || !bolaoId || typeof prizeAmount !== 'number' || prizeAmount <= 0) {
@@ -153,32 +148,29 @@ exports.requestWithdrawal = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para solicitar um saque.');
     }
-
+    
     const { amount, pixKey } = data;
     const userId = context.auth.uid;
-
+    
     if (typeof amount !== 'number' || amount <= 0) {
         throw new functions.https.HttpsError('invalid-argument', 'O valor do saque é inválido.');
     }
-    if (!pixKey || typeof pixKey !== 'string') {
-        throw new functions.https.HttpsError('invalid-argument', 'A chave PIX é obrigatória.');
-    }
-
+    
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
-
+    
     return db.runTransaction(async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'Usuário não encontrado.');
         }
-
+        
         const currentBalance = userDoc.data()?.balance || 0;
         if (currentBalance < amount) {
             throw new functions.https.HttpsError('failed-precondition', 'Saldo insuficiente para realizar o saque.');
         }
-
+        
         transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-amount) });
-
+        
         const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
         transaction.set(transactionRef, {
             uid: userId,
@@ -189,65 +181,74 @@ exports.requestWithdrawal = functions.https.onCall(async (data, context) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             metadata: { pixKey },
         });
-
+        
         return { success: true, transactionId: transactionRef.id };
     });
 });
 
 exports.approveDeposit = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.admin) { 
+    if (!context.auth || context.auth.token.role !== 'admin') { 
         throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem aprovar depósitos.');
     }
-
-    const { transactionId } = data;
-    if (!transactionId) {
-        throw new functions.https.HttpsError('invalid-argument', 'O ID da transação é obrigatório.');
-    }
     
+    const { transactionId } = data;
     const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
-
+    
     return db.runTransaction(async (transaction) => {
         const transactionDoc = await transaction.get(transactionRef);
-
         if (!transactionDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'Transação não encontrada.');
         }
-
-        const transactionData = transactionDoc.data()!;
-        if (transactionData.status !== 'pending') {
-            throw new functions.https.HttpsError('failed-precondition', 'Este depósito já foi processado.');
+        
+        const transactionData = transactionDoc.data();
+        if(transactionData?.status !== 'pending') {
+            throw new functions.https.HttpsError('failed-precondition', 'Esta transação não está pendente.');
         }
 
         const userRef = db.collection(USERS_COLLECTION).doc(transactionData.uid);
-        
-        transaction.update(userRef, {
-            balance: admin.firestore.FieldValue.increment(transactionData.amount)
-        });
+        transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(transactionData.amount) });
+        transaction.update(transactionRef, { status: 'completed' });
+    });
+});
 
+exports.confirmWithdrawal = functions.https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token.role !== 'admin') { 
+        throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem confirmar saques.');
+    }
+    
+    const { transactionId } = data;
+    const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
+    
+    return db.runTransaction(async (transaction) => {
+        const transactionDoc = await transaction.get(transactionRef);
+        if (!transactionDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Transação não encontrada.');
+        }
+        
+        if(transactionDoc.data()?.status !== 'pending') {
+            throw new functions.https.HttpsError('failed-precondition', 'Este saque não está pendente.');
+        }
+        
         transaction.update(transactionRef, { status: 'completed' });
     });
 });
 
 exports.declineTransaction = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.admin) { 
+    if (!context.auth || context.auth.token.role !== 'admin') { 
         throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem recusar transações.');
     }
-
+    
     const { transactionId } = data;
-    if (!transactionId) {
-        throw new functions.https.HttpsError('invalid-argument', 'O ID da transação é obrigatório.');
-    }
-
     const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
-
+    
     return db.runTransaction(async (transaction) => {
         const transactionDoc = await transaction.get(transactionRef);
         if (!transactionDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'Transação não encontrada.');
         }
-
-        const transactionData = transactionDoc.data()!;
-        if (transactionData.status !== 'pending') {
+        
+        const transactionData = transactionDoc.data();
+        if(transactionData?.status !== 'pending') {
             throw new functions.https.HttpsError('failed-precondition', 'Esta transação já foi processada.');
         }
         
@@ -255,34 +256,7 @@ exports.declineTransaction = functions.https.onCall(async (data, context) => {
             const userRef = db.collection(USERS_COLLECTION).doc(transactionData.uid);
             transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-transactionData.amount) });
         }
-
+        
         transaction.update(transactionRef, { status: 'failed' });
-    });
-});
-
-exports.confirmWithdrawal = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.admin) {
-        throw new functions.https.HttpsError('permission-denied', 'Apenas administradores podem confirmar saques.');
-    }
-    
-    const { transactionId } = data;
-    if (!transactionId ) {
-        throw new functions.https.HttpsError('invalid-argument', 'O ID da transação é obrigatório.');
-    }
-
-    const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
-
-    return db.runTransaction(async (transaction) => {
-        const transactionDoc = await transaction.get(transactionRef);
-        if (!transactionDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Transação não encontrada.');
-        }
-
-        const transactionData = transactionDoc.data()!;
-        if (transactionData.status !== 'pending') {
-            throw new functions.https.HttpsError('failed-precondition', 'Este saque já foi processado.');
-        }
-
-        transaction.update(transactionRef, { status: 'completed' });
     });
 });
