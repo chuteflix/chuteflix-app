@@ -3,34 +3,39 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Usuários só podem ser criados por usuários autenticados
-    // e só podem ser lidos, atualizados ou deletados pelo próprio usuário.
+    // Usuários:
+    // - Admins podem ler e listar todos os usuários.
+    // - Usuários normais só podem ler e atualizar seus próprios dados.
     match /users/{userId} {
       allow create: if request.auth != null;
-      allow read, update, delete: if request.auth.uid == userId;
+      allow read: if request.auth.uid == userId || request.auth.token.role == 'admin';
+      allow update, delete: if request.auth.uid == userId;
+      allow list: if request.auth.token.role == 'admin'; // Permissão explícita para listar
     }
 
     // Permite leitura pública para as coleções essenciais da home.
-    // A escrita continua protegida.
     match /boloes/{bolaoId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth.token.role == 'admin';
     }
 
     match /teams/{teamId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth.token.role == 'admin';
     }
 
     match /championships/{championshipId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth.token.role == 'admin';
     }
 
-    // Para todas as outras coleções, a regra padrão se aplica:
-    // leitura e escrita apenas para usuários autenticados.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Regra genérica para coleções como 'chutes', 'transactions', etc.
+    // Usuários só podem ler e escrever seus próprios documentos.
+    // Admins podem ler tudo.
+    match /{collection}/{docId} {
+        allow read: if (request.auth != null && resource.data.uid == request.auth.uid) || request.auth.token.role == 'admin';
+        allow create: if request.auth != null;
+        allow update, delete: if (request.auth != null && resource.data.uid == request.auth.uid) || request.auth.token.role == 'admin';
     }
   }
 }

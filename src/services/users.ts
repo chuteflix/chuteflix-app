@@ -24,7 +24,7 @@ export interface UserProfile {
   isAdmin?: boolean
   balance?: number
   photoURL?: string
-  role?: string // Adicionando a propriedade role
+  role?: string 
 }
 
 export const uploadProfilePicture = async (uid: string, file: File): Promise<string> => {
@@ -46,8 +46,8 @@ export const uploadProfilePicture = async (uid: string, file: File): Promise<str
 
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
-    const usersCollectionRef = collection(db, "users")
-    const querySnapshot = await getDocs(usersCollectionrRef)
+    const usersCollectionRef = collection(db, "users") // Corrigido o typo aqui
+    const querySnapshot = await getDocs(usersCollectionRef)
     const users: UserProfile[] = []
     querySnapshot.forEach(doc => {
       users.push({ uid: doc.id, ...doc.data() } as UserProfile)
