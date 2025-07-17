@@ -4,13 +4,19 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Usuários:
-    // - Admins podem ler e listar todos os usuários.
-    // - Usuários normais só podem ler e atualizar seus próprios dados.
     match /users/{userId} {
       allow create: if request.auth != null;
       allow read: if request.auth.uid == userId || request.auth.token.role == 'admin';
       allow update, delete: if request.auth.uid == userId;
-      allow list: if request.auth.token.role == 'admin'; // Permissão explícita para listar
+      allow list: if request.auth.token.role == 'admin';
+    }
+
+    // Configurações (Settings):
+    // Qualquer usuário autenticado pode ler as configurações de pagamento.
+    // Apenas administradores podem alterá-las.
+    match /settings/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.role == 'admin';
     }
 
     // Permite leitura pública para as coleções essenciais da home.
@@ -30,8 +36,6 @@ service cloud.firestore {
     }
 
     // Regra genérica para coleções como 'chutes', 'transactions', etc.
-    // Usuários só podem ler e escrever seus próprios documentos.
-    // Admins podem ler tudo.
     match /{collection}/{docId} {
         allow read: if (request.auth != null && resource.data.uid == request.auth.uid) || request.auth.token.role == 'admin';
         allow create: if request.auth != null;
