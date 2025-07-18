@@ -1,11 +1,14 @@
-import type {NextConfig} from 'next';
 
+import type { NextConfig } from 'next';
+
+/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
+    // Permite o build mesmo que haja erros de tipo.
     ignoreBuildErrors: true,
   },
   eslint: {
+    // Pula a verificação de ESLint durante o build.
     ignoreDuringBuilds: true,
   },
   images: {
@@ -13,19 +16,16 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'placehold.co',
-        port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'api.qrserver.com',
-        port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
-        port: '',
         pathname: '/**',
       },
     ],

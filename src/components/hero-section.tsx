@@ -20,17 +20,9 @@ export function HeroSection() {
         {/* Dark overlay for better text contrast */}
         <div className="absolute inset-0 bg-black/60 z-10" />
         
-        {/* Background video */}
-        <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-            className="absolute inset-0 w-full h-full object-cover z-0"
-        >
-            <source src="/videos/hero-bg.mp4" type="video/mp4" />
-            Seu navegador não suporta a tag de vídeo.
-        </video>
+        {/* O elemento de vídeo foi removido */}
+        <div className="absolute inset-0 w-full h-full object-cover z-0 bg-black" />
+
 
       {/* Content */}
       <div className="relative z-20 p-4 sm:p-6 md:p-8 flex flex-col items-center">

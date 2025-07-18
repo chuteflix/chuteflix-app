@@ -3,7 +3,7 @@ export interface Team {
   name: string;
   logoUrl: string;
   level: 'Profissional' | 'Amador/Várzea';
-  location: string; // Estado/Cidade
+  location: string;
   scope: 'Nacional' | 'Estadual' | 'Municipal';
 }
 
@@ -24,25 +24,35 @@ export interface Bolao {
   id: string;
   championshipId: string;
   championship: string;
-  teamA: Team;
-  teamB: Team;
+  homeTeam: Team;
+  awayTeam: Team;
   matchStartDate: Date;
   matchEndDate: Date;
+  closingTime: string; // Horário limite para apostas
   betAmount: number;
+  initialPrize?: number;
   status: 'Aberto' | 'Fechado' | 'Finalizado';
+  categoryIds?: string[];
   userGuess?: {
-    teamA: number;
-    teamB: number;
+    homeTeam: number;
+    awayTeam: number;
   };
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-  balance: number;
+export interface UserProfile {
+    uid: string;
+    email: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    photoURL?: string;
+    balance: number;
+    isAdmin?: boolean;
+    createdAt?: any;
+    phone?: string;
 }
+  
 
 export interface Transaction {
   id: string;

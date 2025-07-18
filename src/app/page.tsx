@@ -1,57 +1,14 @@
+"use client";
 
-"use client"
-
-import { useState, useEffect, useMemo } from "react"
-import { getBoloes, Bolao } from "@/services/boloes"
-import { getTeams, Team } from "@/services/teams"
-import { getChampionships, Championship } from "@/services/championships"
-import { getParticipantCount } from "@/services/palpites"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { BoloesCarousel } from "@/components/boloes-carousel"
-import { HeroSection } from "@/components/hero-section"
-import { Tv, Medal, Users } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
-import { PublicHeader } from "@/components/public-header"
-
-type BolaoComDetalhes = Bolao & {
-  teamADetails?: Team;
-  teamBDetails?: Team;
-  championshipDetails?: Championship;
-  participantCount?: number;
-};
-
-const useCategorizedBoloes = (boloes: BolaoComDetalhes[]) => {
-  return useMemo(() => {
-    const customCategories = boloes.reduce((acc, bolao) => {
-      bolao.categories?.forEach(category => {
-        if (!acc[category]) {
-          acc[category] = {};
-        }
-        bolao.subcategories?.forEach(subcategory => {
-          if (!acc[category][subcategory]) {
-            acc[category][subcategory] = [];
-          }
-          acc[category][subcategory].push(bolao);
-        });
-      });
-      return acc;
-    }, {} as Record<string, Record<string, BolaoComDetalhes[]>>);
-
-    const customCategoryCarousels = Object.entries(customCategories).flatMap(([category, subcategories]) => 
-      Object.entries(subcategories).map(([subcategory, boloes]) => ({
-        title: `${category} - ${subcategory}`,
-        boloes
-      }))
-    );
-    
-    const categories = [
-      ...customCategoryCarousels
-    ].filter(category => category.boloes.length > 0);
-
-    return categories;
-  }, [boloes]);
-};
+import { useState, useEffect } from "react";
+import { getAllCategories, Category } from "@/services/categories";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CategoryShelf } from "@/components/category-shelf";
+import { HeroSection } from "@/components/hero-section";
+import { Tv, Medal, Users } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { PublicHeader } from "@/components/public-header";
 
 const features = [
     {
@@ -91,52 +48,36 @@ const faqData = [
 ];
 
 export default function PublicHomePage() {
-  const [boloes, setBoloes] = useState<BolaoComDetalhes[]>([])
-  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
+    const fetchCategories = async () => {
+      setLoading(true);
       try {
-        const [boloesData, teamsData, championshipsData] = await Promise.all([
-          getBoloes(),
-          getTeams(),
-          getChampionships(),
-        ]);
-
-        const availableBoloes = boloesData.filter(b => b.status !== 'Finalizado');
-
-        const detailedBoloes = await Promise.all(
-          availableBoloes.map(async (bolao) => {
-            const [teamADetails, teamBDetails, championshipDetails, participantCount] = await Promise.all([
-              teamsData.find(t => t.id === bolao.teamAId),
-              teamsData.find(t => t.id === bolao.teamBId),
-              championshipsData.find(c => c.id === bolao.championshipId),
-              getParticipantCount(bolao.id)
-            ]);
-            return { ...bolao, teamADetails, teamBDetails, championshipDetails, participantCount };
-          })
-        );
-        
-        setBoloes(detailedBoloes);
-
+        const fetchedCategories = await getAllCategories();
+        setCategories(fetchedCategories);
       } catch (error) {
-        console.error("Falha ao buscar dados para a home page:", error)
+        console.error("Falha ao buscar categorias para a home page:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchData()
-  }, [])
-
-  const categorizedBoloes = useCategorizedBoloes(boloes);
+    };
+    fetchCategories();
+  }, []);
 
   const renderSkeleton = () => (
-    <div className="mb-12">
-        <Skeleton className="h-8 w-1/3 mb-6" />
-        <div className="flex space-x-4">
-            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-56 w-80 rounded-lg" />)}
-        </div>
+    <div className="space-y-8">
+        {Array.from({ length: 2 }).map((_, i) => (
+             <div key={i}>
+                <Skeleton className="h-8 w-1/3 mb-4" />
+                <div className="flex space-x-4">
+                    <Skeleton className="h-48 w-64 rounded-lg" />
+                    <Skeleton className="h-48 w-64 rounded-lg" />
+                    <Skeleton className="h-48 w-64 rounded-lg" />
+                </div>
+            </div>
+        ))}
     </div>
   )
 
@@ -167,13 +108,13 @@ export default function PublicHomePage() {
         <section id="boloes" className="container mx-auto py-16 sm:py-24">
              {loading ? (
                 renderSkeleton()
-            ) : boloes.length > 0 ? (
-                categorizedBoloes.map(({ title, boloes }) => (
-                  <BoloesCarousel key={title} title={title} boloes={boloes} />
+            ) : categories.length > 0 ? (
+                categories.map((category) => (
+                    <CategoryShelf key={category.id} category={category} />
                 ))
             ) : (
                 <div className="text-center bg-muted/20 border-2 border-dashed border-border/30 rounded-lg py-20">
-                    <h3 className="text-2xl font-bold">Nenhum bolão em destaque no momento.</h3>
+                    <h3 className="text-2xl font-bold">Nenhum bolão disponível no momento.</h3>
                     <p className="text-muted-foreground mt-2">Fique de olho! Novas oportunidades em breve.</p>
                 </div>
             )}

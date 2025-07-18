@@ -26,7 +26,8 @@ import {
   Send,
   ChevronsLeft,
   ChevronsRight,
-  ShieldCheck, // Ícone para a equipe
+  ShieldCheck,
+  Shapes, // Ícone para Categorias
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import {
@@ -202,8 +203,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy },
     { href: '/admin/times', label: 'Times', icon: Flag },
     { href: '/admin/usuarios', label: 'Usuários', icon: UsersIcon },
-    { href: '/admin/equipe', label: 'Equipe', icon: ShieldCheck }, // <-- ITEM ADICIONADO AQUI
+    { href: '/admin/equipe', label: 'Equipe', icon: ShieldCheck },
     { href: '/admin/transacoes', label: 'Transações', icon: ArrowRightLeft },
+    { href: '/admin/categorias', label: 'Categorias', icon: Shapes },
     { href: '/admin/notificacoes', label: 'Notificações', icon: Bell },
     { href: '/admin/configuracoes', label: 'Configurações', icon: SettingsIcon },
   ];

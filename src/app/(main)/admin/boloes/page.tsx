@@ -1,21 +1,14 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { parse } from "date-fns"
 import Link from "next/link"
 import {
   addBolao,
   getBoloes,
   updateBolao,
   deleteBolao,
-  Bolao,
 } from "@/services/boloes"
-import { getTeams, Team } from "@/services/teams"
-import { getChampionships, Championship } from "@/services/championships"
-
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -40,40 +33,35 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger, // <-- CORREÇÃO AQUI
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2, Trophy, Users } from "lucide-react"
+import { Pencil, Trash2, Trophy, Users, Loader2 } from "lucide-react"
 import { BolaoFormModal } from "@/components/bolao-form-modal"
 import { ResultFormModal } from "@/components/result-form-modal"
 import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button"
+import { format, isPast, isValid } from "date-fns"
+import { Bolao } from "@/types"
 
 export default function BoloesPage() {
   const searchParams = useSearchParams()
   const championshipIdFilter = searchParams.get("championshipId")
 
   const [boloes, setBoloes] = useState<Bolao[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
-  const [championships, setChampionships] = useState<Championship[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [boloesData, teamsData, championshipsData] = await Promise.all([
-        getBoloes(),
-        getTeams(),
-        getChampionships(),
-      ])
+      let boloesData = await getBoloes()
       
-      const filteredBoloes = championshipIdFilter 
-        ? boloesData.filter(bolao => bolao.championshipId === championshipIdFilter)
-        : boloesData;
+      if (championshipIdFilter) {
+        boloesData = boloesData.filter(bolao => bolao.championshipId === championshipIdFilter)
+      }
 
-      setBoloes(filteredBoloes)
-      setTeams(teamsData)
-      setChampionships(championshipsData)
+      setBoloes(boloesData)
     } catch (err) {
       toast({
         title: "Erro ao buscar dados",
@@ -89,25 +77,12 @@ export default function BoloesPage() {
     fetchData()
   }, [championshipIdFilter])
 
-  const handleSave = async (data: Omit<Bolao, "id" | "status" | "name">, id?: string) => {
+  const handleSave = async (data: Omit<Bolao, "id" | "status">, id?: string) => {
     try {
-        const teamA = teams.find(t => t.id === data.teamAId)
-        const teamB = teams.find(t => t.id === data.teamBId)
-        const championship = championships.find(c => c.id === data.championshipId)
-
-        if(!teamA || !teamB || !championship) {
-            throw new Error("Dados inválidos para criar o nome do bolão.")
-        }
-        
-        const name = `${teamA.name} vs ${teamB.name} - ${championship.name}`
-        const categories = Array.isArray(data.categories) ? data.categories : [];
-        const subcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
-        const bolaoData = { ...data, name, categories, subcategories }
-
         if (id) {
-            await updateBolao(id, bolaoData);
+            await updateBolao(id, data);
         } else {
-            await addBolao(bolaoData);
+            await addBolao(data);
         }
         fetchData();
         toast({
@@ -142,25 +117,19 @@ export default function BoloesPage() {
     }
   }
   
-  const getNameById = (id: string, list: {id: string, name: string}[]) => {
-    return list.find(item => item.id === id)?.name || "N/A"
-  }
-
-  const getTeamName = (id: string) => getNameById(id, teams);
-  
-  const getChampionshipName = (id: string) => getNameById(id, championships);
-
-  const getDisplayStatus = (bolao: Bolao): Bolao['status'] => {
+  const getDisplayStatus = (bolao: Bolao): 'Aberto' | 'Fechado' | 'Finalizado' => {
     if (bolao.status === 'Finalizado') return 'Finalizado';
-    const closingDateTime = parse(`${bolao.matchDate} ${bolao.closingTime}`, 'yyyy-MM-dd HH:mm', new Date());
-    if (new Date() > closingDateTime) return 'Chutes Encerrados';
-    return bolao.status;
+    
+    const closingDate = new Date(bolao.closingTime);
+    if(isValid(closingDate) && isPast(closingDate)) return 'Fechado';
+
+    return 'Aberto';
   };
 
-  const statusVariant = (status: Bolao['status']) => {
+  const statusVariant = (status: 'Aberto' | 'Fechado' | 'Finalizado') => {
     switch (status) {
-      case 'Disponível': return 'success'
-      case 'Chutes Encerrados': return 'secondary'
+      case 'Aberto': return 'success'
+      case 'Fechado': return 'secondary'
       case 'Finalizado': return 'destructive'
       default: return 'outline'
     }
@@ -174,7 +143,7 @@ export default function BoloesPage() {
                 Gerenciamento de Bolões
             </h1>
             <p className="text-muted-foreground">
-                {championshipIdFilter ? `Bolões do campeonato ${getChampionshipName(championshipIdFilter)}` : 'Adicione, edite e visualize os bolões da plataforma.'}
+                Adicione, edite e visualize os bolões da plataforma.
             </p>
         </div>
         <BolaoFormModal onSave={handleSave}>
@@ -194,6 +163,7 @@ export default function BoloesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Partida</TableHead>
+                <TableHead>Campeonato</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Resultados</TableHead>
@@ -203,99 +173,66 @@ export default function BoloesPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin"/></TableCell></TableRow>
               ) : boloes.length > 0 ? (
                 boloes.map(bolao => {
                     const displayStatus = getDisplayStatus(bolao);
+                    const homeTeamName = bolao.homeTeam?.name || "Time A";
+                    const awayTeamName = bolao.awayTeam?.name || "Time B";
                     
-                    let winnerInfo = '';
-                    // CORREÇÃO: Usando os campos corretos `finalScoreTeam1` e `finalScoreTeam2`
-                    if (displayStatus === 'Finalizado' && bolao.finalScoreTeam1 !== undefined && bolao.finalScoreTeam2 !== undefined) {
-                        if (bolao.finalScoreTeam1 > bolao.finalScoreTeam2) {
-                            winnerInfo = `Vencedor: ${getTeamName(bolao.teamAId)}`;
-                        } else if (bolao.finalScoreTeam2 > bolao.finalScoreTeam1) {
-                            winnerInfo = `Vencedor: ${getTeamName(bolao.teamBId)}`;
-                        } else {
-                            winnerInfo = 'Empate';
-                        }
-                    }
-
                     return (
                         <TableRow key={bolao.id}>
-                            <TableCell className="font-medium">{`${getTeamName(bolao.teamAId)} vs ${getTeamName(bolao.teamBId)}`}</TableCell>
-                            <TableCell>{new Date(bolao.matchDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
+                            <TableCell className="font-medium">{`${homeTeamName} vs ${awayTeamName}`}</TableCell>
+                            <TableCell>{bolao.championship}</TableCell>
                             <TableCell>
-                                <Badge variant={statusVariant(displayStatus)}>
-                                    {displayStatus}
-                                </Badge>
+                                {bolao.matchStartDate && isValid(new Date(bolao.matchStartDate))
+                                ? format(new Date(bolao.matchStartDate), 'dd/MM/yyyy')
+                                : 'N/A'}
                             </TableCell>
+                            <TableCell><Badge variant={statusVariant(displayStatus)}>{displayStatus}</Badge></TableCell>
                             <TableCell>
                             {displayStatus === 'Finalizado' ? (
-                                <div>
-                                    <span className="font-bold">{`${bolao.finalScoreTeam1} x ${bolao.finalScoreTeam2}`}</span>
-                                    <p className="text-xs text-muted-foreground">{winnerInfo}</p>
-                                </div>
+                                <span>{`${bolao.userGuess?.homeTeam ?? '-'} x ${bolao.userGuess?.awayTeam ?? '-'}`}</span>
                             ) : (
-                                <ResultFormModal bolao={{...bolao, teamA: getTeamName(bolao.teamAId), teamB: getTeamName(bolao.teamBId) }} onResultSubmitted={fetchData}>
-                                <Button variant="outline" size="sm" disabled={displayStatus !== 'Chutes Encerrados'}>
-                                    <Trophy className="mr-2 h-4 w-4" />
-                                    Lançar Placar
-                                </Button>
+                                <ResultFormModal bolao={bolao} onResultSubmitted={fetchData}>
+                                    <Button variant="outline" size="sm" disabled={displayStatus !== 'Fechado'}>
+                                        <Trophy className="mr-2 h-4 w-4" /> Lançar
+                                    </Button>
                                 </ResultFormModal>
                             )}
                             </TableCell>
                             <TableCell>
                                 {displayStatus === 'Finalizado' && (
                                     <Button asChild variant="outline" size="sm">
-                                        <Link href={`/admin/boloes/${bolao.id}/ganhadores`}>
-                                            <Users className="mr-2 h-4 w-4" />
-                                            Ver
-                                        </Link>
+                                        <Link href={`/admin/boloes/${bolao.id}/ganhadores`}><Users className="mr-2 h-4 w-4" />Ver</Link>
                                     </Button>
                                 )}
                             </TableCell>
                             <TableCell className="text-right">
-                            <BolaoFormModal
-                                bolao={bolao}
-                                onSave={handleSave}
-                            >
-                                <Button variant="ghost" size="icon" disabled={displayStatus === 'Finalizado'}>
-                                <Pencil className="h-4 w-4" />
-                                </Button>
-                            </BolaoFormModal>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={displayStatus !== 'Finalizado'}>
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                    Essa ação não pode ser desfeita e irá remover o bolão permanentemente.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(bolao.id)}>
-                                    Deletar
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                                <BolaoFormModal bolao={bolao} onSave={handleSave}>
+                                    <Button variant="ghost" size="icon" disabled={displayStatus === 'Finalizado'}><Pencil className="h-4 w-4" /></Button>
+                                </BolaoFormModal>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" disabled={displayStatus === 'Finalizado'}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(bolao.id)}>Deletar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </TableCell>
                         </TableRow>
                     )
                 })
               ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    Nenhum bolão encontrado.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">Nenhum bolão encontrado.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

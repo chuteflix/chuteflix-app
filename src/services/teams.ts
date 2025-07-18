@@ -12,36 +12,36 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { uploadFile } from "./storage";
-
-export interface Team {
-  id: string;
-  name: string;
-  shieldUrl?: string;
-  state?: string;
-  city?: string;
-}
+import { Team } from "@/types"; // Importando o tipo global
 
 export type TeamData = {
   name: string;
   state: string;
   city: string;
   shieldFile?: File | null;
+  level: 'Profissional' | 'Amador/Várzea';
+  scope: 'Nacional' | 'Estadual' | 'Municipal';
+  location: string;
 };
 
+// Esta função agora mapeia shieldUrl para logoUrl
 const fromFirestore = (doc: DocumentData): Team => {
   const data = doc.data();
   return {
     id: doc.id,
     name: data.name,
-    shieldUrl: data.shieldUrl,
+    logoUrl: data.shieldUrl || '', // A "tradução" acontece aqui
     state: data.state,
     city: data.city,
+    level: data.level,
+    scope: data.scope,
+    location: data.location,
   };
 };
 
 export const addTeam = async (data: TeamData): Promise<Team> => {
   try {
-    const { shieldFile, name, state, city } = data;
+    const { shieldFile, ...rest } = data;
     let shieldUrl = "";
 
     const newTeamRef = doc(collection(db, "teams"));
@@ -53,15 +53,13 @@ export const addTeam = async (data: TeamData): Promise<Team> => {
     }
 
     const newTeam = {
-      name,
-      state,
-      city,
-      shieldUrl,
+      ...rest,
+      shieldUrl, // Salva no banco como shieldUrl
       createdAt: serverTimestamp(),
     };
     await setDoc(newTeamRef, newTeam);
 
-    return { id: teamId, name, state, city, shieldUrl };
+    return { id: teamId, ...rest, logoUrl: shieldUrl };
   } catch (error) {
     console.error("Erro ao adicionar time:", error);
     throw new Error("Não foi possível adicionar o time.");
@@ -78,15 +76,15 @@ export const getTeams = async (): Promise<Team[]> => {
   }
 };
 
-export const getTeamById = async (id: string): Promise<Team | undefined> => {
-  if (!id) return undefined;
+export const getTeamById = async (id: string): Promise<Team | null> => {
+  if (!id) return null;
   try {
     const docRef = doc(db, "teams", id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return fromFirestore(docSnap);
     }
-    return undefined;
+    return null;
   } catch (error) {
     console.error("Erro ao buscar dados do time:", error);
     throw new Error("Não foi possível buscar os dados do time.");
@@ -98,18 +96,9 @@ export const updateTeam = async (
   data: Partial<TeamData>
 ): Promise<void> => {
   try {
-    const { shieldFile, name, state, city } = data;
+    const { shieldFile, ...rest } = data;
     
-    const finalData: {
-      name?: string;
-      state?: string;
-      city?: string;
-      shieldUrl?: string;
-    } = {};
-
-    if (name) finalData.name = name;
-    if (state) finalData.state = state;
-    if (city) finalData.city = city;
+    const finalData: { [key: string]: any } = { ...rest };
 
     if (shieldFile) {
       const path = `teams/${id}/shield.png`;
