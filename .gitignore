@@ -30,6 +30,7 @@ yarn-error.log*
 firebase-debug.log
 firebase-debug.*.log
 *.env.local
+/functions/serviceAccountKey.json.json
 
 # next.js build output
 .next/

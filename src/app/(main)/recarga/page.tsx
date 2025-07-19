@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { getSettings, Settings } from "@/services/settings";
 import { createTransaction, updateTransaction, Transaction } from "@/services/transactions";
-import { uploadFile } from "@/services/storage";
+import { uploadImage } from "@/lib/cloudinary"; // CORRIGIDO: Importa do novo serviço Cloudinary
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { ProofOfPaymentModal } from "@/components/proof-of-payment-modal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore'; // 1. Importar limit
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function RechargePage() {
@@ -49,7 +49,7 @@ export default function RechargePage() {
       where("uid", "==", user.uid),
       where("type", "==", "deposit"),
       orderBy("createdAt", "desc"),
-      limit(10) // 2. Limitar a 10 registros
+      limit(10)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -151,6 +151,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
     handleProofModalClose();
   };
 
+  // CORRIGIDO: A função agora usa 'uploadImage' do Cloudinary
   const handleFileSelect = async (file: File) => {
     if (!user || !currentTransactionId) {
       toast({ title: "Erro", description: "Usuário não autenticado ou transação não encontrada.", variant: "destructive" });
@@ -159,8 +160,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
 
     setIsUploading(true);
     try {
-      const filePath = `receipts/deposits/${user.uid}/${currentTransactionId}-${file.name}`;
-      const receiptUrl = await uploadFile(file, filePath);
+      const receiptUrl = await uploadImage(file); // Usa a função do serviço Cloudinary
       await updateTransaction(currentTransactionId, { metadata: { receiptUrl } });
       handleProofModalClose();
     } catch (error) {
