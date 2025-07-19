@@ -11,9 +11,10 @@ import {
   DocumentData,
   setDoc,
 } from "firebase/firestore";
-import { uploadFile } from "./storage";
-import { Team } from "@/types"; // Importando o tipo global
+import { uploadImage } from "@/lib/cloudinary"; // Importando o novo serviço
+import { Team } from "@/types";
 
+// A definição do TeamData permanece a mesma, o formulário não precisa mudar.
 export type TeamData = {
   name: string;
   state: string;
@@ -24,13 +25,12 @@ export type TeamData = {
   location: string;
 };
 
-// Esta função agora mapeia shieldUrl para logoUrl
 const fromFirestore = (doc: DocumentData): Team => {
   const data = doc.data();
   return {
     id: doc.id,
     name: data.name,
-    logoUrl: data.shieldUrl || '', // A "tradução" acontece aqui
+    logoUrl: data.shieldUrl || '',
     state: data.state,
     city: data.city,
     level: data.level,
@@ -44,22 +44,20 @@ export const addTeam = async (data: TeamData): Promise<Team> => {
     const { shieldFile, ...rest } = data;
     let shieldUrl = "";
 
-    const newTeamRef = doc(collection(db, "teams"));
-    const teamId = newTeamRef.id;
-
     if (shieldFile) {
-      const path = `teams/${teamId}/shield.png`;
-      shieldUrl = await uploadFile(shieldFile, path);
+      // Usa o novo serviço do Cloudinary
+      shieldUrl = await uploadImage(shieldFile);
     }
 
+    const newTeamRef = doc(collection(db, "teams"));
     const newTeam = {
       ...rest,
-      shieldUrl, // Salva no banco como shieldUrl
+      shieldUrl, // Salva a URL do Cloudinary
       createdAt: serverTimestamp(),
     };
     await setDoc(newTeamRef, newTeam);
 
-    return { id: teamId, ...rest, logoUrl: shieldUrl };
+    return { id: newTeamRef.id, ...rest, logoUrl: shieldUrl };
   } catch (error) {
     console.error("Erro ao adicionar time:", error);
     throw new Error("Não foi possível adicionar o time.");
@@ -101,8 +99,8 @@ export const updateTeam = async (
     const finalData: { [key: string]: any } = { ...rest };
 
     if (shieldFile) {
-      const path = `teams/${id}/shield.png`;
-      finalData.shieldUrl = await uploadFile(shieldFile, path);
+      // Usa o novo serviço do Cloudinary
+      finalData.shieldUrl = await uploadImage(shieldFile);
     }
 
     const teamRef = doc(db, "teams", id);
@@ -120,6 +118,8 @@ export const deleteTeam = async (id: string): Promise<void> => {
   try {
     const teamRef = doc(db, "teams", id);
     await deleteDoc(teamRef);
+    // Nota: Isso não deleta a imagem do Cloudinary.
+    // Uma função separada seria necessária para isso, se desejado.
   } catch (error) {
     console.error("Erro ao deletar time:", error);
     throw new Error("Não foi possível deletar o time.");
