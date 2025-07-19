@@ -1,1 +1,0 @@
-self.__SSG_MANIFEST=new Set(["\u002Fadmin\u002Fboloeloes\u002F[id]\u002Fganhadores","\u002Fadmin\u002Fboloes\u002F[id]\u002Fganhadores","\u002Fboloes\u002F[id]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
