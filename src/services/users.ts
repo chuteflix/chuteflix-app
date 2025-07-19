@@ -9,7 +9,7 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { uploadImage } from "@/lib/cloudinary"; // CORRIGIDO: Importa do novo serviço Cloudinary
+import { uploadFileToApi } from "./upload"; // CORRIGIDO: Usa a nova função de cliente
 
 export interface UserProfile {
   uid: string;
@@ -27,15 +27,12 @@ export interface UserProfile {
   role?: string;
 }
 
-// CORRIGIDO: Função agora usa 'uploadImage' do Cloudinary
 export const uploadProfilePicture = async (uid: string, file: File): Promise<string> => {
   try {
     if (!uid) throw new Error("UID do usuário é necessário para o upload.");
     if (!file) throw new Error("Nenhum arquivo selecionado.");
 
-    // O serviço do Cloudinary não precisa de um 'path' da mesma forma, ele gerencia isso.
-    // Podemos adicionar um 'public_id' ou 'folder' se quisermos organizar, o que já foi feito em 'uploadImage'.
-    const photoURL = await uploadImage(file);
+    const photoURL = await uploadFileToApi(file); // Usa a nova função que chama a API Route
 
     await updateUserProfile(uid, { photoURL });
     

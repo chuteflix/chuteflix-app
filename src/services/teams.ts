@@ -11,10 +11,9 @@ import {
   DocumentData,
   setDoc,
 } from "firebase/firestore";
-import { uploadImage } from "@/lib/cloudinary"; // Importando o novo serviço
+import { uploadFileToApi } from "./upload"; // CORRIGIDO: Usa a nova função de cliente
 import { Team } from "@/types";
 
-// A definição do TeamData permanece a mesma, o formulário não precisa mudar.
 export type TeamData = {
   name: string;
   state: string;
@@ -45,14 +44,13 @@ export const addTeam = async (data: TeamData): Promise<Team> => {
     let shieldUrl = "";
 
     if (shieldFile) {
-      // Usa o novo serviço do Cloudinary
-      shieldUrl = await uploadImage(shieldFile);
+      shieldUrl = await uploadFileToApi(shieldFile); // Usa a nova função que chama a API Route
     }
 
     const newTeamRef = doc(collection(db, "teams"));
     const newTeam = {
       ...rest,
-      shieldUrl, // Salva a URL do Cloudinary
+      shieldUrl,
       createdAt: serverTimestamp(),
     };
     await setDoc(newTeamRef, newTeam);
@@ -99,8 +97,7 @@ export const updateTeam = async (
     const finalData: { [key: string]: any } = { ...rest };
 
     if (shieldFile) {
-      // Usa o novo serviço do Cloudinary
-      finalData.shieldUrl = await uploadImage(shieldFile);
+      finalData.shieldUrl = await uploadFileToApi(shieldFile); // Usa a nova função que chama a API Route
     }
 
     const teamRef = doc(db, "teams", id);
@@ -118,8 +115,6 @@ export const deleteTeam = async (id: string): Promise<void> => {
   try {
     const teamRef = doc(db, "teams", id);
     await deleteDoc(teamRef);
-    // Nota: Isso não deleta a imagem do Cloudinary.
-    // Uma função separada seria necessária para isso, se desejado.
   } catch (error) {
     console.error("Erro ao deletar time:", error);
     throw new Error("Não foi possível deletar o time.");

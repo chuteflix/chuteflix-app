@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { getSettings, Settings } from "@/services/settings";
 import { createTransaction, updateTransaction, Transaction } from "@/services/transactions";
-import { uploadImage } from "@/lib/cloudinary"; // CORRIGIDO: Importa do novo serviço Cloudinary
+import { uploadFileToApi } from "@/services/upload"; // CORRIGIDO: Importa da nova função de cliente segura
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -151,7 +151,6 @@ Meu ID de Transação é: ${currentTransactionId}`;
     handleProofModalClose();
   };
 
-  // CORRIGIDO: A função agora usa 'uploadImage' do Cloudinary
   const handleFileSelect = async (file: File) => {
     if (!user || !currentTransactionId) {
       toast({ title: "Erro", description: "Usuário não autenticado ou transação não encontrada.", variant: "destructive" });
@@ -160,7 +159,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
 
     setIsUploading(true);
     try {
-      const receiptUrl = await uploadImage(file); // Usa a função do serviço Cloudinary
+      const receiptUrl = await uploadFileToApi(file); // CORRIGIDO: Usa a função de cliente segura
       await updateTransaction(currentTransactionId, { metadata: { receiptUrl } });
       handleProofModalClose();
     } catch (error) {
