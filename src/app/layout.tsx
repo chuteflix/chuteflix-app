@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/auth-context";
 
+// Force refresh
 export const metadata: Metadata = {
   title: "ChuteFlix Bolão App",
   description: "Apostas e diversão no mundo do futebol.",
