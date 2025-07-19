@@ -3,9 +3,6 @@ import type { NextConfig } from 'next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  // ADICIONADO: Garante que o build seja autocontido e otimizado para deploy.
-  output: 'standalone',
-
   typescript: {
     // Permite o build mesmo que haja erros de tipo.
     ignoreBuildErrors: true,
