@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, isValid } from "date-fns";
+import { format, isValid, parseISO } from "date-fns"; 
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import {
   Dialog,
@@ -35,7 +35,9 @@ import { cn } from "@/lib/utils";
 
 const toDateSafe = (date: any): Date | undefined => {
     if (!date) return undefined;
-    const d = date.toDate ? date.toDate() : new Date(date);
+    // @ts-ignore
+    if (typeof date.toDate === 'function') return date.toDate();
+    const d = new Date(date);
     return isValid(d) ? d : undefined;
 };
 
@@ -85,14 +87,21 @@ export function BolaoFormModal({
             const matchStartDate = toDateSafe(bolao.matchStartDate);
             const matchEndDate = toDateSafe(bolao.matchEndDate);
         
+            let formattedClosingTime = "";
+            if (bolao.closingTime) {
+                const parsedClosingTime = toDateSafe(bolao.closingTime);
+                if (parsedClosingTime) {
+                    formattedClosingTime = format(parsedClosingTime, "HH:mm");
+                }
+            }
+
             setFormData({
               homeTeamId: bolao.homeTeam.id,
               awayTeamId: bolao.awayTeam.id,
               matchDate: matchStartDate,
               startTime: matchStartDate ? format(matchStartDate, "HH:mm") : "",
               endTime: matchEndDate ? format(matchEndDate, "HH:mm") : "",
-              // MODIFICAÇÃO AQUI: Formatando closingTime para string "HH:MM"
-              closingTime: bolao.closingTime ? format(toDateSafe(bolao.closingTime)!, "HH:mm") : "",
+              closingTime: formattedClosingTime,
               betAmount: bolao.betAmount,
               initialPrize: bolao.initialPrize || 0,
             });
@@ -113,6 +122,7 @@ export function BolaoFormModal({
             }
           }
         } catch (err) {
+          console.error("Error fetching data in BolaoFormModal:", err);
           setError("Erro ao carregar dados. Tente novamente.");
         }
       };
@@ -150,11 +160,10 @@ export function BolaoFormModal({
     const matchEndDate = new Date(matchDate);
     matchEndDate.setHours(endHours, endMinutes);
 
-    // NOVA MODIFICAÇÃO AQUI: Criando objeto Date completo para closingTime
     const [closingHours, closingMinutes] = closingTime.split(':').map(Number);
-    const finalClosingTime = new Date(matchDate); // Usa a data da partida como base
-    finalClosingTime.setHours(closingHours, closingMinutes, 0, 0); // Define a hora e minuto, zera segundos e milissegundos
-
+    const finalClosingTime = new Date(matchDate); 
+    finalClosingTime.setHours(closingHours, closingMinutes, 0, 0); 
+    
     const finalCategoryId = categoryPath[categoryPath.length - 1];
     const finalCategory = allCategories.find(c => c.id === finalCategoryId);
     
@@ -165,7 +174,7 @@ export function BolaoFormModal({
         ...rest,
         matchStartDate,
         matchEndDate,
-        closingTime: finalClosingTime, // Passa o objeto Date formatado
+        closingTime: finalClosingTime, 
         homeTeam: teams.find(t => t.id === formData.homeTeamId)!,
         awayTeam: teams.find(t => t.id === formData.awayTeamId)!,
         championshipId: championshipId,
