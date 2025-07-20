@@ -4,12 +4,10 @@ import * as admin from 'firebase-admin';
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    // CORRIGIDO: Garantindo que o replace está em UMA ÚNICA LINHA para evitar 'Unterminated regexp literal'
-    const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY
-      ? process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY.replace(/
-/g, '
-')
-      : undefined;
+    // CORRIGIDO: Removido o replace() para evitar o erro de sintaxe.
+    // Certifique-se de copiar a private_key para a variável de ambiente do Vercel
+    // EXATAMENTE como ela aparece no arquivo JSON da conta de serviço (incluindo as quebras de linha).
+    const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL || !privateKey) {
       console.error("Firebase Admin SDK - Variáveis de ambiente não configuradas corretamente.");
