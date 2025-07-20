@@ -8,18 +8,9 @@ function initializeFirebaseAdmin() {
     const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
-    // --- TEMPORARY DEBUGGING: Log actual values for direct inspection ---
-    console.log('--- FINAL ADMIN SDK ENV VARS CHECK ---');
-    console.log('PROJECT_ID (NEXT_PUBLIC_FIREBASE_PROJECT_ID): ', projectId);
-    console.log('CLIENT_EMAIL (NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL): ', clientEmail);
-    console.log('PRIVATE_KEY length:', privateKey?.length);
-    console.log('PRIVATE_KEY starts with:', privateKey?.substring(0, 30)); // Primeiros 30 caracteres
-    console.log('PRIVATE_KEY ends with:', privateKey?.substring(privateKey.length - 30)); // Últimos 30 caracteres
-    console.log('--- END FINAL ADMIN SDK ENV VARS CHECK ---');
-    // --- END TEMPORARY DEBUGGING ---
-
     if (!projectId || !clientEmail || !privateKey) {
       console.error("Firebase Admin SDK - VARIÁVEIS DE AMBIENTE AUSENTES OU INVÁLIDAS. Verifique suas configurações no Vercel.");
+      // O erro do Firebase Admin SDK abaixo será mais específico se initializeApp falhar.
     }
 
     admin.initializeApp({
