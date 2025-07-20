@@ -4,20 +4,28 @@ import * as admin from 'firebase-admin';
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    // CORRIGIDO: Removido o replace() para evitar o erro de sintaxe.
-    // Certifique-se de copiar a private_key para a variável de ambiente do Vercel
-    // EXATAMENTE como ela aparece no arquivo JSON da conta de serviço (incluindo as quebras de linha).
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
+    // Certifique-se de que a privateKey é copiada exatamente como está no arquivo JSON, incluindo quebras de linha
     const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
-    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL || !privateKey) {
-      console.error("Firebase Admin SDK - Variáveis de ambiente não configuradas corretamente.");
-      return;
+    // --- TEMPORARY DEBUGGING: Log actual values for direct inspection ---
+    console.log('--- FINAL ADMIN SDK ENV VARS CHECK ---');
+    console.log('PROJECT_ID (NEXT_PUBLIC_FIREBASE_PROJECT_ID): ', projectId);
+    console.log('CLIENT_EMAIL (NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL): ', clientEmail);
+    console.log('PRIVATE_KEY exists (NEXT_PUBLIC_FIREBASE_PRIVATE_KEY): ', !!privateKey); // Loga apenas se existe, não o valor
+    console.log('--- END FINAL ADMIN SDK ENV VARS CHECK ---');
+    // --- END TEMPORARY DEBUGGING ---
+
+    if (!projectId || !clientEmail || !privateKey) {
+      console.error("Firebase Admin SDK - VARIÁVEIS DE AMBIENTE AUSENTES OU INVÁLIDAS. Verifique suas configurações no Vercel.");
+      // REMOVIDO: `return;` para permitir que o initializeApp() seja chamado e Firebase lance um erro mais específico
     }
 
     admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
+        projectId: projectId,
+        clientEmail: clientEmail,
         privateKey: privateKey,
       }),
     });
