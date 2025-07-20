@@ -122,6 +122,7 @@ export default function BoloesPage() {
     if (bolao.status === 'Finalizado') return 'Finalizado';
     
     const closingDate = new Date(bolao.closingTime);
+
     if(isValid(closingDate) && isPast(closingDate)) return 'Fechado';
 
     return 'Aberto';
@@ -187,7 +188,7 @@ export default function BoloesPage() {
                             <TableCell>{bolao.championship}</TableCell>
                             <TableCell>
                                 {bolao.matchStartDate && isValid(new Date(bolao.matchStartDate))
-                                ? format(new Date(bolao.matchStartDate), 'dd/MM/yyyy')
+                                ? format(new Date(bolao.matchStartDate), "dd/MM/yyyy")
                                 : 'N/A'}
                             </TableCell>
                             <TableCell><Badge variant={statusVariant(displayStatus)}>{displayStatus}</Badge></TableCell>

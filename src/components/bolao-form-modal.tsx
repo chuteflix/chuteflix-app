@@ -91,7 +91,8 @@ export function BolaoFormModal({
               matchDate: matchStartDate,
               startTime: matchStartDate ? format(matchStartDate, "HH:mm") : "",
               endTime: matchEndDate ? format(matchEndDate, "HH:mm") : "",
-              closingTime: bolao.closingTime || "",
+              // MODIFICAÇÃO AQUI: Formatando closingTime para string "HH:MM"
+              closingTime: bolao.closingTime ? format(toDateSafe(bolao.closingTime)!, "HH:mm") : "",
               betAmount: bolao.betAmount,
               initialPrize: bolao.initialPrize || 0,
             });
@@ -149,6 +150,11 @@ export function BolaoFormModal({
     const matchEndDate = new Date(matchDate);
     matchEndDate.setHours(endHours, endMinutes);
 
+    // NOVA MODIFICAÇÃO AQUI: Criando objeto Date completo para closingTime
+    const [closingHours, closingMinutes] = closingTime.split(':').map(Number);
+    const finalClosingTime = new Date(matchDate); // Usa a data da partida como base
+    finalClosingTime.setHours(closingHours, closingMinutes, 0, 0); // Define a hora e minuto, zera segundos e milissegundos
+
     const finalCategoryId = categoryPath[categoryPath.length - 1];
     const finalCategory = allCategories.find(c => c.id === finalCategoryId);
     
@@ -159,7 +165,7 @@ export function BolaoFormModal({
         ...rest,
         matchStartDate,
         matchEndDate,
-        closingTime,
+        closingTime: finalClosingTime, // Passa o objeto Date formatado
         homeTeam: teams.find(t => t.id === formData.homeTeamId)!,
         awayTeam: teams.find(t => t.id === formData.awayTeamId)!,
         championshipId: championshipId,

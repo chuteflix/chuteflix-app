@@ -14,7 +14,7 @@ import {
 import { db } from "@/lib/firebase";
 import { getTeamById } from "@/services/teams"; 
 import { Bolao, Team } from "@/types"; 
-import { isValid } from "date-fns";
+import { isValid, isPast } from "date-fns"; 
 
 type RawBolao = Omit<Bolao, 'homeTeam' | 'awayTeam'> & { homeTeamId: string; awayTeamId: string };
 
@@ -35,6 +35,7 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
   let homeTeam: Team | null = null;
   let awayTeam: Team | null = null;
 
+  // Tentar buscar os times, se os IDs existirem
   if (homeTeamId) {
     homeTeam = await getTeamById(homeTeamId);
   }
@@ -42,15 +43,19 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     awayTeam = await getTeamById(awayTeamId);
   }
 
+  // Se os times não foram encontrados, criar objetos Team com IDs padrão (strings)
+  const defaultHomeTeam: Team = homeTeam || { id: homeTeamId || 'unknown_home_team', name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
+  const defaultAwayTeam: Team = awayTeam || { id: awayTeamId || 'unknown_away_team', name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
+
   return {
     id: docSnap.id,
     championshipId: data.championshipId,
     championship: data.championship,
-    homeTeam: homeTeam || { id: homeTeamId, name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }, 
-    awayTeam: awayTeam || { id: awayTeamId, name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }, 
-    matchStartDate: safeParseDate(data.matchStartDate)!,
-    matchEndDate: safeParseDate(data.matchEndDate)!,
-    closingTime: safeParseDate(data.closingTime)!,
+    homeTeam: defaultHomeTeam, 
+    awayTeam: defaultAwayTeam, 
+    matchStartDate: safeParseDate(data.matchStartDate),
+    matchEndDate: safeParseDate(data.matchEndDate),
+    closingTime: safeParseDate(data.closingTime),
     betAmount: data.betAmount,
     initialPrize: data.initialPrize || 0,
     status: data.status || 'Aberto',
@@ -61,11 +66,19 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
   };
 };
 
+const filterAvailableBoloes = (boloes: Bolao[]): Bolao[] => {
+  const now = new Date();
+  return boloes.filter(bolao => {
+    const closingTime = bolao.closingTime; // Já é Date | null
+    return bolao.status === 'Aberto' && isValid(closingTime) && !isPast(closingTime);
+  });
+};
+
 export const getBoloes = async (): Promise<Bolao[]> => {
   try {
     const boloesSnapshot = await getDocs(collection(db, "boloes"));
     const boloesWithTeams = await Promise.all(boloesSnapshot.docs.map(fromFirestore));
-    return boloesWithTeams;
+    return filterAvailableBoloes(boloesWithTeams); 
   } catch (error) {
     console.error("Erro ao buscar bolões: ", error);
     throw new Error("Não foi possível buscar os bolões.");
@@ -77,7 +90,7 @@ export const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]
       const q = query(collection(db, "boloes"), where("categoryIds", "array-contains", categoryId));
       const querySnapshot = await getDocs(q);
       const boloesWithTeams = await Promise.all(querySnapshot.docs.map(fromFirestore));
-      return boloesWithTeams;
+      return filterAvailableBoloes(boloesWithTeams); 
     } catch (error) {
       console.error("Erro ao buscar bolões por categoria: ", error);
       throw new Error("Não foi possível buscar os bolões para esta categoria.");

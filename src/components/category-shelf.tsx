@@ -22,7 +22,6 @@ export function CategoryShelf({ category }: CategoryShelfProps) {
         setBoloes(fetchedBoloes);
       } catch (error) {
         console.error(`Erro ao buscar bolões para a categoria ${category.name}:`, error);
-        // Em caso de erro, a prateleira simplesmente não mostrará bolões.
       } finally {
         setLoading(false);
       }

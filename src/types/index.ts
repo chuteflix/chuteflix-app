@@ -26,9 +26,9 @@ export interface Bolao {
   championship: string;
   homeTeam: Team;
   awayTeam: Team;
-  matchStartDate: Date;
-  matchEndDate: Date;
-  closingTime: Date; // Horário limite para apostas
+  matchStartDate: Date | null; // Pode ser Date ou null
+  matchEndDate: Date | null;   // Pode ser Date ou null
+  closingTime: Date | null;    // Pode ser Date ou null
   betAmount: number;
   initialPrize?: number;
   status: 'Aberto' | 'Fechado' | 'Finalizado';
@@ -37,8 +37,8 @@ export interface Bolao {
     homeTeam: number;
     awayTeam: number;
   };
-  finalScoreTeam1?: number; // Adicionado para o placar final do jogo
-  finalScoreTeam2?: number; // Adicionado para o placar final do jogo
+  finalScoreTeam1?: number; 
+  finalScoreTeam2?: number; 
 }
 
 export interface UserProfile {

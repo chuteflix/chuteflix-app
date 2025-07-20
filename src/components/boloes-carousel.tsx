@@ -8,19 +8,12 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 import { BolaoCard } from "@/components/bolao-card"
-import { Bolao } from "@/services/boloes"
-import { Team } from "@/services/teams"
-import { Championship } from "@/services/championships"
-
-type BolaoComDetalhes = Bolao & {
-  teamADetails?: Team;
-  teamBDetails?: Team;
-  championshipDetails?: Championship;
-};
+import { Bolao } from "@/types" // Importa a interface Bolao do types
+// As importações de Team e Championship não são mais necessárias aqui se Bolao já as contém
 
 interface BoloesCarouselProps {
-  title: string
-  boloes: BolaoComDetalhes[]
+  // title: string // Removido, pois não está sendo usado no componente atual do BoloesCarousel
+  boloes: Bolao[] // Agora espera um array de objetos Bolao completos
 }
 
 export function BoloesCarousel({ title, boloes }: BoloesCarouselProps) {
@@ -28,9 +21,10 @@ export function BoloesCarousel({ title, boloes }: BoloesCarouselProps) {
 
   return (
     <section className="mb-12">
-      <h2 className="text-2xl font-semibold mb-6 border-l-4 border-primary pl-4">
+      {/* O título da categoria já é renderizado em CategoryShelf, então esta prop de título não é mais necessária aqui */}
+      {/* <h2 className="text-2xl font-semibold mb-6 border-l-4 border-primary pl-4">
         {title}
-      </h2>
+      </h2> */}
       <Carousel
         opts={{
           align: "start",
@@ -45,9 +39,9 @@ export function BoloesCarousel({ title, boloes }: BoloesCarouselProps) {
                 <div className="p-1 h-full">
                   <BolaoCard 
                     bolao={bolao}
-                    teamA={bolao.teamADetails}
-                    teamB={bolao.teamBDetails}
-                    championship={bolao.championshipDetails}
+                    // teamA={bolao.teamADetails} // Removido: BolaoCard agora usa bolao.homeTeam
+                    // teamB={bolao.teamBDetails} // Removido: BolaoCard agora usa bolao.awayTeam
+                    // championship={bolao.championshipDetails} // Removido: Não é necessário para BolaoCard
                   />
                 </div>
               </Link>
