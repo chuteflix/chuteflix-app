@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
-// --- TEMPORARY DEBUGGING ---
-console.log('--- VERCEL BUILD ENV VARS ---');
-console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID);
-console.log('FIREBASE_CLIENT_EMAIL:', process.env.FIREBASE_CLIENT_EMAIL);
-console.log('FIREBASE_PRIVATE_KEY exists:', !!process.env.FIREBASE_PRIVATE_KEY);
-console.log('--- END VERCEL BUILD ENV VARS ---');
-// --- END TEMPORARY DEBUGGING ---
-
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
