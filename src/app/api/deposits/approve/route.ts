@@ -14,8 +14,6 @@ function initializeFirebaseAdmin() {
 
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL || !privateKey) {
       console.error("Firebase Admin SDK - Variáveis de ambiente não configuradas corretamente.");
-      // Não jogue um erro aqui para permitir que o build seja concluído,
-      // mas logue o erro para depuração.
       return;
     }
 
@@ -39,7 +37,10 @@ export async function POST(req: Request) {
   try {
     // Garante que o SDK está inicializado antes de usar
     if (!admin.apps.length) {
-      return NextResponse.json({ message: 'Erro de configuração do servidor.' }, { status: 500 });
+      initializeFirebaseAdmin(); // Tenta inicializar novamente se não estiver pronto
+      if(!admin.apps.length){
+        return NextResponse.json({ message: 'Erro de configuração do servidor.' }, { status: 500 });
+      }
     }
 
     const authHeader = req.headers.get('authorization');
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     const callerUid = decodedToken.uid;
-    const isAdmin = decodedToken.claims.role === 'admin'; // Verifique custom claims
+    const isAdmin = decodedToken.role === 'admin'; // Custom claims estão diretamente no token decodificado
 
     if (!isAdmin) {
       return NextResponse.json({ message: 'Apenas administradores podem aprovar depósitos.' }, { status: 403 });
