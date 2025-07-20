@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -16,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Bolao } from "@/services/boloes"
+import { Bolao } from "@/types"
 // Importa a função centralizada que faz todo o trabalho pesado
 import { setResultAndProcessPalpites } from "@/services/palpites" 
 import { useToast } from "@/hooks/use-toast"
@@ -30,8 +29,7 @@ const resultSchema = z.object({
 type ResultFormValues = z.infer<typeof resultSchema>;
 
 interface ResultFormModalProps {
-  // Apenas o ID do bolão é necessário, mas manteremos o objeto para os nomes dos times
-  bolao: Bolao & { teamA: string; teamB: string } 
+  bolao: Bolao; 
   onResultSubmitted: () => void
   children: React.ReactNode
 }
@@ -89,14 +87,14 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
                 <div className="flex items-center justify-around space-x-4">
                     <FormField control={form.control} name="scoreTeam1" render={({ field }) => (
                         <FormItem className="flex-1 text-center">
-                            <FormLabel className="font-semibold">{bolao.teamA}</FormLabel>
+                            <FormLabel className="font-semibold">{bolao.homeTeam.name}</FormLabel>
                             <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
                         </FormItem>
                     )}/>
                     <div className="pt-8 font-bold">X</div>
                     <FormField control={form.control} name="scoreTeam2" render={({ field }) => (
                         <FormItem className="flex-1 text-center">
-                            <FormLabel className="font-semibold">{bolao.teamB}</FormLabel>
+                            <FormLabel className="font-semibold">{bolao.awayTeam.name}</FormLabel>
                             <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
                         </FormItem>
                     )}/>
