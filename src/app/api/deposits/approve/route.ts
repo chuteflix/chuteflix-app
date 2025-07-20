@@ -1,14 +1,28 @@
 import { NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
+// --- TEMPORARY DEBUGGING V2 ---
+console.log('--- VERCEL BUILD ENV VARS V2 ---');
+console.log('Attempting to read server-only FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID);
+console.log('Attempting to read client-side NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+console.log('--- END VERCEL BUILD ENV VARS V2 ---');
+// --- END TEMPORARY DEBUGGING V2 ---
+
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY ? JSON.parse(process.env.FIREBASE_PRIVATE_KEY) : undefined;
+    
+    // Fallback para depuração
+    const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+    if (!projectId) {
+      console.error("CRITICAL ERROR: Neither FIREBASE_PROJECT_ID nor NEXT_PUBLIC_FIREBASE_PROJECT_ID is defined.");
+    }
 
     admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
+        projectId: projectId, // Usando o fallback
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: privateKey,
       }),
