@@ -83,6 +83,10 @@ export function BolaoFormModal({
           setTeams(allTeams);
           setAllCategories(fetchedCategories);
 
+          // Sempre reinicia o categoryPath e formData ao abrir o modal
+          setFormData(initialFormData);
+          setCategoryPath([]);
+
           if (isEditing && bolao) {
             const matchStartDate = toDateSafe(bolao.matchStartDate);
             const matchEndDate = toDateSafe(bolao.matchEndDate);
@@ -117,7 +121,9 @@ export function BolaoFormModal({
                     }
                 }
                 const leafId = bolao.categoryIds.find(id => !fetchedCategories.some(c => c.parentId === id));
-                buildPath(leafId!);
+                if (leafId) {
+                    buildPath(leafId);
+                }
                 setCategoryPath(path);
             }
           }
@@ -128,11 +134,6 @@ export function BolaoFormModal({
       };
       
       fetchData();
-      
-      if (!isEditing) {
-        setFormData(initialFormData);
-        setCategoryPath([]);
-      }
     }
   }, [open, isEditing, bolao]);
   
@@ -188,9 +189,10 @@ export function BolaoFormModal({
 
   const renderCategorySelectors = () => {
     const selectors = [];
+    // Garante que o primeiro seletor sempre aparece para a categoria principal
     selectors.push(
       <Select
-        key="level-0"
+        key={`category-level-0-${categoryPath[0]}`}
         value={categoryPath[0] || ""}
         onValueChange={(value) => handleCategoryChange(0, value)}
       >
@@ -203,13 +205,16 @@ export function BolaoFormModal({
       </Select>
     );
 
+    // Renderiza seletores para subcategorias baseado no categoryPath
     for (let i = 0; i < categoryPath.length; i++) {
       const parentId = categoryPath[i];
       const children = allCategories.filter(c => c.parentId === parentId);
+      
+      // Só adiciona um novo seletor se houver filhos e não for o último nível já selecionado
       if (children.length > 0) {
         selectors.push(
           <Select
-            key={`level-${i + 1}`}
+            key={`category-level-${i + 1}-${categoryPath[i + 1]}`}
             value={categoryPath[i + 1] || ""}
             onValueChange={(value) => handleCategoryChange(i + 1, value)}
           >
@@ -252,18 +257,39 @@ export function BolaoFormModal({
             <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                 <div>
                     <Label>Início da Partida</Label>
-                    <PatternFormat customInput={Input} format="##:##" placeholder="HH:MM" value={formData.startTime} onValueChange={(values) => setFormData({...formData, startTime: values.formattedValue})}/>
+                    <PatternFormat 
+                        key={formData.startTime} 
+                        customInput={Input} 
+                        format="##:##" 
+                        placeholder="HH:MM" 
+                        value={formData.startTime}
+                        onValueChange={(values) => setFormData({...formData, startTime: values.formattedValue})}
+                    />
                 </div>
                 <div>
                     <Label>Fim da Partida</Label>
-                    <PatternFormat customInput={Input} format="##:##" placeholder="HH:MM" value={formData.endTime} onValueChange={(values) => setFormData({...formData, endTime: values.formattedValue})}/>
+                    <PatternFormat 
+                        key={formData.endTime} 
+                        customInput={Input} 
+                        format="##:##" 
+                        placeholder="HH:MM" 
+                        value={formData.endTime} 
+                        onValueChange={(values) => setFormData({...formData, endTime: values.formattedValue})}
+                    />
                 </div>
                 <div>
                     <Label className="flex items-center gap-1 text-primary font-semibold">
                         <Clock className="h-4 w-4" />
                         Limite para Apostas
                     </Label>
-                    <PatternFormat customInput={Input} format="##:##" placeholder="HH:MM" value={formData.closingTime} onValueChange={(values) => setFormData({...formData, closingTime: values.formattedValue})}/>
+                    <PatternFormat 
+                        key={formData.closingTime} 
+                        customInput={Input} 
+                        format="##:##" 
+                        placeholder="HH:MM" 
+                        value={formData.closingTime} 
+                        onValueChange={(values) => setFormData({...formData, closingTime: values.formattedValue})}
+                    />
                 </div>
             </div>
 

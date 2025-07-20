@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
@@ -17,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Countdown from "react-countdown"
 import { ArrowLeft, Crown, TrendingUp, MessageSquare } from "lucide-react"
-import { isPast } from "date-fns"
+import { isPast, format } from "date-fns" // Adicionado format aqui
 
 interface TopBettor {
     user: PalpiteComDetalhes['user'];
@@ -84,11 +83,13 @@ export function BolaoPageClient({ id }: BolaoPageClientProps) {
   const closingDateTime = useMemo(() => {
     if (bolao?.matchStartDate && bolao.closingTime) {
         const date = new Date(bolao.matchStartDate);
-        const [hours, minutes] = bolao.closingTime.split(':');
+        // Corrigido: formatar bolao.closingTime (que é um objeto Date) para string antes de usar split
+        const formattedClosingTime = format(bolao.closingTime, 'HH:mm');
+        const [hours, minutes] = formattedClosingTime.split(':');
         date.setHours(parseInt(hours), parseInt(minutes));
         return date;
     }
-    return new Date(0);
+    return new Date(0); // Retorna uma data inválida se as condições não forem atendidas
   }, [bolao]);
 
   const isBettingClosed = useMemo(() => {
