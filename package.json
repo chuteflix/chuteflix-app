@@ -1,5 +1,5 @@
 {
-  "name": "nextn",
+ "name": "nextn",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,6 +11,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "deploy": "firebase deploy"
+  },
+  "engines": { // ESTA SEÇÃO DEVE ESTAR AQUI, FORA DE "scripts"
+    "node": "20.x" // Use "20.x" ou "22.x" conforme sua preferência
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.13.0",
