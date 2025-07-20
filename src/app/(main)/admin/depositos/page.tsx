@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db, functions } from '@/lib/firebase';
-import { httpsCallable } from 'firebase/functions';
+// import { httpsCallable } from 'firebase/functions'; // Não é mais necessário aqui
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +21,8 @@ import { getUserProfile, UserProfile } from '@/services/users';
 import { Transaction } from '@/services/transactions';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { getAuth } from "firebase/auth"; // Para obter o token do usuário
+import { httpsCallable } from 'firebase/functions'; // Mantido para handleDecline por enquanto
 
 type DepositRequest = Transaction & {
     user?: UserProfile;
@@ -32,6 +34,7 @@ export default function AdminDepositsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const { toast } = useToast();
+  const auth = getAuth(); // Inicializa o Auth
 
   useEffect(() => {
     const baseQuery = query(collection(db, "transactions"), where("type", "==", "deposit"));
@@ -65,8 +68,29 @@ export default function AdminDepositsPage() {
   const handleApprove = async (id: string) => {
     setSubmitting(id);
     try {
-        const approveDeposit = httpsCallable(functions, 'approveDeposit');
-        await approveDeposit({ transactionId: id });
+        const user = auth.currentUser; // Obtém o usuário logado
+        if (!user) {
+            throw new Error("Usuário não autenticado.");
+        }
+        const idToken = await user.getIdToken(); // Obtém o ID Token
+
+        // CHAMA A NOVA NEXT.JS API ROUTE
+        const response = await fetch('/api/deposits/approve', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`, // Envia o token para autenticação na API Route
+            },
+            body: JSON.stringify({ transactionId: id }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            // Se a resposta não for OK (status 4xx, 5xx), lança um erro com a mensagem da API
+            throw new Error(result.message || 'Falha ao aprovar depósito.');
+        }
+
         toast({ title: "Depósito aprovado com sucesso!", variant: "success" });
     } catch (error: any) {
         toast({ title: "Erro ao aprovar depósito.", description: error.message, variant: "destructive" });
@@ -78,6 +102,7 @@ export default function AdminDepositsPage() {
   const handleDecline = async (id: string) => {
     setSubmitting(id);
     try {
+        // Esta função ainda usa a Cloud Function, precisará ser migrada futuramente
         const declineTransaction = httpsCallable(functions, 'declineTransaction');
         await declineTransaction({ transactionId: id });
         toast({ title: "Depósito recusado.", variant: "info" });

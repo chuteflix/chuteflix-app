@@ -83,7 +83,6 @@ export function BolaoFormModal({
           setTeams(allTeams);
           setAllCategories(fetchedCategories);
 
-          // Sempre reinicia o categoryPath e formData ao abrir o modal
           setFormData(initialFormData);
           setCategoryPath([]);
 
@@ -106,8 +105,8 @@ export function BolaoFormModal({
               startTime: matchStartDate ? format(matchStartDate, "HH:mm") : "",
               endTime: matchEndDate ? format(matchEndDate, "HH:mm") : "",
               closingTime: formattedClosingTime,
-              betAmount: bolao.betAmount,
-              initialPrize: bolao.initialPrize || 0,
+              betAmount: parseFloat(String(bolao.betAmount)) || 0, // Garante que é um float
+              initialPrize: parseFloat(String(bolao.initialPrize)) || 0, // Garante que é um float
             });
             
             if (bolao.categoryIds && bolao.categoryIds.length > 0) {
@@ -189,7 +188,6 @@ export function BolaoFormModal({
 
   const renderCategorySelectors = () => {
     const selectors = [];
-    // Garante que o primeiro seletor sempre aparece para a categoria principal
     selectors.push(
       <Select
         key={`category-level-0-${categoryPath[0]}`}
@@ -205,12 +203,10 @@ export function BolaoFormModal({
       </Select>
     );
 
-    // Renderiza seletores para subcategorias baseado no categoryPath
     for (let i = 0; i < categoryPath.length; i++) {
       const parentId = categoryPath[i];
       const children = allCategories.filter(c => c.parentId === parentId);
       
-      // Só adiciona um novo seletor se houver filhos e não for o último nível já selecionado
       if (children.length > 0) {
         selectors.push(
           <Select
