@@ -50,7 +50,7 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     awayTeam: awayTeam || { id: awayTeamId, name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }, 
     matchStartDate: safeParseDate(data.matchStartDate)!,
     matchEndDate: safeParseDate(data.matchEndDate)!,
-    closingTime: data.closingTime,
+    closingTime: safeParseDate(data.closingTime)!,
     betAmount: data.betAmount,
     initialPrize: data.initialPrize || 0,
     status: data.status || 'Aberto',
