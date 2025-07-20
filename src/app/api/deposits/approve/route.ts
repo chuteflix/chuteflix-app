@@ -6,13 +6,15 @@ function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
     // Use as variáveis de ambiente diretamente aqui para o Admin SDK
     // NOTA: Estas NÃO precisam de NEXT_PUBLIC_ porque são usadas APENAS no servidor (API Route)
+    
+    // Garante que a chave privada é tratada como JSON para resolver quebras de linha
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY ? JSON.parse(process.env.FIREBASE_PRIVATE_KEY) : undefined;
+
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/
-/g, '
-'), // Importante para chaves com quebras de linha
+        privateKey: privateKey,
       }),
       // Se usar outros serviços (como Realtime Database), configure a URL do banco aqui
     });
@@ -96,7 +98,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Erro na API de aprovação de depósito:", error);
-    // Trate erros específicos do negócio ou retorne um erro genérico
     if (error.message === 'Transação não encontrada.' || error.message === 'Transação não está pendente.' || error.message === 'Usuário não encontrado.') {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
