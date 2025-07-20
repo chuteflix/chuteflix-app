@@ -4,14 +4,11 @@ import * as admin from 'firebase-admin';
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    // A API Route é server-side, mas para o build do Vercel funcionar,
-    // precisamos ler as variáveis com o prefixo NEXT_PUBLIC_ que configuramos.
-    
-    // CORRIGIDO: Garantindo que o replace está em uma única linha para evitar 'Unterminated regexp literal'
+    // CORRIGIDO: Garantindo que o replace está em UMA ÚNICA LINHA para evitar 'Unterminated regexp literal'
     const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY
       ? process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY.replace(/
 /g, '
-') // Esta linha foi corrigida
+')
       : undefined;
 
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL || !privateKey) {
@@ -60,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     const callerUid = decodedToken.uid;
-    const isAdmin = decodedToken.claims.role === 'admin'; // Verifique custom claims
+    const isAdmin = decodedToken.role === 'admin'; // Acessa 'role' diretamente do decodedToken
 
     if (!isAdmin) {
       return NextResponse.json({ message: 'Apenas administradores podem aprovar depósitos.' }, { status: 403 });
