@@ -6,20 +6,20 @@ function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
-    // Certifique-se de que a privateKey é copiada exatamente como está no arquivo JSON, incluindo quebras de linha
     const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
     // --- TEMPORARY DEBUGGING: Log actual values for direct inspection ---
     console.log('--- FINAL ADMIN SDK ENV VARS CHECK ---');
     console.log('PROJECT_ID (NEXT_PUBLIC_FIREBASE_PROJECT_ID): ', projectId);
     console.log('CLIENT_EMAIL (NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL): ', clientEmail);
-    console.log('PRIVATE_KEY exists (NEXT_PUBLIC_FIREBASE_PRIVATE_KEY): ', !!privateKey); // Loga apenas se existe, não o valor
+    console.log('PRIVATE_KEY length:', privateKey?.length);
+    console.log('PRIVATE_KEY starts with:', privateKey?.substring(0, 30)); // Primeiros 30 caracteres
+    console.log('PRIVATE_KEY ends with:', privateKey?.substring(privateKey.length - 30)); // Últimos 30 caracteres
     console.log('--- END FINAL ADMIN SDK ENV VARS CHECK ---');
     // --- END TEMPORARY DEBUGGING ---
 
     if (!projectId || !clientEmail || !privateKey) {
       console.error("Firebase Admin SDK - VARIÁVEIS DE AMBIENTE AUSENTES OU INVÁLIDAS. Verifique suas configurações no Vercel.");
-      // REMOVIDO: `return;` para permitir que o initializeApp() seja chamado e Firebase lance um erro mais específico
     }
 
     admin.initializeApp({
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   try {
     // Garante que o SDK está inicializado antes de usar
     if (!admin.apps.length) {
-      initializeFirebaseAdmin(); // Tenta inicializar novamente se não estiver pronto
+      initializeFirebaseAdmin();
       if(!admin.apps.length){
         return NextResponse.json({ message: 'Erro de configuração do servidor.' }, { status: 500 });
       }
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     const callerUid = decodedToken.uid;
-    const isAdmin = decodedToken.role === 'admin'; // Acessa 'role' diretamente do decodedToken
+    const isAdmin = decodedToken.role === 'admin';
 
     if (!isAdmin) {
       return NextResponse.json({ message: 'Apenas administradores podem aprovar depósitos.' }, { status: 403 });
