@@ -56,6 +56,8 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     status: data.status || 'Aberto',
     categoryIds: data.categoryIds || [],
     userGuess: data.userGuess,
+    finalScoreTeam1: data.finalScoreTeam1, 
+    finalScoreTeam2: data.finalScoreTeam2, 
   };
 };
 

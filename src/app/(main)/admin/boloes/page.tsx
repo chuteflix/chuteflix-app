@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams }
+ from "next/navigation"
 import Link from "next/link"
 import {
   addBolao,
@@ -192,7 +193,7 @@ export default function BoloesPage() {
                             <TableCell><Badge variant={statusVariant(displayStatus)}>{displayStatus}</Badge></TableCell>
                             <TableCell>
                             {displayStatus === 'Finalizado' ? (
-                                <span>{`${bolao.userGuess?.homeTeam ?? '-'} x ${bolao.userGuess?.awayTeam ?? '-'}`}</span>
+                                <span>{`${bolao.finalScoreTeam1 ?? '-'} x ${bolao.finalScoreTeam2 ?? '-'}`}</span>
                             ) : (
                                 <ResultFormModal bolao={bolao} onResultSubmitted={fetchData}>
                                     <Button variant="outline" size="sm" disabled={displayStatus !== 'Fechado'}>
