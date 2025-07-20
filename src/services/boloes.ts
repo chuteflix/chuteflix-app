@@ -1,4 +1,3 @@
-
 import {
   doc,
   getDoc,
@@ -13,8 +12,8 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Team } from "@/services/teams";
-import { Bolao } from "@/types";
+import { getTeamById } from "@/services/teams"; 
+import { Bolao, Team } from "@/types"; 
 import { isValid } from "date-fns";
 
 type RawBolao = Omit<Bolao, 'homeTeam' | 'awayTeam'> & { homeTeamId: string; awayTeamId: string };
@@ -27,17 +26,29 @@ const safeParseDate = (dateInput: any): Date | null => {
     return isValid(date) ? date : null;
 };
 
-const fromFirestore = (docSnap: DocumentData): RawBolao => {
+const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
   const data = docSnap.data();
+  
+  const homeTeamId = data.homeTeamId || data.teamAId;
+  const awayTeamId = data.awayTeamId || data.teamBId;
+
+  let homeTeam: Team | null = null;
+  let awayTeam: Team | null = null;
+
+  if (homeTeamId) {
+    homeTeam = await getTeamById(homeTeamId);
+  }
+  if (awayTeamId) {
+    awayTeam = await getTeamById(awayTeamId);
+  }
+
   return {
     id: docSnap.id,
     championshipId: data.championshipId,
     championship: data.championship,
-    homeTeamId: data.homeTeamId || data.teamAId, 
-    awayTeamId: data.awayTeamId || data.teamBId,
-    // @ts-ignore
+    homeTeam: homeTeam || { id: homeTeamId, name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }, 
+    awayTeam: awayTeam || { id: awayTeamId, name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }, 
     matchStartDate: safeParseDate(data.matchStartDate)!,
-    // @ts-ignore
     matchEndDate: safeParseDate(data.matchEndDate)!,
     closingTime: data.closingTime,
     betAmount: data.betAmount,
@@ -48,33 +59,35 @@ const fromFirestore = (docSnap: DocumentData): RawBolao => {
   };
 };
 
-export const getBoloes = async (): Promise<RawBolao[]> => {
+export const getBoloes = async (): Promise<Bolao[]> => {
   try {
     const boloesSnapshot = await getDocs(collection(db, "boloes"));
-    return boloesSnapshot.docs.map(fromFirestore);
+    const boloesWithTeams = await Promise.all(boloesSnapshot.docs.map(fromFirestore));
+    return boloesWithTeams;
   } catch (error) {
     console.error("Erro ao buscar bolões: ", error);
     throw new Error("Não foi possível buscar os bolões.");
   }
 };
 
-export const getBoloesByCategoryId = async (categoryId: string): Promise<RawBolao[]> => {
+export const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]> => {
     try {
       const q = query(collection(db, "boloes"), where("categoryIds", "array-contains", categoryId));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(fromFirestore);
+      const boloesWithTeams = await Promise.all(querySnapshot.docs.map(fromFirestore));
+      return boloesWithTeams;
     } catch (error) {
       console.error("Erro ao buscar bolões por categoria: ", error);
       throw new Error("Não foi possível buscar os bolões para esta categoria.");
     }
 };
 
-export const getBolaoById = async (id: string): Promise<RawBolao | null> => {
+export const getBolaoById = async (id: string): Promise<Bolao | null> => {
     if (!id) return null;
     try {
       const docSnap = await getDoc(doc(db, 'boloes', id));
       if (docSnap.exists()) {
-        return fromFirestore(docSnap);
+        return await fromFirestore(docSnap);
       }
       return null;
     } catch (error) {
