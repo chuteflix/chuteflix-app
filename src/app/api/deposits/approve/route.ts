@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
+// --- TEMPORARY DEBUGGING ---
+console.log('--- VERCEL BUILD ENV VARS ---');
+console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID);
+console.log('FIREBASE_CLIENT_EMAIL:', process.env.FIREBASE_CLIENT_EMAIL);
+console.log('FIREBASE_PRIVATE_KEY exists:', !!process.env.FIREBASE_PRIVATE_KEY);
+console.log('--- END VERCEL BUILD ENV VARS ---');
+// --- END TEMPORARY DEBUGGING ---
+
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    // Use as variáveis de ambiente diretamente aqui para o Admin SDK
-    // NOTA: Estas NÃO precisam de NEXT_PUBLIC_ porque são usadas APENAS no servidor (API Route)
-    
-    // Garante que a chave privada é tratada como JSON para resolver quebras de linha
     const privateKey = process.env.FIREBASE_PRIVATE_KEY ? JSON.parse(process.env.FIREBASE_PRIVATE_KEY) : undefined;
 
     admin.initializeApp({
@@ -16,7 +20,6 @@ function initializeFirebaseAdmin() {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: privateKey,
       }),
-      // Se usar outros serviços (como Realtime Database), configure a URL do banco aqui
     });
   }
 }
@@ -29,7 +32,6 @@ const TRANSACTIONS_COLLECTION = 'transactions';
 
 export async function POST(req: Request) {
   try {
-    // 1. Autenticação e Autorização (Admin Check)
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ message: 'Não autenticado.' }, { status: 401 });
@@ -45,48 +47,38 @@ export async function POST(req: Request) {
     }
 
     const callerUid = decodedToken.uid;
-    const isAdmin = decodedToken.role === 'admin'; // Assume que 'role' é um custom claim
+    const isAdmin = decodedToken.role === 'admin';
 
     if (!isAdmin) {
       return NextResponse.json({ message: 'Apenas administradores podem aprovar depósitos.' }, { status: 403 });
     }
 
-    // 2. Extrair dados da requisição
     const { transactionId } = await req.json();
 
     if (!transactionId) {
       return NextResponse.json({ message: 'ID da transação é obrigatório.' }, { status: 400 });
     }
 
-    // 3. Lógica da transação no Firestore (copiada da Cloud Function)
     const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
 
     await db.runTransaction(async (transaction) => {
       const transactionDoc = await transaction.get(transactionRef);
-
       if (!transactionDoc.exists) {
         throw new Error('Transação não encontrada.');
       }
-
       const currentTransaction = transactionDoc.data();
-
       if (currentTransaction?.status !== 'pending') {
         throw new Error('Transação não está pendente.');
       }
-
       const userRef = db.collection(USERS_COLLECTION).doc(currentTransaction.uid);
       const userDoc = await transaction.get(userRef);
-
       if (!userDoc.exists) {
         throw new Error('Usuário não encontrado.');
       }
-
-      const amount = currentTransaction.amount; 
-
+      const amount = currentTransaction.amount;
       transaction.update(userRef, {
         balance: admin.firestore.FieldValue.increment(amount),
       });
-
       transaction.update(transactionRef, {
         status: 'completed',
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
