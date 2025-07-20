@@ -1,29 +1,28 @@
 import { NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
-// --- TEMPORARY DEBUGGING V2 ---
-console.log('--- VERCEL BUILD ENV VARS V2 ---');
-console.log('Attempting to read server-only FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID);
-console.log('Attempting to read client-side NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
-console.log('--- END VERCEL BUILD ENV VARS V2 ---');
-// --- END TEMPORARY DEBUGGING V2 ---
-
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY ? JSON.parse(process.env.FIREBASE_PRIVATE_KEY) : undefined;
-    
-    // Fallback para depuração
-    const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    // A API Route é server-side, mas para o build do Vercel funcionar,
+    // precisamos ler as variáveis com o prefixo NEXT_PUBLIC_ que configuramos.
+    const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY
+      ? process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY.replace(/
+/g, '
+')
+      : undefined;
 
-    if (!projectId) {
-      console.error("CRITICAL ERROR: Neither FIREBASE_PROJECT_ID nor NEXT_PUBLIC_FIREBASE_PROJECT_ID is defined.");
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL || !privateKey) {
+      console.error("Firebase Admin SDK - Variáveis de ambiente não configuradas corretamente.");
+      // Não jogue um erro aqui para permitir que o build seja concluído,
+      // mas logue o erro para depuração.
+      return;
     }
 
     admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: projectId, // Usando o fallback
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
         privateKey: privateKey,
       }),
     });
@@ -38,6 +37,11 @@ const TRANSACTIONS_COLLECTION = 'transactions';
 
 export async function POST(req: Request) {
   try {
+    // Garante que o SDK está inicializado antes de usar
+    if (!admin.apps.length) {
+      return NextResponse.json({ message: 'Erro de configuração do servidor.' }, { status: 500 });
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ message: 'Não autenticado.' }, { status: 401 });
@@ -53,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     const callerUid = decodedToken.uid;
-    const isAdmin = decodedToken.role === 'admin';
+    const isAdmin = decodedToken.claims.role === 'admin'; // Verifique custom claims
 
     if (!isAdmin) {
       return NextResponse.json({ message: 'Apenas administradores podem aprovar depósitos.' }, { status: 403 });
