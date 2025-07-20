@@ -1,5 +1,5 @@
 {
- "name": "nextn",
+  "name": "nextn",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,8 +12,8 @@
     "typecheck": "tsc --noEmit",
     "deploy": "firebase deploy"
   },
-  "engines": { // ESTA SEÇÃO DEVE ESTAR AQUI, FORA DE "scripts"
-    "node": "20.x" // Use "20.x" ou "22.x" conforme sua preferência
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.13.0",
@@ -45,33 +45,39 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
-    "dotenv": "^16.5.0",
-    "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.10.0",
-    "firebase-admin": "^13.4.0",
-    "genkit": "^1.13.0",
-    "lucide-react": "^0.475.0",
-    "multer": "^2.0.2",
+    "firebase": "^10.12.3",
+    "lucide-react": "^0.400.0",
     "next": "15.3.3",
-    "patch-package": "^8.0.0",
-    "react": "^18.3.1",
-    "react-countdown": "^2.3.6",
+    "next-themes": "^0.3.0",
+    "react": "19.0.0-rc-f994737f-20240702",
+    "react-calendar": "^5.0.0",
     "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.54.2",
-    "react-imask": "^7.6.1",
-    "react-number-format": "^5.4.4",
-    "recharts": "^2.15.4",
-    "tailwind-merge": "^3.0.1",
+    "react-dom": "19.0.0-rc-f994737f-20240702",
+    "react-hook-form": "^7.52.1",
+    "react-number-format": "^5.4.0",
+    "react-otp-input": "^3.1.1",
+    "react-renderer": "^0.0.0",
+    "react-resizable-panels": "^2.0.19",
+    "react-responsive-carousel": "^3.2.23",
+    "react-router-dom": "^6.24.1",
+    "react-slick": "^0.30.2",
+    "react-timer-hook": "^3.0.7",
+    "recharts": "^2.12.7",
+    "slick-carousel": "^1.8.1",
+    "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
+    "tsx": "^4.16.2",
+    "vaul": "^0.9.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "firebase-tools": "^14.11.0",
-    "genkit-cli": "^1.13.0",
+    "@types/react-responsive-carousel": "^3.1.2",
+    "@types/react-slick": "^0.23.13",
+    "eslint": "^8",
+    "eslint-config-next": "15.3.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
