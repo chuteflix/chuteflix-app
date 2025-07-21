@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useForm } from "react-hook-form"
@@ -57,13 +56,12 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
         try {
-            await placeChute({
-                bolaoId: bolao.id,
-                betAmount: bolao.betAmount, // <-- CORREÇÃO AQUI
-                scoreTeam1: values.scoreTeam1,
-                scoreTeam2: values.scoreTeam2,
-                comment: values.comment,
-            })
+            await placeChute(
+                bolao.id,
+                values.scoreTeam1,
+                values.scoreTeam2,
+                values.comment
+            )
             toast({
                 title: "Palpite Enviado!",
                 description: "Seu chute foi registrado com sucesso. Boa sorte!",

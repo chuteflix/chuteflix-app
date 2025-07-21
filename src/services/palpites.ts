@@ -202,8 +202,8 @@ export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteCom
           if (!bolaoDetails) return palpite;
 
           const [teamADetails, teamBDetails, championshipDetails] = await Promise.all([
-              getTeamById(bolaoDetails.teamAId),
-              getTeamById(bolaoDetails.teamBId),
+              getTeamById(bolaoDetails.homeTeam.id),
+              getTeamById(bolaoDetails.awayTeam.id),
               getChampionshipById(bolaoDetails.championshipId),
           ]);
 
