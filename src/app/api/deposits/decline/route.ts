@@ -4,39 +4,39 @@ import * as admin from 'firebase-admin';
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
-      console.error("Firebase Admin SDK - Variáveis de ambiente ausentes ou inválidas.");
-      return;
+      console.error("Firebase Admin SDK - Variáveis de ambiente do servidor ausentes.");
+      throw new Error("Configuração do servidor Firebase incompleta.");
     }
 
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: projectId,
-        clientEmail: clientEmail,
-        privateKey: privateKey,
-      }),
-    });
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        }),
+      });
+      console.log("Firebase Admin SDK inicializado com sucesso.");
+    } catch (error) {
+      console.error("Firebase Admin SDK - ERRO FATAL ao inicializar:", error);
+      throw error;
+    }
   }
 }
 
-initializeFirebaseAdmin();
-
-const db = admin.firestore();
 const USERS_COLLECTION = 'users';
 const TRANSACTIONS_COLLECTION = 'transactions';
 
 export async function POST(req: Request) {
   try {
-    if (!admin.apps.length) {
-      initializeFirebaseAdmin();
-      if(!admin.apps.length){
-        return NextResponse.json({ message: 'Erro de configuração do servidor.' }, { status: 500 });
-      }
-    }
+    // Garante que o SDK está inicializado antes de usar
+    initializeFirebaseAdmin();
+    const db = admin.firestore(); // db inicializado após a inicialização do app
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -67,21 +67,15 @@ export async function POST(req: Request) {
 
     const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
 
-    console.log(`Decline API: Attempting to decline transaction ${transactionId}`);
-
     await db.runTransaction(async (transaction) => {
       const transactionDoc = await transaction.get(transactionRef);
 
       if (!transactionDoc.exists) {
-        console.error(`Decline API: Transaction ${transactionId} not found.`);
         throw new Error('Transação não encontrada.');
       }
 
       const currentTransaction = transactionDoc.data();
-
-      console.log(`Decline API: Transaction ${transactionId} current status: ${currentTransaction?.status}`);
       if (currentTransaction?.status !== 'pending') {
-        console.warn(`Decline API: Transaction ${transactionId} is not pending. Current status: ${currentTransaction?.status}`);
         throw new Error('Transação não está pendente.');
       }
 
@@ -90,14 +84,13 @@ export async function POST(req: Request) {
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
         processedBy: callerUid,
       });
-      console.log(`Decline API: Transaction ${transactionId} status updated to 'failed'.`);
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (error: any) {
     console.error("Erro na API de recusa de depósito:", error);
-    if (error.message === 'Transação não encontrada.' || error.message === 'Transação não está pendente.') {
+    if (error.message === 'Transação não encontrada.' || error.message === 'Transação não está pendente.' || error.message.includes('Configuração do servidor Firebase incompleta')) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
     return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });

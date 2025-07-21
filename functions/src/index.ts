@@ -5,100 +5,46 @@ import * as functions from "firebase-functions";
 admin.initializeApp();
 const db = admin.firestore();
 
-const TRANSACTIONS_COLLECTION = 'transactions';
-const USERS_COLLECTION = 'users';
-const BOLOES_COLLECTION = 'boloes';
-const CHUTES_COLLECTION = 'chutes';
+// Este arquivo agora está quase vazio pois todas as funções relacionadas a transações
+// e gerenciamento de saldo foram migradas para as API Routes do Next.js (Vercel).
+// Mantenha apenas funções de Firebase que são ESTRICTAMENTE NECESSÁRIAS e que não
+// podem ser substituídas por uma API Route (ex: triggers de Firestore, etc.).
 
+// Se a função setUserRole ainda for utilizada, ela deve ser migrada para uma API Route
+// para seguir o padrão da nova arquitetura e ser chamada do frontend via HTTP.
+// Caso contrário, esta função também pode ser removida.
+// Por enquanto, será deixada como um esqueleto ou totalmente removida se confirmado.
+
+// Funções antigas de saldo atômico e transações (agora no Vercel):
+// exports.placeChute = functions.https.onCall(async (data, context) => { /* ... */ });
+// exports.payWinner = functions.https.onCall(async (data, context) => { /* ... */ });
+// exports.requestWithdrawal = functions.https.onCall(async (data, context) => { /* ... */ });
+// exports.approveDeposit = functions.https.onCall(async (data, context) => { /* ... */ });
+// exports.confirmWithdrawal = functions.https.onCall(async (data, context) => { /* ... */ });
+// exports.declineTransaction = functions.https.onCall(async (data, context) => { /* ... */ });
+
+// Lógica para setUserRole foi removida daqui, pois também deve ser migrada para uma API Route segura no Vercel.
+// Exemplo de como era (comentado): 
+/*
 export const setUserRole = functions.https.onCall(async (data, context) => {
-    // ... (código existente, sem alterações)
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "A requisição deve ser feita por um usuário autenticado.");
+  }
+  const callerRole = context.auth.token.role;
+  if (callerRole !== "admin") {
+    throw new functions.https.HttpsError("permission-denied", "Apenas administradores podem definir funções de usuário.");
+  }
+  const { uid, role } = data;
+  if (typeof uid !== "string" || typeof role !== "string") {
+    throw new functions.https.HttpsError("invalid-argument", "Os dados devem incluir um 'uid' e uma 'role' do tipo string.");
+  }
+  try {
+    await admin.auth().setCustomUserClaims(uid, { role: role });
+    await db.collection(USERS_COLLECTION).doc(uid).set({ role: role }, { merge: true });
+    return { result: `Sucesso! O usuário ${uid} agora tem a função de ${role}.` };
+  } catch (error) {
+    console.error("Erro ao definir custom claim:", error);
+    throw new functions.https.HttpsError("internal", "Ocorreu um erro interno ao tentar definir a função do usuário.");
+  }
 });
-
-// VERSÃO CORRIGIDA E SEGURA, BASEADA NA LÓGICA ESTÁVEL
-exports.placeChute = functions.https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado para fazer um chute.');
-    }
-
-    const { bolaoId, scoreTeam1, scoreTeam2, comment } = data; // O valor da aposta não vem mais do frontend
-    const userId = context.auth.uid;
-
-    const userRef = db.collection(USERS_COLLECTION).doc(userId);
-    const bolaoRef = db.collection(BOLOES_COLLECTION).doc(bolaoId);
-
-    return db.runTransaction(async (transaction) => {
-        // 1. Lê os dados do bolão DIRETAMENTE do banco de dados (fonte da verdade)
-        const bolaoDoc = await transaction.get(bolaoRef);
-        if (!bolaoDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Bolão não encontrado.');
-        }
-        const betAmount = bolaoDoc.data()?.betAmount; // Usa o valor do banco
-        
-        // 2. Valida o valor da aposta obtido do banco
-        if (typeof betAmount !== 'number' || betAmount <= 0) {
-            throw new functions.https.HttpsError('invalid-argument', 'O valor da aposta configurado para este bolão é inválido.');
-        }
-
-        const palpiteQuery = db.collection(CHUTES_COLLECTION)
-            .where('userId', '==', userId)
-            .where('bolaoId', '==', bolaoId)
-            .where('scoreTeam1', '==', scoreTeam1)
-            .where('scoreTeam2', '==', scoreTeam2);
-            
-        const existingPalpite = await transaction.get(palpiteQuery);
-        if (!existingPalpite.empty) {
-            throw new functions.https.HttpsError('already-exists', 'Você já fez uma aposta com este placar para este bolão.');
-        }
-
-        const userDoc = await transaction.get(userRef);
-        const currentBalance = userDoc.data()?.balance || 0;
-
-        if (currentBalance < betAmount) {
-            throw new functions.https.HttpsError('failed-precondition', 'Saldo insuficiente.');
-        }
-
-        transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-betAmount) });
-
-        const palpiteRef = db.collection(CHUTES_COLLECTION).doc();
-        transaction.set(palpiteRef, {
-            userId,
-            bolaoId,
-            scoreTeam1,
-            scoreTeam2,
-            amount: betAmount,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            status: "Em Aberto",
-            ...(comment && { comment }),
-        });
-        
-        const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
-        transaction.set(transactionRef, {
-            uid: userId,
-            type: 'bet_placement',
-            amount: -betAmount,
-            description: `Aposta no bolão: ${bolaoDoc.data()?.championship}`,
-            status: 'completed',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            metadata: { bolaoId, palpiteId: palpiteRef.id },
-        });
-
-        return { success: true, transactionId: transactionRef.id, palpiteId: palpiteRef.id };
-    });
-});
-
-// ... (Restante das funções sem alterações) ...
-exports.payWinner = functions.https.onCall(async (data, context) => {
-    // ...
-});
-exports.requestWithdrawal = functions.https.onCall(async (data, context) => {
-    // ...
-});
-exports.approveDeposit = functions.https.onCall(async (data, context) => {
-    // ...
-});
-exports.confirmWithdrawal = functions.https.onCall(async (data, context) => {
-    // ...
-});
-exports.declineTransaction = functions.https.onCall(async (data, context) => {
-    // ...
-});
+*/

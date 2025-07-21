@@ -1,14 +1,16 @@
 
-import { db, functions } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, DocumentData, getCountFromServer, orderBy, limit, writeBatch, deleteDoc } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
+import { db } from "@/lib/firebase"; // Removido 'functions'
+import {
+  collection, query, where, getDocs, doc, getDoc, updateDoc,
+  DocumentData, getCountFromServer, orderBy, writeBatch, deleteDoc
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // Importado para obter o usuário atual
 import { getBolaoById, Bolao } from "./boloes";
 import { getTeamById, Team } from "./teams";
 import { getChampionshipById, Championship } from "./championships";
 import { getUserProfile, UserProfile } from "./users";
 
-// Tipagem de Status Atualizada, incluindo o status legado "Aprovado" para leitura
-export type PalpiteStatus = "Em Aberto" | "Ganho" | "Perdido" | "Anulado" | "Aprovado";
+export type PalpiteStatus = "Em Aberto" | "Ganho" | "Perdido" | "Anulado";
 
 export interface Palpite {
   id: string;
@@ -23,12 +25,12 @@ export interface Palpite {
 }
 
 export interface PalpiteComDetalhes extends Palpite {
-    user?: UserProfile;
-    bolaoDetails?: Bolao & {
-        teamADetails?: Team;
-        teamBDetails?: Team;
-        championshipDetails?: Championship;
-    };
+  user?: UserProfile;
+  bolaoDetails?: Bolao & {
+    teamADetails?: Team;
+    teamBDetails?: Team;
+    championshipDetails?: Championship;
+  };
 }
 
 const fromFirestore = (doc: DocumentData): Palpite => {
@@ -39,17 +41,48 @@ const fromFirestore = (doc: DocumentData): Palpite => {
     bolaoId: data.bolaoId,
     scoreTeam1: data.scoreTeam1,
     scoreTeam2: data.scoreTeam2,
-    amount: data.amount || 0, // Garante que amount sempre exista
+    amount: data.amount || 0,
     createdAt: data.createdAt,
     status: data.status,
     comment: data.comment,
   };
 };
 
-export const placeChute = async (bolaoId: string, scoreTeam1: number, scoreTeam2: number, amount: number): Promise<void> => {
+/**
+ * Realiza um chute (aposta) chamando a nova API Route no Vercel.
+ * @param {string} bolaoId - O ID do bolão.
+ * @param {number} scoreTeam1 - O placar do time 1.
+ * @param {number} scoreTeam2 - O placar do time 2.
+ * @param {string} [comment] - Um comentário opcional para a aposta.
+ * @returns O resultado da chamada da API.
+ */
+export const placeChute = async (bolaoId: string, scoreTeam1: number, scoreTeam2: number, comment?: string): Promise<any> => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new Error("Usuário não autenticado.");
+    }
+
     try {
-        const placeChuteFunction = httpsCallable(functions, 'placeChute');
-        await placeChuteFunction({ bolaoId, scoreTeam1, scoreTeam2, amount });
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/chutes/place', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ bolaoId, scoreTeam1, scoreTeam2, comment }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "Falha ao registrar o chute.");
+        }
+
+        return result;
+
     } catch (error) {
         console.error("Erro ao registrar o chute:", error);
         throw error;
@@ -61,20 +94,9 @@ export const deletePalpite = async (id: string): Promise<void> => {
   await deleteDoc(palpiteRef);
 };
 
-// Função de busca por status corrigida
 export const getPalpitesByStatus = async (status: PalpiteStatus): Promise<Palpite[]> => {
   try {
-    const collectionName = "chutes"; // Usando a coleção correta
-    let statusQuery;
-
-    // Lógica de retrocompatibilidade
-    if (status === "Em Aberto") {
-      statusQuery = where("status", "in", ["Em Aberto", "Aprovado"]);
-    } else {
-      statusQuery = where("status", "==", status);
-    }
-    
-    const q = query(collection(db, collectionName), statusQuery, orderBy("createdAt", "desc"));
+    const q = query(collection(db, "chutes"), where("status", "==", status), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(fromFirestore);
   } catch (error) {
@@ -83,14 +105,41 @@ export const getPalpitesByStatus = async (status: PalpiteStatus): Promise<Palpit
   }
 };
 
-// Função de atualização de status corrigida
+/**
+ * Atualiza o status de um palpite. Se o status for 'Anulado', chama a API de anulação.
+ * @param {string} id - O ID do palpite.
+ * @param {PalpiteStatus} status - O novo status do palpite.
+ */
 export const updatePalpiteStatus = async (id: string, status: PalpiteStatus): Promise<void> => {
-  const palpiteRef = doc(db, "chutes", id); // Usando a coleção correta
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+      throw new Error("Usuário não autenticado.");
+  }
+
   try {
+    const idToken = await user.getIdToken();
+
     if (status === "Anulado") {
-      const anularChuteFunction = httpsCallable(functions, 'anularChute');
-      await anularChuteFunction({ palpiteId: id });
+      const response = await fetch('/api/chutes/annul', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ palpiteId: id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+          throw new Error(result.message || "Falha ao anular o chute.");
+      }
+      console.log("Chute anulado com sucesso:", result);
     } else {
+      // Para outros status que não envolvem estorno de saldo (e.g., Ganho, Perdido)
+      const palpiteRef = doc(db, "chutes", id);
       await updateDoc(palpiteRef, { status });
     }
   } catch (error) {
@@ -99,50 +148,49 @@ export const updatePalpiteStatus = async (id: string, status: PalpiteStatus): Pr
   }
 };
 
-// Função de resultado corrigida
+/**
+ * Define o resultado de um bolão e processa os palpites, incluindo o pagamento aos vencedores.
+ * Esta função agora chama uma API Route no backend para a lógica transacional.
+ * @param {string} bolaoId - O ID do bolão a ser finalizado.
+ * @param {number} scoreTeam1 - O placar final do Time 1.
+ * @param {number} scoreTeam2 - O placar final do Time 2.
+ * @returns O resultado da operação do backend.
+ */
 export const setResultAndProcessPalpites = async (bolaoId: string, scoreTeam1: number, scoreTeam2: number) => {
-    const batch = writeBatch(db);
-    const collectionName = "chutes"; // Usando a coleção correta
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-    const bolaoRef = doc(db, 'boloes', bolaoId);
-    batch.update(bolaoRef, { finalScoreTeam1: scoreTeam1, finalScoreTeam2: scoreTeam2, status: 'Finalizado' });
-
-    const palpitesQuery = query(collection(db, collectionName), where('bolaoId', '==', bolaoId), where('status', 'in', ['Em Aberto', 'Aprovado']));
-    const palpitesSnapshot = await getDocs(palpitesQuery);
-
-    const winners: Palpite[] = [];
-    let totalBetAmount = 0;
-
-    palpitesSnapshot.forEach(palpiteDoc => {
-        const palpite = fromFirestore(palpiteDoc);
-        totalBetAmount += palpite.amount;
-        if (palpite.scoreTeam1 === scoreTeam1 && palpite.scoreTeam2 === scoreTeam2) {
-            winners.push(palpite);
-        } else {
-            batch.update(palpiteDoc.ref, { status: 'Perdido' });
-        }
-    });
-
-    if (winners.length > 0) {
-        const bolaoDoc = await getDoc(bolaoRef);
-        const bolaoData = bolaoDoc.data() as Bolao;
-        const totalPrize = (bolaoData.initialPrize || 0) + (totalBetAmount * 0.9);
-        const prizePerWinner = totalPrize / winners.length;
-
-        const payWinnerFunction = httpsCallable(functions, 'payWinner');
-        const winnerPromises = winners.map(winner => {
-            batch.update(doc(db, collectionName, winner.id), { status: 'Ganho' });
-            return payWinnerFunction({ userId: winner.userId, bolaoId: bolaoId, prizeAmount: prizePerWinner });
-        });
-        
-        await Promise.all(winnerPromises);
+    if (!user) {
+        throw new Error("Usuário não autenticado.");
     }
-    
-    await batch.commit();
+
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/boloes/process-results', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ bolaoId, scoreTeam1, scoreTeam2 }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "Falha ao processar os resultados do bolão.");
+        }
+
+        return result;
+
+    } catch (error) {
+        console.error("Erro ao definir resultado e processar palpites:", error);
+        throw error;
+    }
 };
 
+// --- Funções de leitura (geralmente não precisam de grandes alterações) ---
 
-// Demais funções corrigidas para usar a coleção "chutes" e com a lógica restaurada
 export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteComDetalhes[]> => {
     if (!userId) return [];
     
@@ -178,7 +226,7 @@ export const getPalpitesByBolaoId = async (bolaoId: string): Promise<PalpiteComD
     if (!bolaoId) return [];
     try {
         const q = query(
-            collection(db, "chutes"), // Corrigido
+            collection(db, "chutes"),
             where("bolaoId", "==", bolaoId),
             orderBy("createdAt", "desc")
         );
@@ -224,7 +272,7 @@ export const getParticipantCount = async (bolaoId: string): Promise<number> => {
         const q = query(
             collection(db, "chutes"),
             where("bolaoId", "==", bolaoId),
-            where("status", "in", ["Em Aberto", "Ganho", "Perdido", "Aprovado"])
+            where("status", "in", ["Em Aberto", "Ganho", "Perdido"])
         );
         const snapshot = await getCountFromServer(q);
         return snapshot.data().count;

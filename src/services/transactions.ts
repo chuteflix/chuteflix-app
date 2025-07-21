@@ -9,11 +9,11 @@ import {
   doc,
   updateDoc,
   DocumentData,
-  serverTimestamp, // 1. Importar serverTimestamp
+  serverTimestamp,
 } from "firebase/firestore"
-import { db, functions } from "@/lib/firebase"
-import { httpsCallable } from "firebase/functions"
+import { db } from "@/lib/firebase" // Removido 'functions' que não será mais usado aqui
 import { getUserProfile, UserProfile } from "./users"
+import { getAuth } from "firebase/auth"
 
 export type TransactionStatus = "pending" | "completed" | "failed"
 export type TransactionType = "deposit" | "withdrawal" | "bet_placement" | "prize_winning"
@@ -52,7 +52,7 @@ export const createTransaction = async (
   try {
     const docRef = await addDoc(collection(db, "transactions"), {
       ...data,
-      createdAt: serverTimestamp(), // 2. Usar o timestamp do servidor
+      createdAt: serverTimestamp(),
     })
     return docRef.id
   } catch (error) {
@@ -74,14 +74,42 @@ export const updateTransaction = async (
   }
 }
 
+/**
+ * Solicita um saque chamando a nova API Route no Vercel.
+ * @param {object} data - Contém o valor (amount) e a chave PIX (pixKey).
+ * @returns O resultado da chamada da API.
+ */
 export const requestWithdrawal = async ({ amount, pixKey }: { amount: number; pixKey: string; }) => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new Error("Usuário não autenticado.");
+    }
+
     try {
-        const requestWithdrawalFunction = httpsCallable(functions, 'requestWithdrawal');
-        // 3. Retornar explicitamente o resultado da função
-        const result = await requestWithdrawalFunction({ amount, pixKey });
-        return result.data;
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/withdrawals/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ amount, pixKey }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            // Lança um erro com a mensagem retornada pela API para ser capturado no formulário
+            throw new Error(result.message || "Falha ao solicitar o saque.");
+        }
+        
+        return result;
+
     } catch (error) {
         console.error("Erro ao solicitar saque:", error);
+        // Re-lança o erro para que o componente que chamou a função possa tratá-lo
         throw error;
     }
 };

@@ -4,40 +4,39 @@ import * as admin from 'firebase-admin';
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
-      console.error("Firebase Admin SDK - VARIÁVEIS DE AMBIENTE AUSENTES OU INVÁLIDAS. Verifique suas configurações no Vercel.");
-      // O erro do Firebase Admin SDK abaixo será mais específico se initializeApp falhar.
+      console.error("Firebase Admin SDK - Variáveis de ambiente do servidor ausentes.");
+      throw new Error("Configuração do servidor Firebase incompleta.");
     }
 
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: projectId,
-        clientEmail: clientEmail,
-        privateKey: privateKey,
-      }),
-    });
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        }),
+      });
+      console.log("Firebase Admin SDK inicializado com sucesso.");
+    } catch (error) {
+      console.error("Firebase Admin SDK - ERRO FATAL ao inicializar:", error);
+      throw error;
+    }
   }
 }
 
-initializeFirebaseAdmin();
-
-const db = admin.firestore();
 const USERS_COLLECTION = 'users';
 const TRANSACTIONS_COLLECTION = 'transactions';
 
 export async function POST(req: Request) {
   try {
     // Garante que o SDK está inicializado antes de usar
-    if (!admin.apps.length) {
-      initializeFirebaseAdmin();
-      if(!admin.apps.length){
-        return NextResponse.json({ message: 'Erro de configuração do servidor.' }, { status: 500 });
-      }
-    }
+    initializeFirebaseAdmin();
+    const db = admin.firestore(); // db inicializado após a inicialização do app
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -97,7 +96,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Erro na API de aprovação de depósito:", error);
-    if (error.message === 'Transação não encontrada.' || error.message === 'Transação não está pendente.' || error.message === 'Usuário não encontrado.') {
+    if (error.message === 'Transação não encontrada.' || error.message === 'Transação não está pendente.' || error.message === 'Usuário não encontrado.' || error.message.includes('Configuração do servidor Firebase incompleta')) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
     return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });
