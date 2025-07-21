@@ -1,0 +1,2 @@
+# Ignore the Firebase Functions directory as backend is now in Next.js API Routes
+functions/
