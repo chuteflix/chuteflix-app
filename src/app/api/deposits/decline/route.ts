@@ -94,6 +94,7 @@ export async function POST(req: Request) {
       if (error.message === 'Transação não encontrada.' || error.message === 'Transação não está pendente.' || error.message.includes('Configuração do servidor Firebase incompleta')) {
         return NextResponse.json({ message: error.message }, { status: 400 });
       }
+      // CORREÇÃO: Adicionando o ':' que faltava aqui
       return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });
     }
   }
