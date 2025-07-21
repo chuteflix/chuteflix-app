@@ -11,12 +11,12 @@ import {
   DocumentData,
   serverTimestamp,
 } from "firebase/firestore"
-import { db } from "@/lib/firebase" // Removido 'functions' que não será mais usado aqui
+import { db } from "@/lib/firebase"
 import { getUserProfile, UserProfile } from "./users"
 import { getAuth } from "firebase/auth"
 
 export type TransactionStatus = "pending" | "completed" | "failed"
-export type TransactionType = "deposit" | "withdrawal" | "bet_placement" | "prize_winning"
+export type TransactionType = "deposit" | "withdrawal" | "bet_placement" | "prize_winning" | "bet_refund"
 
 export interface Transaction {
   id: string
@@ -74,11 +74,7 @@ export const updateTransaction = async (
   }
 }
 
-/**
- * Solicita um saque chamando a nova API Route no Vercel.
- * @param {object} data - Contém o valor (amount) e a chave PIX (pixKey).
- * @returns O resultado da chamada da API.
- */
+
 export const requestWithdrawal = async ({ amount, pixKey }: { amount: number; pixKey: string; }) => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -101,7 +97,6 @@ export const requestWithdrawal = async ({ amount, pixKey }: { amount: number; pi
         const result = await response.json();
 
         if (!response.ok) {
-            // Lança um erro com a mensagem retornada pela API para ser capturado no formulário
             throw new Error(result.message || "Falha ao solicitar o saque.");
         }
         
@@ -109,10 +104,54 @@ export const requestWithdrawal = async ({ amount, pixKey }: { amount: number; pi
 
     } catch (error) {
         console.error("Erro ao solicitar saque:", error);
-        // Re-lança o erro para que o componente que chamou a função possa tratá-lo
         throw error;
     }
 };
+
+export const approveWithdrawal = async (transactionId: string) => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuário não autenticado.");
+
+    const idToken = await user.getIdToken();
+    const response = await fetch('/api/withdrawals/approve', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ transactionId }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+        throw new Error(result.message || "Falha ao aprovar o saque.");
+    }
+    return result;
+}
+
+export const declineTransaction = async (transactionId: string) => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuário não autenticado.");
+
+    const idToken = await user.getIdToken();
+    const response = await fetch('/api/withdrawals/decline', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ transactionId }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+        throw new Error(result.message || "Falha ao recusar a transação.");
+    }
+    return result;
+}
+
 
 export const getTransactions = async (
   filters: Partial<{ uid: string; type: TransactionType; status: TransactionStatus }>

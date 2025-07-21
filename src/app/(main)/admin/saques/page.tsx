@@ -2,9 +2,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db, functions } from '@/lib/firebase';
-import { httpsCallable } from 'firebase/functions';
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Check, X, Loader2, Eye } from 'lucide-react';
 import { getUserProfile, UserProfile } from '@/services/users';
-import { Transaction } from '@/services/transactions';
+import { Transaction, approveWithdrawal, declineTransaction } from '@/services/transactions';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
@@ -34,15 +33,18 @@ export default function AdminWithdrawalsPage() {
   const { toast } = useToast();
   
   useEffect(() => {
+    const baseQuery = collection(db, "transactions");
     const pendingQuery = query(
-        collection(db, "transactions"), 
+        baseQuery, 
         where("type", "==", "withdrawal"),
-        where("status", "==", "pending")
+        where("status", "==", "pending"),
+        orderBy("createdAt", "desc")
     );
     const completedQuery = query(
-        collection(db, "transactions"), 
+        baseQuery, 
         where("type", "==", "withdrawal"),
-        where("status", "in", ["completed", "failed"])
+        where("status", "in", ["completed", "failed"]),
+        orderBy("createdAt", "desc")
     );
 
     const fetchAndSetRequests = (q: any, setter: React.Dispatch<React.SetStateAction<WithdrawalRequest[]>>) => {
@@ -72,8 +74,7 @@ export default function AdminWithdrawalsPage() {
   const handleConfirm = async (transactionId: string) => {
       setSubmitting(transactionId);
       try {
-          const confirmWithdrawal = httpsCallable(functions, 'confirmWithdrawal');
-          await confirmWithdrawal({ transactionId });
+          await approveWithdrawal(transactionId);
           toast({ title: "Saque confirmado com sucesso!", variant: "success" });
       } catch (error: any) {
           toast({ title: "Erro ao confirmar saque.", description: error.message, variant: "destructive" });
@@ -85,13 +86,28 @@ export default function AdminWithdrawalsPage() {
   const handleDecline = async (id: string) => {
     setSubmitting(id);
     try {
-        const declineTransaction = httpsCallable(functions, 'declineTransaction');
-        await declineTransaction({ transactionId: id });
-        toast({ title: "Solicitação recusada.", variant: "info" });
+        await declineTransaction(id);
+        toast({ title: "Solicitação recusada e saldo estornado.", variant: "info" });
     } catch(error: any) {
         toast({ title: "Erro ao recusar solicitação.", description: error.message, variant: "destructive" });
     } finally {
         setSubmitting(null);
+    }
+  }
+  
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+        case 'completed': return 'Concluído';
+        case 'failed': return 'Recusado';
+        default: return 'Pendente';
+    }
+  }
+  
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+        case 'completed': return 'bg-green-100 text-green-800';
+        case 'failed': return 'bg-red-100 text-red-800';
+        default: return 'bg-yellow-100 text-yellow-800';
     }
   }
 
@@ -163,12 +179,12 @@ export default function AdminWithdrawalsPage() {
                 ) : completedRequests.length > 0 ? (
                     completedRequests.map((req) => (
                     <TableRow key={req.id}>
-                        <TableCell>{req.createdAt ? format(new Date(req.createdAt.seconds * 1000), "dd/MM/yyyy") : 'N/A'}</TableCell>
+                        <TableCell>{req.createdAt ? format(new Date(req.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
                         <TableCell>{req.user?.name || req.user?.email || req.uid}</TableCell>
                         <TableCell>{Math.abs(req.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                         <TableCell>
-                            <span className={`px-2 py-1 text-xs rounded-full ${req.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {req.status === 'completed' ? 'Concluído' : 'Recusado'}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusVariant(req.status)}`}>
+                                {getStatusLabel(req.status)}
                             </span>
                         </TableCell>
                         <TableCell>

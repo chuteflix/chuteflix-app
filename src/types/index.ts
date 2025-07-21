@@ -1,10 +1,13 @@
 export interface Team {
   id: string;
   name: string;
-  logoUrl: string;
+  shieldUrl?: string; // Tornar opcional para consistência
+  logoUrl?: string; // Manter por retrocompatibilidade, se necessário
   level: 'Profissional' | 'Amador/Várzea';
   location: string;
   scope: 'Nacional' | 'Estadual' | 'Municipal';
+  state?: string;
+  city?: string;
 }
 
 export interface Championship {
@@ -26,9 +29,9 @@ export interface Bolao {
   championship: string;
   homeTeam: Team;
   awayTeam: Team;
-  matchStartDate: Date | null; // Pode ser Date ou null
-  matchEndDate: Date | null;   // Pode ser Date ou null
-  closingTime: Date | null;    // Pode ser Date ou null
+  matchStartDate: Date | null; 
+  matchEndDate: Date | null;   
+  closingTime: Date | null;    
   betAmount: number;
   initialPrize?: number;
   status: 'Aberto' | 'Fechado' | 'Finalizado';
@@ -53,16 +56,29 @@ export interface UserProfile {
     isAdmin?: boolean;
     createdAt?: any;
     phone?: string;
+    cpf?: string;
+    pixKey?: string;
+    pixKeyType?: string;
+    role?: 'admin' | 'editor' | 'support' | 'user';
 }
   
+export type TransactionType = "deposit" | "withdrawal" | "bet_placement" | "prize_winning" | "bet_refund";
+
+export type TransactionStatus = "pending" | "completed" | "failed";
 
 export interface Transaction {
   id: string;
-  userId: string;
-  bolaoId: string;
+  uid: string; // userId para manter consistência
+  type: TransactionType;
   amount: number;
-  date: Date;
-  status: 'Pendente' | 'Confirmado' | 'Falhou';
+  description: string;
+  status: TransactionStatus;
+  createdAt: any; // Firestore Timestamp
+  processedAt?: any; // Firestore Timestamp
+  processedBy?: string; // UID do admin que processou
+  metadata?: {
+    [key: string]: any;
+  };
 }
 
 export interface Settings {
