@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useForm } from "react-hook-form"
@@ -60,6 +61,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
                 bolao.id,
                 values.scoreTeam1,
                 values.scoreTeam2,
+                bolao.betAmount,
                 values.comment
             )
             toast({

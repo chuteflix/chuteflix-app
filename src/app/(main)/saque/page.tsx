@@ -9,13 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowRight, History, Eye } from 'lucide-react';
+import { Loader2, ArrowRight, History, Eye, Wallet } from 'lucide-react';
 import { NumericFormat } from 'react-number-format';
 import { Transaction } from '@/services/transactions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore'; // 1. Importar limit
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore'; 
 import { db } from '@/lib/firebase';
 
 export default function WithdrawPage() {
@@ -45,7 +45,7 @@ export default function WithdrawPage() {
       where("uid", "==", user.uid),
       where("type", "==", "withdrawal"),
       orderBy("createdAt", "desc"),
-      limit(10) // 2. Limitar a 10 registros
+      limit(10) 
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -110,25 +110,35 @@ export default function WithdrawPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card>
             <CardHeader>
-                <CardTitle>Passo 1: Informe o Valor</CardTitle>
+                <CardTitle>Dados do Saque</CardTitle>
                 <CardDescription>
-                Digite o valor que você deseja sacar do seu saldo.
+                  Preencha o valor e confirme sua chave PIX para solicitar o saque.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted flex items-center gap-4">
+                    <Wallet className="h-6 w-6 text-primary" />
+                    <div>
+                        <p className="text-sm text-muted-foreground">Saldo disponível</p>
+                        <p className="text-2xl font-bold text-foreground">
+                            {(userProfile?.balance ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
+                    </div>
+                </div>
+
                 <div className="space-y-2">
-                <Label htmlFor="amount">Valor do Saque (R$)</Label>
-                <NumericFormat
-                    id="amount"
-                    customInput={Input}
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    prefix="R$ "
-                    value={amount}
-                    onValueChange={(values) => setAmount(values.floatValue)}
-                    placeholder="R$ 0,00"
-                    className="h-12 text-lg"
-                />
+                    <Label htmlFor="amount">Valor do Saque (R$)</Label>
+                    <NumericFormat
+                        id="amount"
+                        customInput={Input}
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        prefix="R$ "
+                        value={amount}
+                        onValueChange={(values) => setAmount(values.floatValue)}
+                        placeholder="R$ 0,00"
+                        className="h-12 text-lg"
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="pixKey">Chave PIX</Label>

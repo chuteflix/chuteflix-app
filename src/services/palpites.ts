@@ -1,10 +1,10 @@
 
-import { db } from "@/lib/firebase"; // Removido 'functions'
+import { db } from "@/lib/firebase";
 import {
   collection, query, where, getDocs, doc, getDoc, updateDoc,
   DocumentData, getCountFromServer, orderBy, writeBatch, deleteDoc
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Importado para obter o usuário atual
+import { getAuth } from "firebase/auth";
 import { getBolaoById, Bolao } from "./boloes";
 import { getTeamById, Team } from "./teams";
 import { getChampionshipById, Championship } from "./championships";
@@ -48,15 +48,7 @@ const fromFirestore = (doc: DocumentData): Palpite => {
   };
 };
 
-/**
- * Realiza um chute (aposta) chamando a nova API Route no Vercel.
- * @param {string} bolaoId - O ID do bolão.
- * @param {number} scoreTeam1 - O placar do time 1.
- * @param {number} scoreTeam2 - O placar do time 2.
- * @param {string} [comment] - Um comentário opcional para a aposta.
- * @returns O resultado da chamada da API.
- */
-export const placeChute = async (bolaoId: string, scoreTeam1: number, scoreTeam2: number, comment?: string): Promise<any> => {
+export const placeChute = async (bolaoId: string, scoreTeam1: number, scoreTeam2: number, betAmount: number, comment?: string): Promise<any> => {
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -72,7 +64,7 @@ export const placeChute = async (bolaoId: string, scoreTeam1: number, scoreTeam2
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${idToken}`,
             },
-            body: JSON.stringify({ bolaoId, scoreTeam1, scoreTeam2, comment }),
+            body: JSON.stringify({ bolaoId, scoreTeam1, scoreTeam2, betAmount, comment }),
         });
 
         const result = await response.json();
@@ -105,11 +97,6 @@ export const getPalpitesByStatus = async (status: PalpiteStatus): Promise<Palpit
   }
 };
 
-/**
- * Atualiza o status de um palpite. Se o status for 'Anulado', chama a API de anulação.
- * @param {string} id - O ID do palpite.
- * @param {PalpiteStatus} status - O novo status do palpite.
- */
 export const updatePalpiteStatus = async (id: string, status: PalpiteStatus): Promise<void> => {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -138,7 +125,6 @@ export const updatePalpiteStatus = async (id: string, status: PalpiteStatus): Pr
       }
       console.log("Chute anulado com sucesso:", result);
     } else {
-      // Para outros status que não envolvem estorno de saldo (e.g., Ganho, Perdido)
       const palpiteRef = doc(db, "chutes", id);
       await updateDoc(palpiteRef, { status });
     }
@@ -148,14 +134,6 @@ export const updatePalpiteStatus = async (id: string, status: PalpiteStatus): Pr
   }
 };
 
-/**
- * Define o resultado de um bolão e processa os palpites, incluindo o pagamento aos vencedores.
- * Esta função agora chama uma API Route no backend para a lógica transacional.
- * @param {string} bolaoId - O ID do bolão a ser finalizado.
- * @param {number} scoreTeam1 - O placar final do Time 1.
- * @param {number} scoreTeam2 - O placar final do Time 2.
- * @returns O resultado da operação do backend.
- */
 export const setResultAndProcessPalpites = async (bolaoId: string, scoreTeam1: number, scoreTeam2: number) => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -188,8 +166,6 @@ export const setResultAndProcessPalpites = async (bolaoId: string, scoreTeam1: n
         throw error;
     }
 };
-
-// --- Funções de leitura (geralmente não precisam de grandes alterações) ---
 
 export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteComDetalhes[]> => {
     if (!userId) return [];

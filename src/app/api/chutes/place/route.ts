@@ -5,7 +5,6 @@ import * as admin from 'firebase-admin';
 // Função para inicializar o Firebase Admin SDK de forma segura
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    // CORREÇÃO: Usando prefixo FB_ADMIN_ para evitar conflito com variáveis reservadas do Vercel
     const projectId = process.env.FB_ADMIN_PROJECT_ID;
     const clientEmail = process.env.FB_ADMIN_CLIENT_EMAIL;
     const privateKey = process.env.FB_ADMIN_PRIVATE_KEY;
@@ -55,9 +54,9 @@ export async function POST(req: Request) {
     }
     
     const userId = decodedToken.uid;
-    const { bolaoId, scoreTeam1, scoreTeam2, comment } = await req.json();
+    const { bolaoId, scoreTeam1, scoreTeam2, betAmount, comment } = await req.json();
 
-    if (!bolaoId || typeof scoreTeam1 !== 'number' || typeof scoreTeam2 !== 'number') {
+    if (!bolaoId || typeof scoreTeam1 !== 'number' || scoreTeam1 < 0 || typeof scoreTeam2 !== 'number' || scoreTeam2 < 0 || typeof betAmount !== 'number' || betAmount <= 0) {
         return NextResponse.json({ message: 'Dados da aposta inválidos.' }, { status: 400 });
     }
 
@@ -69,12 +68,12 @@ export async function POST(req: Request) {
       if (!bolaoDoc.exists) {
         throw new Error('Bolão não encontrado.');
       }
-      const betAmount = bolaoDoc.data()?.betAmount;
-      const bolaoName = bolaoDoc.data()?.championship || 'Nome não encontrado';
-
-      if (typeof betAmount !== 'number' || betAmount <= 0) {
-        throw new Error('O valor da aposta configurado para este bolão é inválido.');
+      
+      const bolaoData = bolaoDoc.data();
+      if (bolaoData?.betAmount !== betAmount) {
+        throw new Error('O valor da aposta não corresponde ao valor configurado para este bolão.');
       }
+      const bolaoName = bolaoData?.championship || 'Nome não encontrado';
       
       const chuteQuery = db.collection(CHUTES_COLLECTION)
             .where('userId', '==', userId)
@@ -127,7 +126,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Erro na API de realizar aposta:", error);
-    if (error.message.includes('Bolão não encontrado') || error.message.includes('inválido') || error.message.includes('Você já fez um chute') || error.message.includes('Saldo insuficiente') || error.message.includes('Configuração do servidor Firebase incompleta')) {
+    if (error.message.includes('Bolão não encontrado') || error.message.includes('inválido') || error.message.includes('não corresponde') || error.message.includes('Você já fez um chute') || error.message.includes('Saldo insuficiente') || error.message.includes('Configuração do servidor Firebase incompleta')) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
     return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useRef } from "react";
@@ -10,15 +11,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { Paperclip, MessageCircle, Loader2 } from "lucide-react";
 
 interface ProofOfPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onWhatsappRedirect: () => void;
-  onFileSelect: (file: File) => Promise<void>; // 1. Nova prop para lidar com a seleção do arquivo
-  isUploading: boolean; // 2. Receber o estado de upload
+  onFileSelect: (file: File) => Promise<void>; 
+  isUploading: boolean; 
 }
 
 export function ProofOfPaymentModal({
@@ -29,24 +29,12 @@ export function ProofOfPaymentModal({
   isUploading,
 }: ProofOfPaymentModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast()
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    // 3. Chama a função passada por prop para fazer o upload
-    try {
-      await onFileSelect(file);
-      toast({
-        title: "Comprovante Enviado!",
-        description: "Seu comprovante foi anexado e será analisado em breve.",
-        variant: "success",
-      })
-      onClose();
-    } catch (error) {
-        // A página que chama o modal será responsável por lidar com o erro
-    }
+    await onFileSelect(file);
   };
 
   const handleAttachReceiptClick = () => {

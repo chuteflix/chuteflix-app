@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { getSettings, Settings } from "@/services/settings";
 import { createTransaction, updateTransaction, Transaction } from "@/services/transactions";
-import { uploadFileToApi } from "@/services/upload"; // CORRIGIDO: Importa da nova função de cliente segura
+import { uploadFileToApi } from "@/services/upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -159,9 +159,14 @@ Meu ID de Transação é: ${currentTransactionId}`;
 
     setIsUploading(true);
     try {
-      const receiptUrl = await uploadFileToApi(file); // CORRIGIDO: Usa a função de cliente segura
+      const receiptUrl = await uploadFileToApi(file);
       await updateTransaction(currentTransactionId, { metadata: { receiptUrl } });
       handleProofModalClose();
+       toast({
+        title: "Comprovante Enviado!",
+        description: "Seu comprovante foi anexado e será analisado em breve.",
+        variant: "success",
+      })
     } catch (error) {
       console.error("Erro ao enviar comprovante:", error);
       toast({
@@ -169,7 +174,6 @@ Meu ID de Transação é: ${currentTransactionId}`;
         description: "Não foi possível enviar o comprovante. Tente novamente ou use o WhatsApp.",
         variant: "destructive",
       });
-      throw error;
     } finally {
       setIsUploading(false);
     }
