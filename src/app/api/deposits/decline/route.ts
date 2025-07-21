@@ -67,26 +67,30 @@ export async function POST(req: Request) {
 
     const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc(transactionId);
 
+    console.log(`Decline API: Attempting to decline transaction ${transactionId}`);
+
     await db.runTransaction(async (transaction) => {
       const transactionDoc = await transaction.get(transactionRef);
 
       if (!transactionDoc.exists) {
+        console.error(`Decline API: Transaction ${transactionId} not found.`);
         throw new Error('Transação não encontrada.');
       }
 
       const currentTransaction = transactionDoc.data();
 
+      console.log(`Decline API: Transaction ${transactionId} current status: ${currentTransaction?.status}`);
       if (currentTransaction?.status !== 'pending') {
+        console.warn(`Decline API: Transaction ${transactionId} is not pending. Current status: ${currentTransaction?.status}`);
         throw new Error('Transação não está pendente.');
       }
-
-      // Não há alteração de saldo para recusa
 
       transaction.update(transactionRef, {
         status: 'failed',
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
         processedBy: callerUid,
       });
+      console.log(`Decline API: Transaction ${transactionId} status updated to 'failed'.`);
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
