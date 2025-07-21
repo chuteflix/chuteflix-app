@@ -56,7 +56,7 @@ export default function AdminDepositsPage() {
     };
 
     const unsubscribePending = fetchAndSetData(pendingQuery, setPendingDeposits);
-    const unsubscribeCompleted = fetchAndAndSetData(completedQuery, setCompletedDeposits);
+    const unsubscribeCompleted = fetchAndSetData(completedQuery, setCompletedDeposits); // CORRIGIDO AQUI
 
     return () => {
         unsubscribePending();
@@ -105,7 +105,7 @@ export default function AdminDepositsPage() {
         }
         const idToken = await user.getIdToken(); 
 
-        // CORRIGIDO: CHAMA A NOVA NEXT.JS API ROUTE PARA RECUSAR
+        // CHAMA A NOVA NEXT.JS API ROUTE PARA RECUSAR
         const response = await fetch('/api/deposits/decline', {
             method: 'POST',
             headers: {
