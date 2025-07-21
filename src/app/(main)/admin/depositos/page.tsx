@@ -21,7 +21,7 @@ import { Transaction } from '@/services/transactions';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { getAuth } from "firebase/auth"; // Para obter o token do usuário
-// import { httpsCallable } from 'firebase/functions'; // Não é mais necessário aqui
+// import { httpsCallable } from 'firebase/functions'; // Removida, pois não é mais usada nesta página
 
 type DepositRequest = Transaction & {
     user?: UserProfile;
@@ -33,7 +33,7 @@ export default function AdminDepositsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const { toast } = useToast();
-  const auth = getAuth(); // Inicializa o Auth
+  const auth = getAuth(); 
 
   useEffect(() => {
     const baseQuery = query(collection(db, "transactions"), where("type", "==", "deposit"));
@@ -56,7 +56,7 @@ export default function AdminDepositsPage() {
     };
 
     const unsubscribePending = fetchAndSetData(pendingQuery, setPendingDeposits);
-    const unsubscribeCompleted = fetchAndSetData(completedQuery, setCompletedDeposits);
+    const unsubscribeCompleted = fetchAndAndSetData(completedQuery, setCompletedDeposits);
 
     return () => {
         unsubscribePending();
@@ -105,7 +105,7 @@ export default function AdminDepositsPage() {
         }
         const idToken = await user.getIdToken(); 
 
-        // CHAMA A NOVA NEXT.JS API ROUTE PARA RECUSAR
+        // CORRIGIDO: CHAMA A NOVA NEXT.JS API ROUTE PARA RECUSAR
         const response = await fetch('/api/deposits/decline', {
             method: 'POST',
             headers: {
