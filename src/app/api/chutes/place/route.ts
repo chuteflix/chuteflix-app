@@ -5,23 +5,16 @@ import * as admin from 'firebase-admin';
 // Função para inicializar o Firebase Admin SDK de forma segura
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    console.log("--- Iniciando diagnóstico do Firebase Admin SDK ---");
-
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-
-    // Log de diagnóstico para verificar se as variáveis de ambiente estão sendo lidas
-    console.log("FIREBASE_PROJECT_ID:", projectId ? "Encontrado" : "NÃO ENCONTRADO OU VAZIO");
-    console.log("FIREBASE_CLIENT_EMAIL:", clientEmail ? "Encontrado" : "NÃO ENCONTRADO OU VAZIO");
-    console.log("FIREBASE_PRIVATE_KEY:", privateKey ? "Encontrado" : "NÃO ENCONTRADO OU VAZIO");
+    // CORREÇÃO: Usando prefixo FB_ADMIN_ para evitar conflito com variáveis reservadas do Vercel
+    const projectId = process.env.FB_ADMIN_PROJECT_ID;
+    const clientEmail = process.env.FB_ADMIN_CLIENT_EMAIL;
+    const privateKey = process.env.FB_ADMIN_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
-      console.error("Firebase Admin SDK - ERRO FATAL: Uma ou mais variáveis de ambiente do servidor estão ausentes.");
-      console.log("-------------------------------------------------");
+      console.error("Firebase Admin SDK - Variáveis de ambiente do servidor ausentes ou vazias.");
       throw new Error("Configuração do servidor Firebase incompleta.");
     }
-    
+
     try {
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -30,11 +23,9 @@ function initializeFirebaseAdmin() {
           privateKey,
         }),
       });
-      console.log("Firebase Admin SDK inicializado com SUCESSO.");
-      console.log("-------------------------------------------------");
+      console.log("Firebase Admin SDK inicializado com sucesso.");
     } catch (error) {
       console.error("Firebase Admin SDK - ERRO FATAL ao inicializar:", error);
-      console.log("-------------------------------------------------");
       throw error;
     }
   }
