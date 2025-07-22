@@ -92,8 +92,8 @@ export default function MeusChutesPage() {
   }, [user]);
 
   const { ongoingGroups, completedGroups } = useMemo(() => {
-    const ongoing = groupedPalpites.filter(g => g.bolao.status === 'Disponível' || g.bolao.status === 'Chutes Encerrados');
-    const completed = groupedPalpites.filter(g => g.bolao.status === 'Finalizado');
+    const ongoing = groupedPalpites.filter(g => g.bolao.status === 'Disponível' || g.bolao.status === 'Chutes Encerrados' || g.bolao.status === 'Em Andamento');
+    const completed = groupedPalpites.filter(g => g.bolao.status === 'Finalizado' || g.bolao.status === 'Cancelado');
     return { ongoingGroups: ongoing, completedGroups: completed };
   }, [groupedPalpites]);
 
