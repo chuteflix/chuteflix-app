@@ -190,8 +190,7 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
                       {index === 0 && <Crown className="h-6 w-6 text-yellow-400" />}
                     </div>
                 )) : <p className="text-center text-muted-foreground py-6">Ninguém se arriscou ainda. Que tal ser o primeiro?</p>}
-              </C
-CardContent>
+              </CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare />Últimos Chutes</CardTitle><CardDescription>Veja os palpites mais recentes da galera.</CardDescription></CardHeader>
