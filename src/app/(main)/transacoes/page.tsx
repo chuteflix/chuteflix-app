@@ -31,6 +31,7 @@ export default function TransactionsPage() {
         return;
     };
 
+    setLoading(true);
     const transactionsRef = collection(db, "transactions")
     const q = query(
       transactionsRef,
@@ -39,7 +40,19 @@ export default function TransactionsPage() {
     )
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const userTransactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      const userTransactions = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              id: doc.id,
+              uid: data.uid,
+              type: data.type,
+              amount: data.amount,
+              description: data.description,
+              status: data.status,
+              createdAt: data.createdAt,
+              metadata: data.metadata,
+          } as Transaction;
+      });
       setTransactions(userTransactions)
       setLoading(false)
     }, (error) => {
@@ -72,7 +85,9 @@ export default function TransactionsPage() {
   const formatAmount = (tx: Transaction) => {
     const isCredit = tx.type === 'deposit' || tx.type === 'prize_winning' || tx.type === 'bet_refund';
     const formatted = Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    return isCredit ? `+${formatted}` : `-${formatted}`;
+    if(tx.amount > 0) return `+${formatted}`;
+    if(tx.amount < 0) return `-${Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+    return formatted;
   };
 
   return (
