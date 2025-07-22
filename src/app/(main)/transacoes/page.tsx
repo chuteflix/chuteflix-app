@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -57,12 +58,13 @@ export default function TransactionsPage() {
     return () => unsubscribe();
   }, [user])
 
-  const getTransactionTypeDetails = (type: Transaction['type'], amount: number) => {
+  const getTransactionTypeDetails = (type: Transaction['type']) => {
     switch(type) {
       case 'deposit': return { label: 'Depósito', icon: <ArrowUpRight className="h-4 w-4 text-success" />, color: 'text-success' };
       case 'withdrawal': return { label: 'Saque', icon: <ArrowDownLeft className="h-4 w-4 text-destructive" />, color: 'text-destructive' };
       case 'bet_placement': return { label: 'Aposta', icon: <Send className="h-4 w-4 text-blue-500" />, color: 'text-blue-500' };
       case 'prize_winning': return { label: 'Prêmio', icon: <CircleDollarSign className="h-4 w-4 text-amber-500" />, color: 'text-amber-500' };
+      case 'bet_refund': return { label: 'Estorno', icon: <CircleDollarSign className="h-4 w-4 text-amber-500" />, color: 'text-amber-500' };
       default: return { label: type, icon: <Minus className="h-4 w-4 text-muted-foreground"/>, color: '' };
     }
   }
@@ -74,6 +76,12 @@ export default function TransactionsPage() {
         default: return 'secondary';
     }
   }
+
+  const formatAmount = (tx: Transaction) => {
+    const isCredit = tx.type === 'deposit' || tx.type === 'prize_winning' || tx.type === 'bet_refund';
+    const formatted = Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return isCredit ? `+${formatted}` : `-${formatted}`;
+  };
 
   return (
     <div className="container mx-auto">
@@ -107,7 +115,7 @@ export default function TransactionsPage() {
                 ))
               ) : transactions.length > 0 ? (
                 transactions.map(tx => {
-                  const typeDetails = getTransactionTypeDetails(tx.type, tx.amount);
+                  const typeDetails = getTransactionTypeDetails(tx.type);
                   return (
                     <TableRow key={tx.id}>
                       <TableCell>{tx.createdAt ? format(new Date(tx.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
@@ -115,7 +123,7 @@ export default function TransactionsPage() {
                       <TableCell>{tx.description}</TableCell>
                       <TableCell><Badge variant={getStatusVariant(tx.status)}>{tx.status}</Badge></TableCell>
                       <TableCell className={`text-right font-bold ${typeDetails.color}`}>
-                        {tx.type === 'bet_placement' ? Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        {formatAmount(tx)}
                       </TableCell>
                     </TableRow>
                   )
