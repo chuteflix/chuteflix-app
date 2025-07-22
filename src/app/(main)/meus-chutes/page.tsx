@@ -1,9 +1,8 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/auth-context";
-import { PalpiteComDetalhes, Palpite } from "@/services/palpites";
+import { Palpite } from "@/services/palpites";
 import { PalpiteGroupCard } from "@/components/palpite-group-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
@@ -55,19 +54,9 @@ export default function MeusChutesPage() {
         const bolaoDetails = await getBolaoById(bolaoId);
         if (!bolaoDetails) return null;
 
-        const [teamADetails, teamBDetails, championshipDetails] = await Promise.all([
-          getTeamById(bolaoDetails.teamAId),
-          getTeamById(bolaoDetails.teamBId),
-          getChampionshipById(bolaoDetails.championshipId),
-        ]);
-
+        // Os detalhes dos times e campeonato já são carregados dentro de getBolaoById
         return {
-          bolao: {
-            ...bolaoDetails,
-            teamADetails,
-            teamBDetails,
-            championshipDetails,
-          },
+          bolao: bolaoDetails,
           palpitesDoUsuario: palpitesPorBolao[bolaoId],
         };
       });
@@ -76,8 +65,10 @@ export default function MeusChutesPage() {
       
       // Ordenar os grupos de bolões pela data do palpite mais recente em cada um
       finalGroupedData.sort((a, b) => {
-        const lastA = a.palpitesDoUsuario[0].createdAt.toMillis();
-        const lastB = b.palpitesDoUsuario[0].createdAt.toMillis();
+        // @ts-ignore
+        const lastA = a.palpitesDoUsuario[0]?.createdAt?.toMillis() || 0;
+        // @ts-ignore
+        const lastB = b.palpitesDoUsuario[0]?.createdAt?.toMillis() || 0;
         return lastB - lastA;
       });
 
@@ -92,8 +83,10 @@ export default function MeusChutesPage() {
   }, [user]);
 
   const { ongoingGroups, completedGroups } = useMemo(() => {
-    const ongoing = groupedPalpites.filter(g => g.bolao.status === 'Disponível' || g.bolao.status === 'Chutes Encerrados' || g.bolao.status === 'Em Andamento');
-    const completed = groupedPalpites.filter(g => g.bolao.status === 'Finalizado' || g.bolao.status === 'Cancelado');
+    // CORREÇÃO: Status 'Aberto' e 'Fechado' indicam que o bolão ainda está "em jogo" (não finalizado).
+    const ongoing = groupedPalpites.filter(g => g.bolao.status === 'Aberto' || g.bolao.status === 'Fechado');
+    // CORREÇÃO: Apenas 'Finalizado' vai para o histórico.
+    const completed = groupedPalpites.filter(g => g.bolao.status === 'Finalizado');
     return { ongoingGroups: ongoing, completedGroups: completed };
   }, [groupedPalpites]);
 
@@ -122,6 +115,7 @@ export default function MeusChutesPage() {
 
   return (
     <div className="container mx-auto space-y-12">
+       <h1 className="text-3xl font-bold">Meus Chutes</h1>
       {groupedPalpites.length === 0 ? (
          <div className="text-center bg-muted/20 border-2 border-dashed border-border/30 rounded-lg py-20 col-span-full">
             <h3 className="text-2xl font-bold">Você ainda não fez nenhum chute.</h3>
