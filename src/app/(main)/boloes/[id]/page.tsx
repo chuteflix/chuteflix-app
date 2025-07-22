@@ -1,18 +1,36 @@
 
-import { getBoloes } from "@/services/boloes";
+import { getBoloes, getBolaoById } from "@/services/boloes";
 import { BolaoPageClient } from "@/components/bolao-page-client";
+import { getTeamById } from "@/services/teams";
+import { getChampionshipById } from "@/services/championships";
+import { notFound } from "next/navigation";
 
-// Esta função roda no servidor durante o build
 export async function generateStaticParams() {
   const boloes = await getBoloes();
- 
   return boloes.map((bolao) => ({
     id: bolao.id,
   }));
 }
 
-// Este é o componente de servidor
-export default function BolaoPage({ params }: { params: { id: string } }) {
-  // Ele simplesmente renderiza o componente de cliente, passando o ID
-  return <BolaoPageClient id={params.id} />;
+export default async function BolaoPage({ params }: { params: { id: string } }) {
+  const bolaoBase = await getBolaoById(params.id);
+
+  if (!bolaoBase) {
+    return notFound();
+  }
+
+  const [teamADetails, teamBDetails, championshipDetails] = await Promise.all([
+    getTeamById(bolaoBase.teamAId),
+    getTeamById(bolaoBase.teamBId),
+    getChampionshipById(bolaoBase.championshipId),
+  ]);
+
+  const bolaoDetails = {
+    ...bolaoBase,
+    teamADetails,
+    teamBDetails,
+    championshipDetails,
+  };
+  
+  return <BolaoPageClient bolaoDetails={bolaoDetails} />;
 }
