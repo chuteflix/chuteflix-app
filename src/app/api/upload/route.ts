@@ -5,13 +5,13 @@ import { v2 as cloudinary } from 'cloudinary';
 export async function POST(req: NextRequest) {
   // Move a configuração para dentro da função POST
   cloudinary.config({
-    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 
   console.log('API Upload Route: Request received');
-  console.log('Cloudinary Config - Cloud Name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+  console.log('Cloudinary Config - Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME);
   console.log('Cloudinary Config - API Key:', process.env.CLOUDINARY_API_KEY ? 'Present' : 'Missing');
   console.log('Cloudinary Config - API Secret:', process.env.CLOUDINARY_API_SECRET ? 'Present' : 'Missing');
 
