@@ -1,8 +1,7 @@
 export interface Team {
   id: string;
   name: string;
-  shieldUrl?: string; // Tornar opcional para consistência
-  logoUrl?: string; // Manter por retrocompatibilidade, se necessário
+  shieldUrl?: string; // Manter apenas shieldUrl
   level: 'Profissional' | 'Amador/Várzea';
   location: string;
   scope: 'Nacional' | 'Estadual' | 'Municipal';

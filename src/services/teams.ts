@@ -29,7 +29,7 @@ const fromFirestore = (doc: DocumentData): Team => {
   return {
     id: doc.id,
     name: data.name,
-    logoUrl: data.shieldUrl || '',
+    shieldUrl: data.shieldUrl || '', // CORREÇÃO AQUI: Mapear para shieldUrl
     state: data.state,
     city: data.city,
     level: data.level,
@@ -55,7 +55,8 @@ export const addTeam = async (data: TeamData): Promise<Team> => {
     };
     await setDoc(newTeamRef, newTeam);
 
-    return { id: newTeamRef.id, ...rest, logoUrl: shieldUrl };
+    // Retorna o objeto Team consistente com a interface
+    return { id: newTeamRef.id, ...rest, shieldUrl: shieldUrl };
   } catch (error) {
     console.error("Erro ao adicionar time:", error);
     throw new Error("Não foi possível adicionar o time.");
