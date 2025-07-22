@@ -110,7 +110,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
             <div className="flex items-center justify-around w-full">
                 <div className="flex flex-col items-center gap-2">
                     <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-                        <AvatarImage src={bolao.homeTeam.logoUrl} alt={bolao.homeTeam.name} />
+                        <AvatarImage src={bolao.homeTeam.shieldUrl} alt={bolao.homeTeam.name} />
                         <AvatarFallback>{bolao.homeTeam.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="font-semibold text-sm max-w-[100px] truncate">{bolao.homeTeam.name}</span>
@@ -118,7 +118,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                 <div className="text-2xl font-bold text-muted-foreground px-2">VS</div>
                 <div className="flex flex-col items-center gap-2">
                     <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-                        <AvatarImage src={bolao.awayTeam.logoUrl} alt={bolao.awayTeam.name} />
+                        <AvatarImage src={bolao.awayTeam.shieldUrl} alt={bolao.awayTeam.name} />
                         <AvatarFallback>{bolao.awayTeam.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="font-semibold text-sm max-w-[100px] truncate">{bolao.awayTeam.name}</span>
