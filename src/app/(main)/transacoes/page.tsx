@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -116,8 +115,7 @@ export default function TransactionsPage() {
                       <TableCell>{tx.description}</TableCell>
                       <TableCell><Badge variant={getStatusVariant(tx.status)}>{tx.status}</Badge></TableCell>
                       <TableCell className={`text-right font-bold ${typeDetails.color}`}>
-                        {tx.amount < 0 ? "" : "+"}
-                        {tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        {tx.type === 'bet_placement' ? Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </TableCell>
                     </TableRow>
                   )
