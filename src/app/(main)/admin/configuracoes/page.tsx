@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSettings, saveSettings, uploadQrCode } from "@/services/settings";
+import { getSettings, saveSettings } from "@/services/settings"; // Removido uploadQrCode que será tratado pela API
+import { uploadFileToApi } from "@/services/upload"; // Importa a função de upload genérica
 import { Settings } from "@/types";
 
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export default function SettingsPage() {
     }
   });
 
+  // Carrega as configurações iniciais
   useEffect(() => {
     const loadSettings = async () => {
       setIsLoading(true);
@@ -73,6 +75,7 @@ export default function SettingsPage() {
     loadSettings();
   }, [setValue, toast]);
 
+  // Lida com a seleção de um novo arquivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -81,22 +84,24 @@ export default function SettingsPage() {
     }
   };
 
+  // Processa o formulário ao salvar
   const onSubmit = async (data: SettingsFormValues) => {
     setIsLoading(true);
     try {
       let finalQrCodeUrl = qrCodePreview;
 
-      // Se um novo arquivo foi selecionado, faça o upload primeiro
+      // Se um novo arquivo de QR Code foi selecionado, faça o upload primeiro
       if (qrCodeFile) {
-        finalQrCodeUrl = await uploadQrCode(qrCodeFile);
+        finalQrCodeUrl = await uploadFileToApi(qrCodeFile);
       }
       
-      // Salva todos os dados, incluindo a URL do QR Code (nova ou existente)
+      // Salva todos os dados, incluindo a URL do QR Code (nova ou a existente)
       await saveSettings({ ...data, qrCodeUrl: finalQrCodeUrl || '' });
 
       toast({ title: "Configurações salvas com sucesso!", variant: "success" });
     } catch (error) {
-      toast({ title: "Erro ao salvar as configurações.", variant: "destructive" });
+      console.error("Erro ao salvar configurações:", error)
+      toast({ title: "Erro ao salvar as configurações.", description: (error as Error).message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
