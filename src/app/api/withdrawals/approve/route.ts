@@ -7,7 +7,7 @@ function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
     const projectId = process.env.FB_ADMIN_PROJECT_ID;
     const clientEmail = process.env.FB_ADMIN_CLIENT_EMAIL;
-    const privateKey = process.env.FB_ADMIN_PRIVATE_KEY;
+    const privateKey = process.env.FB_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
       console.error("Firebase Admin SDK - Variáveis de ambiente do servidor ausentes ou vazias.");

@@ -4,10 +4,9 @@ import * as admin from 'firebase-admin';
 // Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
-    // CORREÇÃO: Usando prefixo FB_ADMIN_ para evitar conflito com variáveis reservadas do Vercel
     const projectId = process.env.FB_ADMIN_PROJECT_ID;
     const clientEmail = process.env.FB_ADMIN_CLIENT_EMAIL;
-    const privateKey = process.env.FB_ADMIN_PRIVATE_KEY;
+    const privateKey = process.env.FB_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
       console.error("Firebase Admin SDK - Variáveis de ambiente do servidor ausentes ou vazias.");
