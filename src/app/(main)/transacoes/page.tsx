@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -20,13 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDownLeft, ArrowUpRight, Minus, CircleDollarSign, Send } from "lucide-react"
 import { format } from "date-fns"
 
-const fromFirestore = (doc: DocumentData): Transaction => {
-    const data = doc.data();
-    return {
-        id: doc.id,
-        ...data
-    } as Transaction;
-}
 
 export default function TransactionsPage() {
   const { user } = useAuth()
@@ -47,7 +39,7 @@ export default function TransactionsPage() {
     )
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const userTransactions = querySnapshot.docs.map(fromFirestore)
+      const userTransactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       setTransactions(userTransactions)
       setLoading(false)
     }, (error) => {
