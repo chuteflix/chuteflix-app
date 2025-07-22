@@ -1,8 +1,8 @@
 
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Settings } from "@/types";
+import { uploadFileToApi } from "./upload"; // Importa a função de upload para o Cloudinary
 
 const SETTINGS_DOC_ID = "main_settings";
 
@@ -18,20 +18,25 @@ export const getSettings = async (): Promise<Settings | null> => {
       console.log("No settings document found!");
       return null;
     }
-  } catch (error) {
+  }
+
+  catch (error) {
     console.error("Error getting settings:", error);
     throw new Error("Could not fetch settings.");
   }
 };
 
 // Salva as configurações no Firestore
-export const saveSettings = async (data: Partial<Omit<Settings, 'qrCodeUrl'>>) => {
+export const saveSettings = async (data: Partial<Settings>) => {
   try {
     const settingsRef = doc(db, "settings", SETTINGS_DOC_ID);
-    await setDoc(settingsRef, { 
-        ...data, 
-        updatedAt: serverTimestamp() 
-    }, { merge: true });
+    await setDoc(settingsRef, 
+        { 
+            ...data, 
+            updatedAt: serverTimestamp() 
+        }, 
+        { merge: true }
+    );
   } catch (error) {
     console.error("Error saving settings:", error);
     throw new Error("Could not save settings.");
@@ -45,12 +50,13 @@ export const uploadQrCode = async (file: File): Promise<string> => {
     }
 
     try {
-        const storageRef = ref(storage, `settings/${SETTINGS_DOC_ID}/qr_code.png`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+        // Usa a função uploadFileToApi que já integra com o Cloudinary
+        const downloadURL = await uploadFileToApi(file);
         
-        // Salva a URL no documento de configurações
-        await saveSettings({ qrCodeUrl: downloadURL });
+        // A URL agora é retornada para ser salva junto com o resto do formulário.
+        // Opcionalmente, pode-se salvar diretamente aqui se o fluxo exigir, mas
+        // salvar tudo de uma vez no formulário é mais seguro.
+        // await saveSettings({ qrCodeUrl: downloadURL });
 
         return downloadURL;
     } catch (error) {

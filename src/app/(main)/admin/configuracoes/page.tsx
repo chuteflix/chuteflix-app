@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { IMaskInput } from "react-imask";
 import { NumericFormat } from "react-number-format";
+import Image from "next/image";
 
 const settingsSchema = z.object({
   pixKey: z.string().min(1, "A chave PIX é obrigatória."),
@@ -83,12 +84,15 @@ export default function SettingsPage() {
   const onSubmit = async (data: SettingsFormValues) => {
     setIsLoading(true);
     try {
+      let finalQrCodeUrl = qrCodePreview;
+
+      // Se um novo arquivo foi selecionado, faça o upload primeiro
       if (qrCodeFile) {
-        const qrCodeUrl = await uploadQrCode(qrCodeFile);
-        await saveSettings({ ...data, qrCodeUrl });
-      } else {
-        await saveSettings(data);
+        finalQrCodeUrl = await uploadQrCode(qrCodeFile);
       }
+      
+      // Salva todos os dados, incluindo a URL do QR Code (nova ou existente)
+      await saveSettings({ ...data, qrCodeUrl: finalQrCodeUrl || '' });
 
       toast({ title: "Configurações salvas com sucesso!", variant: "success" });
     } catch (error) {
@@ -184,7 +188,7 @@ export default function SettingsPage() {
               <Input id="qrCode" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} />
               {qrCodePreview && (
                 <div className="mt-4">
-                  <img src={qrCodePreview} alt="QR Code Preview" className="w-32 h-32" />
+                  <Image src={qrCodePreview} alt="QR Code Preview" className="w-32 h-32" width={128} height={128} />
                 </div>
               )}
             </div>
