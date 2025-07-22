@@ -70,6 +70,7 @@ export async function POST(req: Request) {
       }
       
       const bolaoData = bolaoDoc.data();
+      // CORREÇÃO: Verificar se o valor da aposta (betAmount) corresponde ao configurado no bolão
       if (bolaoData?.betAmount !== betAmount) {
         throw new Error('O valor da aposta não corresponde ao valor configurado para este bolão.');
       }
