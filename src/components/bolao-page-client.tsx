@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Countdown from "react-countdown"
 import { ArrowLeft, Crown, TrendingUp, MessageSquare } from "lucide-react"
-import { isPast, format } from "date-fns"
+import { isPast, format, isValid } from "date-fns"
 import { Bolao } from "@/services/boloes"
 import { Team } from "@/services/teams"
 import { Championship } from "@/services/championships"
@@ -82,11 +82,8 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
   }, [comments]);
 
     const closingDateTime = useMemo(() => {
-        if (bolao?.matchDate && bolao.closingTime) {
-            const date = new Date(bolao.matchDate);
-            const [hours, minutes] = bolao.closingTime.split(':');
-            date.setHours(parseInt(hours), parseInt(minutes));
-            return date;
+        if (bolao?.closingTime && isValid(bolao.closingTime)) {
+            return bolao.closingTime;
         }
         return new Date(0);
     }, [bolao]);
@@ -94,15 +91,17 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
 
   const isBettingClosed = useMemo(() => {
     if (!bolao) return true;
-    const now = new Date();
-    return isPast(closingDateTime) || bolao.status === 'Chutes Encerrados' || bolao.status === 'Finalizado' || bolao.status === 'Cancelado';
+    if (!isValid(closingDateTime) || isPast(closingDateTime)) {
+        return true;
+    }
+    return bolao.status === 'Fechado' || bolao.status === 'Finalizado';
   }, [closingDateTime, bolao]);
   
-  const totalPrize = (bolao?.initialPrize || 0) + (participantCount * (bolao?.betValue || 0) * 0.9);
+  const totalPrize = (bolao?.initialPrize || 0) + (participantCount * (bolao?.betAmount || 0) * 0.9);
 
   const countdownRenderer = ({ days, hours, minutes, seconds, completed }: any) => {
     if (completed || isBettingClosed) {
-      return <span className="text-destructive font-bold text-lg">{bolao?.status || 'Chutes Encerrados'}</span>
+      return <span className="text-destructive font-bold text-lg">{bolao?.status === 'Finalizado' ? 'Finalizado' : 'Chutes Encerrados'}</span>
     } else {
       return (
         <div className="flex space-x-2 text-center">
@@ -116,11 +115,11 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
   }
   
   const getBettingLine = (palpite: PalpiteComDetalhes) => {
-    let line = `${palpite.user?.name || "Anônimo"} apostou ${palpite.scoreTeamA} x ${palpite.scoreTeamB}`;
-    if (palpite.scoreTeamA > palpite.scoreTeamB) {
-        line += ` para o ${bolao?.teamADetails?.name}`;
-    } else if (palpite.scoreTeamB > palpite.scoreTeamA) {
-        line += ` para o ${bolao?.teamBDetails?.name}`;
+    let line = `${palpite.user?.name || "Anônimo"} apostou <strong>${palpite.scoreTeam1} x ${palpite.scoreTeam2}</strong>`;
+    if (palpite.scoreTeam1 > palpite.scoreTeam2) {
+        line += ` para o ${bolao?.homeTeam?.name}`;
+    } else if (palpite.scoreTeam2 > palpite.scoreTeam1) {
+        line += ` para o ${bolao?.awayTeam?.name}`;
     }
     return line;
   }
@@ -150,17 +149,17 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
             <CardHeader className="p-4 bg-muted/20">
               <div className="flex justify-between items-start">
                   <div>
-                      <h1 className="text-2xl font-bold">{bolao.teamADetails?.name} vs {bolao.teamBDetails?.name}</h1>
-                      <p className="text-sm text-muted-foreground">{bolao.championshipDetails?.name}</p>
+                      <h1 className="text-2xl font-bold">{bolao.homeTeam?.name} vs {bolao.awayTeam?.name}</h1>
+                      <p className="text-sm text-muted-foreground">{bolao.championship}</p>
                   </div>
-                  <Badge variant={bolao.status === 'Disponível' ? 'success' : 'destructive'} className="text-sm">{bolao.status}</Badge>
+                  <Badge variant={bolao.status === 'Aberto' ? 'success' : 'destructive'} className="text-sm">{bolao.status}</Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4">
               <div className="flex justify-center items-center my-4 space-x-4 md:space-x-8">
-                <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.teamADetails?.logoUrl} /><AvatarFallback>{bolao.teamADetails?.name.slice(0,2)}</AvatarFallback></Avatar>
+                <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.homeTeam?.shieldUrl} /><AvatarFallback>{bolao.homeTeam?.name.slice(0,2)}</AvatarFallback></Avatar>
                 <span className="text-3xl md:text-4xl font-bold text-muted-foreground">VS</span>
-                <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.teamBDetails?.logoUrl} /><AvatarFallback>{bolao.teamBDetails?.name.slice(0,2)}</AvatarFallback></Avatar>
+                <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.awayTeam?.shieldUrl} /><AvatarFallback>{bolao.awayTeam?.name.slice(0,2)}</AvatarFallback></Avatar>
               </div>
               <Separator className="my-4"/>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -169,7 +168,7 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
                   <div><p className="text-sm text-muted-foreground">Participantes</p><p className="text-3xl font-bold">{participantCount}</p></div>
               </div>
               <Separator className="my-4"/>
-              <div className="text-center"><Button size="lg" className="font-bold text-lg" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>{isBettingClosed ? "Apostas Encerradas" : `Chutar Placar por ${bolao.betValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}</Button></div>
+              <div className="text-center"><Button size="lg" className="font-bold text-lg" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>{isBettingClosed ? "Apostas Encerradas" : `Chutar Placar por ${bolao.betAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}</Button></div>
             </CardContent>
         </Card>
         
