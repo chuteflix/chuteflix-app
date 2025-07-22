@@ -10,18 +10,16 @@ import {
   serverTimestamp,
   DocumentData,
   setDoc,
+  addDoc
 } from "firebase/firestore";
-import { uploadFileToApi } from "./upload"; // CORRIGIDO: Usa a nova função de cliente
 import { Team } from "@/types";
 
+// Tipagem simplificada, pois o upload é tratado no componente
 export type TeamData = {
   name: string;
   state: string;
   city: string;
-  shieldFile?: File | null;
-  level: 'Profissional' | 'Amador/Várzea';
-  scope: 'Nacional' | 'Estadual' | 'Municipal';
-  location: string;
+  shieldUrl: string; // Apenas a URL é necessária aqui
 };
 
 const fromFirestore = (doc: DocumentData): Team => {
@@ -29,7 +27,7 @@ const fromFirestore = (doc: DocumentData): Team => {
   return {
     id: doc.id,
     name: data.name,
-    shieldUrl: data.shieldUrl || '', // CORREÇÃO AQUI: Mapear para shieldUrl
+    shieldUrl: data.shieldUrl || '',
     state: data.state,
     city: data.city,
     level: data.level,
@@ -38,25 +36,17 @@ const fromFirestore = (doc: DocumentData): Team => {
   };
 };
 
-export const addTeam = async (data: TeamData): Promise<Team> => {
+// A função de adicionar agora recebe os dados já prontos, sem o arquivo
+export const addTeam = async (data: Omit<Team, 'id'>): Promise<Team> => {
   try {
-    const { shieldFile, ...rest } = data;
-    let shieldUrl = "";
-
-    if (shieldFile) {
-      shieldUrl = await uploadFileToApi(shieldFile); // Usa a nova função que chama a API Route
-    }
-
-    const newTeamRef = doc(collection(db, "teams"));
-    const newTeam = {
-      ...rest,
-      shieldUrl,
+    const docRef = await addDoc(collection(db, "teams"), {
+      ...data,
       createdAt: serverTimestamp(),
+    });
+    return {
+      id: docRef.id,
+      ...data,
     };
-    await setDoc(newTeamRef, newTeam);
-
-    // Retorna o objeto Team consistente com a interface
-    return { id: newTeamRef.id, ...rest, shieldUrl: shieldUrl };
   } catch (error) {
     console.error("Erro ao adicionar time:", error);
     throw new Error("Não foi possível adicionar o time.");
@@ -88,21 +78,14 @@ export const getTeamById = async (id: string): Promise<Team | null> => {
   }
 };
 
+// A função de atualizar também recebe os dados prontos
 export const updateTeam = async (
   id: string,
-  data: Partial<TeamData>
+  data: Partial<Omit<Team, 'id'>>
 ): Promise<void> => {
   try {
-    const { shieldFile, ...rest } = data;
-    
-    const finalData: { [key: string]: any } = { ...rest };
-
-    if (shieldFile) {
-      finalData.shieldUrl = await uploadFileToApi(shieldFile); // Usa a nova função que chama a API Route
-    }
-
     const teamRef = doc(db, "teams", id);
-    await updateDoc(teamRef, finalData);
+    await updateDoc(teamRef, data);
   } catch (error) {
     console.error("Erro ao atualizar time:", error);
     throw new Error("Não foi possível atualizar o time.");

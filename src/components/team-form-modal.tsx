@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -21,25 +20,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Team, TeamData } from "@/services/teams" // Importar TeamData
+import { Team, TeamData } from "@/services/teams"
 import { getStates, getCitiesByState, IBGEState, IBGECity } from "@/services/ibge"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 import Image from "next/image"
+import { uploadFileToApi } from "@/services/upload" // 1. Importar a função de upload da API
 
 interface TeamFormModalProps {
   team?: Team | null
-  onSave: (data: TeamData, id?: string) => void // Assinatura atualizada
+  onSave: (data: Omit<Team, 'id'>, id?: string) => void
   children: React.ReactNode
 }
 
-// O tipo do estado do formulário agora é TeamData
-const initialFormData: TeamData = {
+const initialFormData = {
   name: "",
   state: "",
   city: "",
-  shieldFile: null,
-}
+  shieldUrl: "",
+};
 
 export function TeamFormModal({
   team,
@@ -47,8 +46,8 @@ export function TeamFormModal({
   children,
 }: TeamFormModalProps) {
   const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState<TeamData>(initialFormData)
-  const [currentShieldUrl, setCurrentShieldUrl] = useState<string | undefined>(team?.shieldUrl)
+  const [formData, setFormData] = useState(initialFormData)
+  const [shieldFile, setShieldFile] = useState<File | null>(null);
   const [states, setStates] = useState<IBGEState[]>([])
   const [cities, setCities] = useState<IBGECity[]>([])
   const [loadingCities, setLoadingCities] = useState(false)
@@ -70,12 +69,12 @@ export function TeamFormModal({
             name: team.name,
             state: team.state || "",
             city: team.city || "",
-            shieldFile: null,
+            shieldUrl: team.shieldUrl || "",
         })
-        setCurrentShieldUrl(team.shieldUrl)
+        setShieldFile(null);
       } else {
         setFormData(initialFormData)
-        setCurrentShieldUrl(undefined)
+        setShieldFile(null);
       }
     }
   }, [open, isEditing, team])
@@ -86,7 +85,6 @@ export function TeamFormModal({
         setLoadingCities(true)
         const ibgeCities = await getCitiesByState(formData.state)
         setCities(ibgeCities)
-        // Se estiver editando, não redefine a cidade
         if (!isEditing || (isEditing && team?.state !== formData.state)) {
             setFormData(prev => ({ ...prev, city: "" }))
         }
@@ -105,11 +103,10 @@ export function TeamFormModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-      setFormData(prev => ({ ...prev, shieldFile: file }))
-      // Preview da imagem selecionada
+      setShieldFile(file);
       const reader = new FileReader()
       reader.onloadend = () => {
-        setCurrentShieldUrl(reader.result as string)
+        setFormData(prev => ({ ...prev, shieldUrl: reader.result as string }))
       }
       reader.readAsDataURL(file)
     }
@@ -119,8 +116,21 @@ export function TeamFormModal({
     e.preventDefault()
     setIsSaving(true)
     try {
-      // O onSave agora lida com a lógica de upload
-      onSave(formData, isEditing ? team.id : undefined)
+      let finalShieldUrl = formData.shieldUrl;
+
+      if (shieldFile) {
+        finalShieldUrl = await uploadFileToApi(shieldFile);
+      }
+      
+      // @ts-ignore
+      const dataToSave: Omit<Team, 'id'> = {
+        name: formData.name,
+        state: formData.state,
+        city: formData.city,
+        shieldUrl: finalShieldUrl,
+      };
+
+      onSave(dataToSave, isEditing ? team.id : undefined)
       setOpen(false)
     } catch (error) {
       toast({ title: "Erro ao salvar o time", variant: "destructive" })
@@ -142,7 +152,7 @@ export function TeamFormModal({
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex items-center gap-4">
-              {currentShieldUrl && <Image src={currentShieldUrl} alt="Escudo" width={64} height={64} className="rounded-full" />}
+              {formData.shieldUrl && <Image src={formData.shieldUrl} alt="Escudo" width={64} height={64} className="rounded-full" />}
               <div className="grid gap-2 w-full">
                 <Label>Escudo do Time</Label>
                 <Input type="file" onChange={handleFileChange} />

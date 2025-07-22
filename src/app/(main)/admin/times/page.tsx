@@ -8,7 +8,6 @@ import {
   updateTeam,
   deleteTeam,
   Team,
-  TeamData, // Importar TeamData
 } from "@/services/teams"
 
 import { Button } from "@/components/ui/button"
@@ -68,8 +67,7 @@ export default function TimesPage() {
     fetchData()
   }, [])
 
-  // A função de salvar agora usa TeamData
-  const handleSaveTeam = async (data: TeamData, id?: string) => {
+  const handleSaveTeam = async (data: Omit<Team, 'id'>, id?: string) => {
     try {
       if (id) {
         await updateTeam(id, data)
@@ -78,7 +76,7 @@ export default function TimesPage() {
         await addTeam(data)
         toast({ title: "Sucesso", description: "Time adicionado com sucesso." })
       }
-      fetchData() // Recarrega os dados após salvar
+      fetchData()
     } catch (err) {
       toast({
         title: "Erro ao salvar time",
@@ -92,7 +90,7 @@ export default function TimesPage() {
     try {
       await deleteTeam(id)
       toast({ title: "Sucesso", description: "Time deletado com sucesso." })
-      fetchData() // Recarrega os dados após deletar
+      fetchData()
     } catch (err) {
       toast({
         title: "Erro ao deletar time",
@@ -113,7 +111,6 @@ export default function TimesPage() {
             Adicione, edite e visualize os times da plataforma.
           </p>
         </div>
-        {/* Passa a nova função para o modal */}
         <TeamFormModal onSave={handleSaveTeam}>
           <Button>Adicionar Time</Button>
         </TeamFormModal>
@@ -154,7 +151,6 @@ export default function TimesPage() {
                       {team.city ? `${team.city}, ${team.state}` : team.state || "N/A"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {/* O modal de edição também usa a nova função */}
                       <TeamFormModal team={team} onSave={handleSaveTeam}>
                         <Button variant="ghost" size="icon">
                           <Pencil className="h-4 w-4" />
