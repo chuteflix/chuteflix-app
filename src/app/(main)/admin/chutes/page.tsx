@@ -85,24 +85,28 @@ export default function AdminChutesPage() {
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Usuário</TableHead>
-                <TableHead>Bolão</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Palpite</TableHead>
+                <TableHead>Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : ongoingChutes.length > 0 ? (
                 ongoingChutes.map((chute) => (
                   <TableRow key={chute.id}>
                      <TableCell>{chute.createdAt ? format(new Date(chute.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
                     <TableCell>{chute.user?.name || chute.user?.email}</TableCell>
-                    <TableCell>{chute.bolao?.name}</TableCell>
-                    <TableCell className="font-medium">{`${chute.scoreTeam1} x ${chute.scoreTeam2}`}</TableCell>
+                    <TableCell>{chute.bolao?.categoryNames?.join(', ')}</TableCell>
+                    <TableCell className="font-medium">
+                        {chute.bolao?.homeTeam?.name} {chute.scoreTeam1} x {chute.scoreTeam2} {chute.bolao?.awayTeam?.name}
+                    </TableCell>
+                    <TableCell>R$ {chute.amount.toFixed(2)}</TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Nenhum chute em andamento.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">Nenhum chute em andamento.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -120,21 +124,25 @@ export default function AdminChutesPage() {
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Usuário</TableHead>
-                <TableHead>Bolão</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Palpite</TableHead>
+                <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
                 {loading ? (
-                    <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : completedChutes.length > 0 ? (
                     completedChutes.map((chute) => (
                     <TableRow key={chute.id}>
                         <TableCell>{chute.createdAt ? format(new Date(chute.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
                         <TableCell>{chute.user?.name || chute.user?.email}</TableCell>
-                        <TableCell>{chute.bolao?.name}</TableCell>
-                        <TableCell className="font-medium">{`${chute.scoreTeam1} x ${chute.scoreTeam2}`}</TableCell>
+                        <TableCell>{chute.bolao?.categoryNames?.join(', ')}</TableCell>
+                        <TableCell className="font-medium">
+                            {chute.bolao?.homeTeam?.name} {chute.scoreTeam1} x {chute.scoreTeam2} {chute.bolao?.awayTeam?.name}
+                        </TableCell>
+                        <TableCell>R$ {chute.amount.toFixed(2)}</TableCell>
                         <TableCell>
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusVariant(chute.status)}`}>
                                 {chute.status}
@@ -143,7 +151,7 @@ export default function AdminChutesPage() {
                     </TableRow>
                     ))
                 ) : (
-                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Nenhum chute no histórico.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Nenhum chute no histórico.</TableCell></TableRow>
                 )}
             </TableBody>
           </Table>

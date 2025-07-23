@@ -35,6 +35,7 @@ export interface Bolao {
   initialPrize?: number;
   status: 'Aberto' | 'Fechado' | 'Finalizado';
   categoryIds?: string[];
+  categoryNames?: string[];
   userGuess?: {
     homeTeam: number;
     awayTeam: number;

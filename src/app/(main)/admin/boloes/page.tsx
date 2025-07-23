@@ -34,7 +34,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // <-- CORREÇÃO AQUI
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Pencil, Trash2, Trophy, Users, Loader2 } from "lucide-react"
@@ -165,8 +165,9 @@ export default function BoloesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Partida</TableHead>
-                <TableHead>Campeonato</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Data</TableHead>
+                <TableHead>Encerramento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Resultados</TableHead>
                 <TableHead>Ganhadores</TableHead>
@@ -175,7 +176,7 @@ export default function BoloesPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin"/></TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin"/></TableCell></TableRow>
               ) : boloes.length > 0 ? (
                 boloes.map(bolao => {
                     const displayStatus = getDisplayStatus(bolao);
@@ -185,10 +186,15 @@ export default function BoloesPage() {
                     return (
                         <TableRow key={bolao.id}>
                             <TableCell className="font-medium">{`${homeTeamName} vs ${awayTeamName}`}</TableCell>
-                            <TableCell>{bolao.championship}</TableCell>
+                            <TableCell>{bolao.categoryNames?.join(', ')}</TableCell>
                             <TableCell>
                                 {bolao.matchStartDate && isValid(new Date(bolao.matchStartDate))
                                 ? format(new Date(bolao.matchStartDate), "dd/MM/yyyy")
+                                : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                                {bolao.closingTime && isValid(new Date(bolao.closingTime))
+                                ? format(new Date(bolao.closingTime), "dd/MM/yyyy 'às' HH:mm")
                                 : 'N/A'}
                             </TableCell>
                             <TableCell><Badge variant={statusVariant(displayStatus)}>{displayStatus}</Badge></TableCell>
@@ -234,7 +240,7 @@ export default function BoloesPage() {
                     )
                 })
               ) : (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">Nenhum bolão encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center h-24">Nenhum bolão encontrado.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

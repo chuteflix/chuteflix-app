@@ -15,6 +15,7 @@ import { db } from "@/lib/firebase";
 import { getTeamById } from "@/services/teams"; 
 import { Bolao, Team } from "@/types"; 
 import { isValid, isPast } from "date-fns"; 
+import { getAllCategories, Category } from "./categories";
 
 type RawBolao = Omit<Bolao, 'homeTeam' | 'awayTeam'> & { homeTeamId: string; awayTeamId: string };
 
@@ -42,6 +43,12 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     awayTeam = await getTeamById(awayTeamId);
   }
 
+  const allCategories = await getAllCategories();
+  const categoryNames = data.categoryIds
+    .map((id: string) => allCategories.find(cat => cat.id === id)?.name)
+    .filter(Boolean);
+
+
   const defaultHomeTeam: Team = homeTeam || { id: homeTeamId || 'unknown_home_team', name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
   const defaultAwayTeam: Team = awayTeam || { id: awayTeamId || 'unknown_away_team', name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
 
@@ -58,6 +65,7 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     initialPrize: data.initialPrize || 0,
     status: data.status || 'Aberto',
     categoryIds: data.categoryIds || [],
+    categoryNames: categoryNames,
     userGuess: data.userGuess,
     finalScoreTeam1: data.finalScoreTeam1, 
     finalScoreTeam2: data.finalScoreTeam2, 
