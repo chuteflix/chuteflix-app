@@ -1,34 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
-
-// Função para inicializar o Firebase Admin SDK de forma segura
-function initializeFirebaseAdmin() {
-  if (!admin.apps.length) {
-    const projectId = process.env.FB_ADMIN_PROJECT_ID;
-    const clientEmail = process.env.FB_ADMIN_CLIENT_EMAIL;
-    const privateKey = process.env.FB_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-    if (!projectId || !clientEmail || !privateKey) {
-      console.error("Firebase Admin SDK - Variáveis de ambiente do servidor ausentes ou vazias.");
-      throw new Error("Configuração do servidor Firebase incompleta.");
-    }
-
-    try {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
-      console.log("Firebase Admin SDK inicializado com sucesso.");
-    } catch (error) {
-      console.error("Firebase Admin SDK - ERRO FATAL ao inicializar:", error);
-      throw error;
-    }
-  }
-}
+import { db, auth, admin } from '@/lib/firebase-admin';
 
 const USERS_COLLECTION = 'users';
 const TRANSACTIONS_COLLECTION = 'transactions';
@@ -37,9 +9,6 @@ const CHUTES_COLLECTION = 'chutes';
 
 export async function POST(req: Request) {
   try {
-    initializeFirebaseAdmin();
-    const db = admin.firestore();
-
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ message: 'Não autenticado.' }, { status: 401 });
@@ -48,7 +17,7 @@ export async function POST(req: Request) {
 
     let decodedToken;
     try {
-      decodedToken = await admin.auth().verifyIdToken(idToken);
+      decodedToken = await auth.verifyIdToken(idToken);
     } catch (error) {
       return NextResponse.json({ message: 'Token inválido.' }, { status: 401 });
     }
@@ -70,7 +39,6 @@ export async function POST(req: Request) {
       }
       
       const bolaoData = bolaoDoc.data();
-      // CORREÇÃO: Verificar se o valor da aposta (betAmount) corresponde ao configurado no bolão
       if (bolaoData?.betAmount !== betAmount) {
         throw new Error('O valor da aposta não corresponde ao valor configurado para este bolão.');
       }
@@ -127,7 +95,8 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Erro na API de realizar aposta:", error);
-    if (error.message.includes('Bolão não encontrado') || error.message.includes('inválido') || error.message.includes('não corresponde') || error.message.includes('Você já fez um chute') || error.message.includes('Saldo insuficiente') || error.message.includes('Configuração do servidor Firebase incompleta')) {
+    // Agora, usamos a mensagem de erro que vem do nosso throw new Error.
+    if (error.message) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
     return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });
