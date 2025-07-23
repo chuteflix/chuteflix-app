@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { format, isValid } from "date-fns";
 import { Calendar as CalendarIcon, Clock, ChevronsUpDown, Check } from "lucide-react";
 import {
@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 
 const toDateSafe = (date: any): Date | undefined => {
     if (!date) return undefined;
+    // @ts-ignore
     if (typeof date.toDate === 'function') return date.toDate();
     const d = new Date(date);
     return isValid(d) ? d : undefined;
@@ -78,11 +79,6 @@ export function BolaoFormModal({
   const [categoryPath, setCategoryPath] = useState<string[]>([]);
   const [homeTeamPopoverOpen, setHomeTeamPopoverOpen] = useState(false);
   const [awayTeamPopoverOpen, setAwayTeamPopoverOpen] = useState(false);
-
-  // Refs para os inputs de tempo para evitar perda de foco
-  const startTimeRef = useRef<HTMLInputElement>(null);
-  const endTimeRef = useRef<HTMLInputElement>(null);
-  const closingTimeRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!bolao;
 
@@ -160,10 +156,7 @@ export function BolaoFormModal({
     e.preventDefault();
     setError(null);
     
-    const { matchDate, ...rest } = formData;
-    const startTime = startTimeRef.current?.value || "";
-    const endTime = endTimeRef.current?.value || "";
-    const closingTime = closingTimeRef.current?.value || "";
+    const { matchDate, startTime, endTime, closingTime, ...rest } = formData;
     
     if (!matchDate || !startTime || !endTime || !closingTime || categoryPath.length === 0) {
         setError("Todos os campos são obrigatórios, incluindo a seleção completa da categoria.");
@@ -189,9 +182,6 @@ export function BolaoFormModal({
 
     const finalData = {
         ...rest,
-        startTime,
-        endTime,
-        closingTime,
         matchStartDate,
         matchEndDate,
         closingTime: finalClosingTime, 
@@ -210,9 +200,9 @@ export function BolaoFormModal({
     const selectors = [];
     selectors.push(
       <Select
-        key={`category-level-0-${categoryPath[0]}`}
+        key="category-level-0"
         value={categoryPath[0] || ""}
-        onValuecha={(value) => handleCategoryChange(0, value)}
+        onValueChange={(value) => handleCategoryChange(0, value)}
       >
         <SelectTrigger><SelectValue placeholder="Categoria Principal" /></SelectTrigger>
         <SelectContent>
@@ -230,7 +220,7 @@ export function BolaoFormModal({
       if (children.length > 0) {
         selectors.push(
           <Select
-            key={`category-level-${i + 1}-${categoryPath[i + 1]}`}
+            key={`category-level-${i + 1}`}
             value={categoryPath[i + 1] || ""}
             onValueChange={(value) => handleCategoryChange(i + 1, value)}
           >
@@ -264,9 +254,9 @@ export function BolaoFormModal({
                         {teams.filter(t => t.id !== otherTeamId).map((team) => (
                             <CommandItem
                                 key={team.id}
-                                value={team.id}
-                                onSelect={(currentValue) => {
-                                    onSelect(currentValue === value ? "" : currentValue)
+                                value={team.name} // Use name for search, but select with id
+                                onSelect={() => {
+                                    onSelect(team.id)
                                     onOpenChange(false)
                                 }}
                             >
@@ -327,22 +317,22 @@ export function BolaoFormModal({
             <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                 <div>
                     <Label>Início da Partida</Label>
-                    <PatternFormat
-                        getInputRef={startTimeRef}
+                    <PatternFormat 
                         customInput={Input} 
                         format="##:##" 
                         placeholder="HH:MM" 
-                        defaultValue={formData.startTime}
+                        value={formData.startTime}
+                        onValueChange={(values) => setFormData({...formData, startTime: values.formattedValue})}
                     />
                 </div>
                 <div>
                     <Label>Fim da Partida</Label>
-                    <PatternFormat
-                        getInputRef={endTimeRef}
+                    <PatternFormat 
                         customInput={Input} 
                         format="##:##" 
-                        placeholder="HH:MM"
-                        defaultValue={formData.endTime}
+                        placeholder="HH:MM" 
+                        value={formData.endTime} 
+                        onValueChange={(values) => setFormData({...formData, endTime: values.formattedValue})}
                     />
                 </div>
                 <div>
@@ -350,12 +340,12 @@ export function BolaoFormModal({
                         <Clock className="h-4 w-4" />
                         Limite para Apostas
                     </Label>
-                    <PatternFormat
-                        getInputRef={closingTimeRef}
+                    <PatternFormat 
                         customInput={Input} 
                         format="##:##" 
                         placeholder="HH:MM" 
-                        defaultValue={formData.closingTime}
+                        value={formData.closingTime}
+                        onValueChange={(values) => setFormData({...formData, closingTime: values.formattedValue})}
                     />
                 </div>
             </div>
