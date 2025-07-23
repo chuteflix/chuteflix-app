@@ -1,9 +1,7 @@
-
 import { NextResponse } from 'next/server';
-import { db, auth, admin } from '@/lib/firebase-admin';
+import { db, auth } from '@/lib/firebase-admin';
 
 const USERS_COLLECTION = 'users';
-const TRANSACTIONS_COLLECTION = 'transactions';
 const BOLOES_COLLECTION = 'boloes';
 const CHUTES_COLLECTION = 'chutes';
 
@@ -37,68 +35,46 @@ export async function POST(req: Request) {
       if (!bolaoDoc.exists) {
         throw new Error('Bolão não encontrado.');
       }
-      
       const bolaoData = bolaoDoc.data();
-      if (bolaoData?.betAmount !== betAmount) {
-        throw new Error('O valor da aposta não corresponde ao valor configurado para este bolão.');
-      }
-      const bolaoName = bolaoData?.championship || 'Nome não encontrado';
-      
-      const chuteQuery = db.collection(CHUTES_COLLECTION)
-            .where('userId', '==', userId)
-            .where('bolaoId', '==', bolaoId)
-            .where('scoreTeam1', '==', scoreTeam1)
-            .where('scoreTeam2', '==', scoreTeam2);
-      const existingChute = await transaction.get(chuteQuery);
-      if (!existingChute.empty) {
-          throw new Error('Você já fez um chute com este mesmo placar para este bolão.');
+      if (bolaoData?.status !== 'open') {
+        throw new Error('Este bolão não está aberto para novas apostas.');
       }
 
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists) {
         throw new Error('Usuário não encontrado.');
       }
-      const currentBalance = userDoc.data()?.balance || 0;
-      if (currentBalance < betAmount) {
+      const userData = userDoc.data();
+      const userBalance = userData?.balance || 0;
+
+      if (userBalance < betAmount) {
         throw new Error('Saldo insuficiente para fazer a aposta.');
       }
 
-      transaction.update(userRef, { balance: admin.firestore.FieldValue.increment(-betAmount) });
+      // Deduz o valor da aposta do saldo do usuário
+      transaction.update(userRef, { balance: userBalance - betAmount });
 
+      // Cria o novo chute
       const chuteRef = db.collection(CHUTES_COLLECTION).doc();
       transaction.set(chuteRef, {
-        userId,
         bolaoId,
+        userId,
         scoreTeam1,
         scoreTeam2,
-        amount: betAmount,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        status: "Em Aberto",
-        ...(comment && { comment }),
-      });
-      
-      const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
-      transaction.set(transactionRef, {
-        uid: userId,
-        type: 'bet_placement',
-        amount: -betAmount,
-        description: `Aposta no bolão: ${bolaoName}`,
-        status: 'completed',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        metadata: { bolaoId, chuteId: chuteRef.id },
+        betAmount,
+        comment,
+        createdAt: new Date(),
+        status: 'validated'
       });
 
-      return { chuteId: chuteRef.id, transactionId: transactionRef.id };
+      return { chuteId: chuteRef.id };
     });
 
-    return NextResponse.json({ success: true, ...result }, { status: 200 });
+    return NextResponse.json({ message: 'Aposta realizada com sucesso!', chuteId: result.chuteId }, { status: 201 });
 
   } catch (error: any) {
-    console.error("Erro na API de realizar aposta:", error);
-    // Agora, usamos a mensagem de erro que vem do nosso throw new Error.
-    if (error.message) {
-      return NextResponse.json({ message: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });
+    console.error('Erro ao realizar aposta:', error);
+    // Retorna a mensagem de erro específica da transação ou uma genérica
+    return NextResponse.json({ message: error.message || 'Erro interno do servidor.' }, { status: 500 });
   }
 }
