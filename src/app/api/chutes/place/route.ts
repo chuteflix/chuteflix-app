@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
       // 2. LÓGICA E VALIDAÇÕES
       const bolaoData = bolaoDoc.data();
-      if (bolaoData?.status !== 'Aberto') { // CORREÇÃO: Usar 'Aberto' em vez de 'open'
+      if (bolaoData?.status !== 'Aberto') {
         throw new Error('Este bolão não está aberto para novas apostas.');
       }
 
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
         uid: userId,
         type: 'bet_placement',
         amount: -betAmount, // Valor negativo para débito
-        description: `Aposta no bolão: ${bolaoData.homeTeam.name} vs ${bolaoData.awayTeam.name}`,
+        description: `Aposta no bolão: ${bolaoData.name || bolaoId}`,
         status: 'completed',
         createdAt: FieldValue.serverTimestamp(),
         metadata: {
