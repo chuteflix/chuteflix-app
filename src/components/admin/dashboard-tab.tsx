@@ -1,20 +1,19 @@
 
-"use client"
+"use client";
+
+import { useEffect, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts"
+  getDashboardData,
+  DashboardKPIs,
+  RecentTransaction,
+} from "@/services/dashboard";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -22,205 +21,203 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DollarSign, Users, CreditCard, Activity } from "lucide-react"
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DollarSign,
+  Users,
+  CreditCard,
+  Activity,
+  ArrowUpRight,
+  ArrowDownLeft,
+  CircleDollarSign,
+  Ticket,
+  TrendingUp
+} from "lucide-react";
+import { UserProfile } from "@/types";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-const KpiCard = ({ title, icon, children, className = "" }) => (
-  <Card className={className}>
+const formatCurrency = (value: number) => {
+    return (value || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+};
+
+const KpiCard = ({ title, value, percentage, icon, description }) => (
+  <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
       {icon}
     </CardHeader>
-    <CardContent>{children}</CardContent>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      {percentage && <p className="text-xs text-muted-foreground">{percentage}</p>}
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+    </CardContent>
   </Card>
-)
+);
 
-const chartData = [
-  { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Fev", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Mar", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Abr", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Mai", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Jun", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Jul", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Ago", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Set", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Out", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Nov", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Dez", total: Math.floor(Math.random() * 5000) + 1000 },
-]
+const SkeletonKpiCard = () => (
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-2/3" />
+        </CardHeader>
+        <CardContent>
+            <Skeleton className="h-8 w-1/2 mb-2" />
+            <Skeleton className="h-3 w-1/3" />
+        </CardContent>
+    </Card>
+);
 
-const recentUsers = [
-  {
-    name: "Olivia Martin",
-    email: "olivia.martin@email.com",
-    avatar: "/avatars/01.png",
-  },
-  {
-    name: "Jackson Lee",
-    email: "jackson.lee@email.com",
-    avatar: "/avatars/02.png",
-  },
-  {
-    name: "Isabella Nguyen",
-    email: "isabella.nguyen@email.com",
-    avatar: "/avatars/03.png",
-  },
-]
-
-const recentTransactions = [
-  {
-    name: "Olivia Martin",
-    email: "olivia.martin@email.com",
-    amount: "R$1,999.00",
-  },
-  {
-    name: "Jackson Lee",
-    email: "jackson.lee@email.com",
-    amount: "R$39.00",
-  },
-  {
-    name: "Isabella Nguyen",
-    email: "isabella.nguyen@email.com",
-    amount: "R$299.00",
-  },
-]
 
 export function DashboardTab() {
+  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [recentUsers, setRecentUsers] = useState<UserProfile[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const data = await getDashboardData();
+      setKpis(data.kpis);
+      setRecentUsers(data.recentUsers);
+      setRecentTransactions(data.recentTransactions);
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  const getTransactionTypeDetails = (type: RecentTransaction['type']) => {
+    switch(type) {
+      case 'deposit': return { label: 'Depósito', icon: <ArrowUpRight className="h-4 w-4 text-green-500" /> };
+      case 'withdrawal': return { label: 'Saque', icon: <ArrowDownLeft className="h-4 w-4 text-red-500" /> };
+      case 'bet_placement': return { label: 'Aposta', icon: <Ticket className="h-4 w-4 text-blue-500" /> };
+      case 'prize_winning': return { label: 'Prêmio', icon: <CircleDollarSign className="h-4 w-4 text-yellow-500" /> };
+      default: return { label: type, icon: <DollarSign className="h-4 w-4 text-muted-foreground"/> };
+    }
+  }
+
+  if (loading) {
+      return (
+          <div className="space-y-4">
+               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <SkeletonKpiCard />
+                    <SkeletonKpiCard />
+                    <SkeletonKpiCard />
+                    <SkeletonKpiCard />
+               </div>
+               <div className="grid gap-4 md:grid-cols-2">
+                    <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
+                    <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
+               </div>
+          </div>
+      )
+  }
+  
   return (
-    <>
+    <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          title="Total de Receita"
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-        >
-          <div className="text-2xl font-bold">R$45.231,89</div>
-          <p className="text-xs text-muted-foreground">
-            +20.1% do último mês
-          </p>
-        </KpiCard>
+          title="Receita Total (Depósitos)"
+          value={formatCurrency(kpis?.totalRevenue)}
+          icon={<ArrowUpRight className="h-4 w-4 text-green-500" />}
+          description="Total de depósitos concluídos."
+        />
         <KpiCard
-          title="Assinaturas"
+          title="Pagamentos (Saques)"
+          value={formatCurrency(kpis?.totalWithdrawals)}
+          icon={<ArrowDownLeft className="h-4 w-4 text-red-500" />}
+          description="Total de saques concluídos."
+        />
+        <KpiCard
+          title="Total de Usuários"
+          value={kpis?.totalUsersCount.toLocaleString('pt-BR')}
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
-        >
-          <div className="text-2xl font-bold">+2350</div>
-          <p className="text-xs text-muted-foreground">
-            +180.1% do último mês
-          </p>
-        </KpiCard>
+          percentage={`${kpis?.newUsersLast30Days} novos nos últimos 30 dias`}
+        />
         <KpiCard
-          title="Vendas"
-          icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-        >
-          <div className="text-2xl font-bold">+12234</div>
-          <p className="text-xs text-muted-foreground">+19% do último mês</p>
-        </KpiCard>
-        <KpiCard
-          title="Ativos"
-          icon={<Activity className="h-4 w-4 text-muted-foreground" />}
-        >
-          <div className="text-2xl font-bold">+573</div>
-          <p className="text-xs text-muted-foreground">+20% do último mês</p>
-        </KpiCard>
+          title="Total de Apostas"
+          value={kpis?.totalBetsCount.toLocaleString('pt-BR')}
+          icon={<Ticket className="h-4 w-4 text-muted-foreground" />}
+          description={`Ticket Médio: ${formatCurrency(kpis?.averageBetValue)}`}
+        />
       </div>
-      <div className="grid gap-4 mt-4">
+      
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Visão Geral</CardTitle>
+            <CardTitle>Transações Recentes</CardTitle>
+            <CardDescription>
+              As últimas 5 movimentações na plataforma.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={chartData}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={value =>
-                    `R$${value.toLocaleString("pt-BR")}`
-                  }
-                />
-                <Tooltip />
-                <Bar dataKey="total" fill="#FF8C00" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentTransactions.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell>
+                      <div className="font-medium">{tx.user?.name || 'Usuário do Sistema'}</div>
+                      <div className="text-sm text-muted-foreground hidden md:block">
+                        {tx.user?.email}
+                      </div>
+                    </TableCell>
+                    <TableCell className="flex items-center gap-2">
+                      {getTransactionTypeDetails(tx.type).icon}
+                      <span>{getTransactionTypeDetails(tx.type).label}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        {formatCurrency(tx.amount)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transações Recentes</CardTitle>
-              <CardDescription>
-                Houveram 26 vendas no último mês.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentTransactions.map(transaction => (
-                    <TableRow key={transaction.email}>
-                      <TableCell>
-                        <div className="font-medium">{transaction.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {transaction.email}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {transaction.amount}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Usuários Recentes</CardTitle>
-              <CardDescription>
-                Houveram 5 novos usuários no último mês.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-8">
-                {recentUsers.map(user => (
-                  <div className="flex items-center" key={user.email}>
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={user.avatar} alt="Avatar" />
-                      <AvatarFallback>
-                        {user.name.charAt(0)}
-                        {user.name.split(" ")[1]?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Novos Usuários</CardTitle>
+            <CardDescription>
+              Os 5 usuários mais recentes que se cadastraram.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentUsers.map((user) => (
+                <div className="flex items-center" key={user.uid}>
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.photoURL} alt="Avatar" />
+                    <AvatarFallback>
+                      {user.name?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.createdAt ? `Cadastrado em ${format(user.createdAt.toDate(), "dd 'de' MMMM", { locale: ptBR })}` : user.email}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  <div className="ml-auto font-medium">{formatCurrency(user.balance || 0)}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
-  )
+    </div>
+  );
 }

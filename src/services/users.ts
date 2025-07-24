@@ -7,32 +7,40 @@ import {
   collection,
   getDocs,
   increment,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { uploadFileToApi } from "./upload"; // CORRIGIDO: Usa a nova função de cliente
+import { uploadFileToApi } from "./upload";
+import { UserProfile } from "@/types"; // Importação do tipo centralizado
 
-export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName?: string;
-  firstName?: string;
-  lastName?: string;
-  cpf?: string;
-  phone?: string;
-  pixKey?: string;
-  pixKeyType?: string;
-  isAdmin?: boolean;
-  balance?: number;
-  photoURL?: string;
-  role?: string;
-}
+// Helper para converter dados do Firestore para UserProfile de forma segura
+export const fromFirestore = (doc: DocumentData): UserProfile => {
+  const data = doc.data();
+  return {
+    uid: doc.id,
+    email: data.email || "",
+    name: data.name || data.displayName || "",
+    firstName: data.firstName || "",
+    lastName: data.lastName || "",
+    displayName: data.displayName || "",
+    photoURL: data.photoURL || "",
+    balance: data.balance || 0,
+    isAdmin: data.isAdmin || false,
+    createdAt: data.createdAt, // Mantém o timestamp
+    phone: data.phone || "",
+    cpf: data.cpf || "",
+    pixKey: data.pixKey || "",
+    pixKeyType: data.pixKeyType || "",
+    role: data.role || "user",
+  };
+};
 
 export const uploadProfilePicture = async (uid: string, file: File): Promise<string> => {
   try {
     if (!uid) throw new Error("UID do usuário é necessário para o upload.");
     if (!file) throw new Error("Nenhum arquivo selecionado.");
 
-    const photoURL = await uploadFileToApi(file); // Usa a nova função que chama a API Route
+    const photoURL = await uploadFileToApi(file);
 
     await updateUserProfile(uid, { photoURL });
     
@@ -47,11 +55,7 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
     const usersCollectionRef = collection(db, "users");
     const querySnapshot = await getDocs(usersCollectionRef);
-    const users: UserProfile[] = [];
-    querySnapshot.forEach(doc => {
-      users.push({ uid: doc.id, ...doc.data() } as UserProfile);
-    });
-    return users;
+    return querySnapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error("Error getting all users:", error);
     return [];
@@ -66,7 +70,8 @@ export const getUserProfile = async (
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
-      return { uid, ...userDocSnap.data() } as UserProfile;
+      // Usa a função fromFirestore para consistência
+      return fromFirestore(userDocSnap);
     } else {
       console.log("No such document!");
       return null;

@@ -50,10 +50,13 @@ service cloud.firestore {
       allow update, delete: if request.auth.token.role == 'admin';
     }
 
-    // Transações: Usuário só pode ver as próprias transações.
+    // Transações: Usuário só pode ver as próprias transações. Admins podem gerenciar tudo.
     match /transactions/{transactionId} {
-      allow read, list: if request.auth.uid == resource.data.userId || request.auth.token.role == 'admin';
-      allow write: if request.auth.token.role == 'admin';
+      // CORREÇÃO: Usar request.resource.data.uid para corresponder ao campo no documento
+      allow create: if request.auth.uid == request.resource.data.uid;
+      // CORREÇÃO: Usar resource.data.uid para corresponder ao campo no documento
+      allow read, list: if request.auth.uid == resource.data.uid || request.auth.token.role == 'admin';
+      allow update, delete: if request.auth.token.role == 'admin';
     }
 
     // Regra genérica para outras coleções
