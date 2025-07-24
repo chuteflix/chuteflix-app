@@ -131,12 +131,11 @@ export const getDashboardData = async (): Promise<{
       getDocs(transactionsQuery),
     ]);
 
-    const recentUsers: UserProfile[] = usersSnapshot.docs.map(doc => getUserProfile(doc.id)).filter(Boolean) as UserProfile[];
+    const recentUsers: UserProfile[] = (await Promise.all(usersSnapshot.docs.map(doc => getUserProfile(doc.id)))).filter(Boolean) as UserProfile[];
 
     const recentTransactions: RecentTransaction[] = await Promise.all(
       transactionsSnapshot.docs.map(async (doc) => {
         const transData = doc.data() as Transaction;
-        // CORREÇÃO: Buscar o usuário pelo UID da transação
         const user = await getUserProfile(transData.uid);
         return {
           id: doc.id,
