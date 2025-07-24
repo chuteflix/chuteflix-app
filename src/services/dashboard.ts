@@ -9,10 +9,12 @@ import {
   Timestamp,
   getCountFromServer,
   DocumentData,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Transaction } from "@/types";
-import { fromFirestore as userFromFirestore } from "./users"; // Renomeando para evitar conflito
+import { getUserProfile } from "./users"; 
 import { UserProfile } from "@/types";
 
 // --- Tipos Específicos do Dashboard ---
@@ -46,10 +48,8 @@ const getSumFromTransactions = async (
   const querySnapshot = await getDocs(q);
   let total = 0;
   querySnapshot.forEach((doc) => {
-    // Acessa o campo 'amount' com segurança
     const amount = doc.data().amount;
     if (typeof amount === 'number') {
-        // Usa Math.abs para garantir que estamos somando valores absolutos (ex: saques são negativos)
         total += Math.abs(amount);
     }
   });
@@ -92,7 +92,7 @@ export const getDashboardData = async (): Promise<{
       totalUsersCount,
       newUsersLast30Days,
       totalPrizesPaid,
-      totalBetAmount, // Valor total apostado
+      totalBetAmount,
     ] = await Promise.all([
       getSumFromTransactions("deposit"),
       getSumFromTransactions("withdrawal"),
@@ -131,12 +131,13 @@ export const getDashboardData = async (): Promise<{
       getDocs(transactionsQuery),
     ]);
 
-    const recentUsers: UserProfile[] = usersSnapshot.docs.map(doc => userFromFirestore(doc));
+    const recentUsers: UserProfile[] = usersSnapshot.docs.map(doc => getUserProfile(doc.id)).filter(Boolean) as UserProfile[];
 
     const recentTransactions: RecentTransaction[] = await Promise.all(
       transactionsSnapshot.docs.map(async (doc) => {
         const transData = doc.data() as Transaction;
-        const user = await userFromFirestore(doc.data().uid);
+        // CORREÇÃO: Buscar o usuário pelo UID da transação
+        const user = await getUserProfile(transData.uid);
         return {
           id: doc.id,
           ...transData,

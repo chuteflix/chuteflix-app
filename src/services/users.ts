@@ -16,13 +16,14 @@ import { UserProfile } from "@/types"; // Importação do tipo centralizado
 // Helper para converter dados do Firestore para UserProfile de forma segura
 export const fromFirestore = (doc: DocumentData): UserProfile => {
   const data = doc.data();
+  const name = data.name || data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim();
   return {
     uid: doc.id,
     email: data.email || "",
-    name: data.name || data.displayName || "",
+    name: name,
     firstName: data.firstName || "",
     lastName: data.lastName || "",
-    displayName: data.displayName || "",
+    displayName: name,
     photoURL: data.photoURL || "",
     balance: data.balance || 0,
     isAdmin: data.isAdmin || false,
@@ -66,6 +67,7 @@ export const getUserProfile = async (
   uid: string
 ): Promise<UserProfile | null> => {
   try {
+    if(!uid) return null;
     const userDocRef = doc(db, "users", uid);
     const userDocSnap = await getDoc(userDocRef);
 
@@ -73,7 +75,7 @@ export const getUserProfile = async (
       // Usa a função fromFirestore para consistência
       return fromFirestore(userDocSnap);
     } else {
-      console.log("No such document!");
+      console.log("No such document for user:", uid);
       return null;
     }
   } catch (error) {
