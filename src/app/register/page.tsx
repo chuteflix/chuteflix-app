@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,8 @@ import { useRouter } from "next/navigation";
 import { IMaskInput } from 'react-imask';
 import { Logo } from "@/components/icons";
 import { PasswordInput } from "@/components/ui/password-input";
+import { getSettings } from "@/services/settings";
+import { Settings } from "@/types";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -28,8 +31,17 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
+  const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchAppSettings = async () => {
+        const settings = await getSettings();
+        setAppSettings(settings);
+    }
+    fetchAppSettings();
+  }, []);
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
@@ -75,7 +87,7 @@ export default function RegisterPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
       <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
-            <Logo />
+            <Logo logoUrl={appSettings?.logoUrl} appName={appSettings?.appName} />
         </Link>
       </div>
       <Card className="mx-auto w-full max-w-lg bg-card border-border text-card-foreground">

@@ -57,13 +57,16 @@ import { Logo } from '@/components/icons';
 import { ToastProvider } from '@/components/toast-provider';
 import { useAuth } from '@/context/auth-context';
 import { auth } from '@/lib/firebase';
+import { getSettings } from '@/services/settings';
+import { Settings } from '@/types';
 
-const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarCollapsed, isAdminPage, pathname, isActive, handleLogout, user, userProfile, isMobileSidebarOpen, setIsMobileSidebarOpen }) => (
+
+const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarCollapsed, isAdminPage, pathname, isActive, handleLogout, user, userProfile, isMobileSidebarOpen, setIsMobileSidebarOpen, logoUrl, appName }) => (
   <>
     <div className={cn('hidden md:flex flex-col transition-all duration-300 ease-in-out', isUserSidebarCollapsed ? 'w-20' : 'w-64', isAdminPage ? 'w-64' : '')}>
       <Sidebar>
         <SidebarHeader>
-          <Logo />
+          <Logo logoUrl={logoUrl} appName={appName} />
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -107,7 +110,7 @@ const SidebarComponent = ({ menuItems, isUserSidebarCollapsed, setIsUserSidebarC
       <SheetContent side="left">
         <Sidebar>
           <SidebarHeader>
-            <Logo />
+            <Logo logoUrl={logoUrl} appName={appName} />
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -168,11 +171,20 @@ export function MainLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, userProfile, loading } = useAuth();
   
+  const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isUserSidebarCollapsed, setIsUserSidebarCollapsed] = useState(false);
   
   const isAdminPage = useMemo(() => pathname.startsWith('/admin'), [pathname]);
   
+  useEffect(() => {
+    const fetchAppSettings = async () => {
+        const settings = await getSettings();
+        setAppSettings(settings);
+    }
+    fetchAppSettings();
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -243,6 +255,8 @@ export function MainLayoutClient({ children }: { children: React.ReactNode }) {
           userProfile={userProfile} 
           isMobileSidebarOpen={isMobileSidebarOpen}
           setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+          logoUrl={appSettings?.logoUrl}
+          appName={appSettings?.appName}
         />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">

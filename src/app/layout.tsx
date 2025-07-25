@@ -1,13 +1,43 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/auth-context";
+import { getSettings } from "@/services/settings";
+import { Inter } from "next/font/google";
 
-// Force refresh
-export const metadata: Metadata = {
-  title: "ChuteFlix Bolão App",
-  description: "Apostas e diversão no mundo do futebol.",
-};
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings();
+  const appName = settings?.appName || "ChuteFlix Bolão App";
+  const description = settings?.metaDescription || "Apostas e diversão no mundo do futebol.";
+  const keywords = settings?.metaKeywords || "bolão, futebol, apostas, prêmios";
+  const favicon = settings?.faviconUrl || "/favicon.ico"; 
+
+  return {
+    title: {
+      default: appName,
+      template: `%s | ${appName}`,
+    },
+    description: description,
+    keywords: keywords,
+    icons: {
+      icon: favicon,
+      shortcut: favicon,
+      apple: favicon,
+    },
+  };
+}
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: 'device-width',
+  initialScale: 1,
+}
+
 
 export default function RootLayout({
   children,
@@ -15,16 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <head>
-        <title>ChuteFlix Bolão App</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="pt-BR" className={`${inter.variable}`}>
       <body className="font-body antialiased">
         <AuthProvider>
           {children}

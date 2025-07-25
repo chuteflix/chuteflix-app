@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,12 +20,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/icons";
 import { PasswordInput } from "@/components/ui/password-input";
+import { getSettings } from "@/services/settings";
+import { Settings } from "@/types";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchAppSettings = async () => {
+        const settings = await getSettings();
+        setAppSettings(settings);
+    }
+    fetchAppSettings();
+  }, []);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,7 +65,7 @@ export default function LoginPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
        <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
-            <Logo />
+            <Logo logoUrl={appSettings?.logoUrl} appName={appSettings?.appName} />
         </Link>
       </div>
       <Card className="mx-auto w-full max-w-md bg-card border-border text-card-foreground">

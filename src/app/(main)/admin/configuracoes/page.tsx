@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSettings, saveSettings } from "@/services/settings"; // Removido uploadQrCode que será tratado pela API
-import { uploadFileToApi } from "@/services/upload"; // Importa a função de upload genérica
+import { getSettings, saveSettings } from "@/services/settings";
+import { uploadFileToApi } from "@/services/upload";
 import { Settings } from "@/types";
 
 import { Button } from "@/components/ui/button";
@@ -21,24 +21,35 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { IMaskInput } from "react-imask";
 import { NumericFormat } from "react-number-format";
 import Image from "next/image";
+import { Textarea } from "@/components/ui/textarea";
 
 const settingsSchema = z.object({
+  // Payment
   pixKey: z.string().min(1, "A chave PIX é obrigatória."),
   whatsappNumber: z.string().min(1, "O número de WhatsApp é obrigatório."),
   minDeposit: z.number().min(0, "O valor mínimo de depósito deve ser positivo."),
   minWithdrawal: z.number().min(0, "O valor mínimo de saque deve ser positivo."),
+  // App
+  appName: z.string().min(1, "O nome do aplicativo é obrigatório."),
+  metaDescription: z.string().optional(),
+  metaKeywords: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 export default function SettingsPage() {
   const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  
   const [qrCodePreview, setQrCodePreview] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<SettingsFormValues>({
@@ -48,23 +59,27 @@ export default function SettingsPage() {
       whatsappNumber: "",
       minDeposit: 0,
       minWithdrawal: 0,
+      appName: "ChuteFlix",
+      metaDescription: "",
+      metaKeywords: "",
     }
   });
 
-  // Carrega as configurações iniciais
   useEffect(() => {
     const loadSettings = async () => {
       setIsLoading(true);
       try {
         const settings = await getSettings();
         if (settings) {
-          setValue("pixKey", settings.pixKey);
-          setValue("whatsappNumber", settings.whatsappNumber);
+          setValue("pixKey", settings.pixKey || "");
+          setValue("whatsappNumber", settings.whatsappNumber || "");
           setValue("minDeposit", settings.minDeposit || 0);
           setValue("minWithdrawal", settings.minWithdrawal || 0);
-          if (settings.qrCodeUrl) {
-            setQrCodePreview(settings.qrCodeUrl);
-          }
+          setValue("appName", settings.appName || "ChuteFlix");
+          setValue("metaDescription", settings.metaDescription || "");
+          setValue("metaKeywords", settings.metaKeywords || "");
+          if (settings.qrCodeUrl) setQrCodePreview(settings.qrCodeUrl);
+          if (settings.logoUrl) setLogoPreview(settings.logoUrl);
         }
       } catch (error) {
         toast({ title: "Erro ao carregar configurações.", variant: "destructive" });
@@ -75,44 +90,58 @@ export default function SettingsPage() {
     loadSettings();
   }, [setValue, toast]);
 
-  // Lida com a seleção de um novo arquivo
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (setter: React.Dispatch<React.SetStateAction<File | null>>, previewSetter: React.Dispatch<React.SetStateAction<string | null>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setQrCodeFile(file);
-      setQrCodePreview(URL.createObjectURL(file));
+      setter(file);
+      previewSetter(URL.createObjectURL(file));
     }
   };
 
-  // Processa o formulário ao salvar
   const onSubmit = async (data: SettingsFormValues) => {
-    setIsLoading(true);
+    setIsSaving(true);
     try {
       let finalQrCodeUrl = qrCodePreview;
+      let finalLogoUrl = logoPreview;
 
-      // Se um novo arquivo de QR Code foi selecionado, faça o upload primeiro
       if (qrCodeFile) {
         finalQrCodeUrl = await uploadFileToApi(qrCodeFile);
       }
+      if (logoFile) {
+        finalLogoUrl = await uploadFileToApi(logoFile);
+      }
       
-      // Salva todos os dados, incluindo a URL do QR Code (nova ou a existente)
-      await saveSettings({ ...data, qrCodeUrl: finalQrCodeUrl || '' });
+      const settingsToSave: Settings = {
+        ...data,
+        qrCodeUrl: finalQrCodeUrl || '',
+        logoUrl: finalLogoUrl || '',
+      };
+      
+      await saveSettings(settingsToSave);
 
       toast({ title: "Configurações salvas com sucesso!", variant: "success" });
     } catch (error) {
-      console.error("Erro ao salvar configurações:", error)
+      console.error("Erro ao salvar configurações:", error);
       toast({ title: "Erro ao salvar as configurações.", description: (error as Error).message, variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
+  
+  if (isLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
+  }
 
   return (
     <div className="container mx-auto">
       <h1 className="text-3xl font-bold mb-8 text-foreground">
-        Configurações de Pagamento
+        Configurações Gerais
       </h1>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Informações de Pagamento</CardTitle>
@@ -189,8 +218,8 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="qrCode">QR Code</Label>
-              <Input id="qrCode" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} />
+              <Label htmlFor="qrCode">QR Code de Pagamento</Label>
+              <Input id="qrCode" type="file" accept="image/png, image/jpeg" onChange={handleFileChange(setQrCodeFile, setQrCodePreview)} />
               {qrCodePreview && (
                 <div className="mt-4">
                   <Image src={qrCodePreview} alt="QR Code Preview" className="w-32 h-32" width={128} height={128} />
@@ -198,13 +227,65 @@ export default function SettingsPage() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar
-            </Button>
-          </CardFooter>
         </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Configurações do Aplicativo</CardTitle>
+                <CardDescription>
+                Personalize a identidade e as informações de SEO do seu site.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6">
+                <div className="grid gap-2">
+                    <Label htmlFor="appName">Nome do Aplicativo</Label>
+                    <Controller
+                        name="appName"
+                        control={control}
+                        render={({ field }) => <Input id="appName" {...field} />}
+                    />
+                    {errors.appName && <p className="text-red-500 text-sm">{errors.appName.message}</p>}
+                </div>
+                
+                <div className="grid gap-2">
+                    <Label htmlFor="logo">Logotipo</Label>
+                    <Input id="logo" type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleFileChange(setLogoFile, setLogoPreview)} />
+                    {logoPreview && (
+                        <div className="mt-4 bg-gray-800 p-4 rounded-md inline-block">
+                        <Image src={logoPreview} alt="Logo Preview" className="h-16 w-auto" width={150} height={64} />
+                        </div>
+                    )}
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="metaDescription">Meta Descrição (SEO)</Label>
+                    <Controller
+                        name="metaDescription"
+                        control={control}
+                        render={({ field }) => <Textarea id="metaDescription" placeholder="Descreva seu site para os mecanismos de busca." {...field} />}
+                    />
+                    {errors.metaDescription && <p className="text-red-500 text-sm">{errors.metaDescription.message}</p>}
+                </div>
+                
+                <div className="grid gap-2">
+                    <Label htmlFor="metaKeywords">Palavras-chave (SEO)</Label>
+                     <Controller
+                        name="metaKeywords"
+                        control={control}
+                        render={({ field }) => <Input id="metaKeywords" placeholder="Ex: bolão, futebol, apostas, prêmios" {...field} />}
+                    />
+                    <p className="text-xs text-muted-foreground">Separe as palavras-chave por vírgula.</p>
+                    {errors.metaKeywords && <p className="text-red-500 text-sm">{errors.metaKeywords.message}</p>}
+                </div>
+            </CardContent>
+        </Card>
+        
+        <div className="sticky bottom-0 bg-background/80 backdrop-blur-sm py-4 rounded-lg shadow-md -mx-4 px-4">
+            <Button type="submit" disabled={isSaving} size="lg">
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Todas as Configurações
+            </Button>
+        </div>
       </form>
     </div>
   );

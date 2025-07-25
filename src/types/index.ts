@@ -67,9 +67,16 @@ export interface Transaction {
 }
 
 export interface Settings {
+  // Payment Settings
   pixKey: string;
   qrCodeUrl: string;
   whatsappNumber: string;
   minDeposit: number;
   minWithdrawal: number;
+  // App Settings
+  appName?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }
