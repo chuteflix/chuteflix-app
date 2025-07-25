@@ -1,7 +1,7 @@
 export interface Team {
   id: string;
   name: string;
-  shieldUrl?: string; // Manter apenas shieldUrl
+  shieldUrl?: string; 
   level: 'Profissional' | 'Amador/Várzea';
   location: string;
   scope: 'Nacional' | 'Estadual' | 'Municipal';
@@ -9,23 +9,8 @@ export interface Team {
   city?: string;
 }
 
-export interface Championship {
-  id: string;
-  name: string;
-  type: 'professional' | 'amateur';
-  competitionType: 'national' | 'international';
-  scope?: 'national' | 'state' | 'municipal';
-  series?: 'A' | 'B' | 'C' | 'D';
-  state?: string;
-  city?: string;
-  continent?: string;
-  country?: string;
-}
-
 export interface Bolao {
   id: string;
-  championshipId: string;
-  championship: string;
   homeTeam: Team;
   awayTeam: Team;
   matchStartDate: Date | null; 

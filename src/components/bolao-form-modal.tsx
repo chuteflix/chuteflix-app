@@ -174,12 +174,6 @@ export function BolaoFormModal({
     const finalClosingTime = new Date(matchDate); 
     finalClosingTime.setHours(closingHours, closingMinutes, 0, 0); 
     
-    const finalCategoryId = categoryPath[categoryPath.length - 1];
-    const finalCategory = allCategories.find(c => c.id === finalCategoryId);
-    
-    const championshipId = finalCategoryId; 
-    const championshipName = finalCategory?.name || "Campeonato";
-
     const finalData = {
         ...rest,
         matchStartDate,
@@ -187,8 +181,6 @@ export function BolaoFormModal({
         closingTime: finalClosingTime, 
         homeTeam: teams.find(t => t.id === formData.homeTeamId)!,
         awayTeam: teams.find(t => t.id === formData.awayTeamId)!,
-        championshipId: championshipId,
-        championship: championshipName,
         categoryIds: categoryPath,
     };
     
@@ -282,7 +274,7 @@ export function BolaoFormModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
 
             <div className="col-span-2 space-y-2 p-3 border rounded-md bg-muted/20">
-                <Label>Campeonato (via Categorias)</Label>
+                <Label>Categorias</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {renderCategorySelectors()}
                 </div>

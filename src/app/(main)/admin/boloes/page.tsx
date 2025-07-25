@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams }
- from "next/navigation"
 import Link from "next/link"
 import {
   addBolao,
@@ -46,9 +44,6 @@ import { format, isPast, isValid } from "date-fns"
 import { Bolao } from "@/types"
 
 export default function BoloesPage() {
-  const searchParams = useSearchParams()
-  const championshipIdFilter = searchParams.get("championshipId")
-
   const [boloes, setBoloes] = useState<Bolao[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
@@ -56,12 +51,7 @@ export default function BoloesPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      let boloesData = await getBoloes()
-      
-      if (championshipIdFilter) {
-        boloesData = boloesData.filter(bolao => bolao.championshipId === championshipIdFilter)
-      }
-
+      const boloesData = await getBoloes()
       setBoloes(boloesData)
     } catch (err) {
       toast({
@@ -76,9 +66,9 @@ export default function BoloesPage() {
 
   useEffect(() => {
     fetchData()
-  }, [championshipIdFilter])
+  }, [])
 
-  const handleSave = async (data: Omit<Bolao, "id" | "status">, id?: string) => {
+  const handleSave = async (data: Omit<Bolao, "id" | "status" | "categoryNames">, id?: string) => {
     try {
         if (id) {
             await updateBolao(id, data);
@@ -121,9 +111,9 @@ export default function BoloesPage() {
   const getDisplayStatus = (bolao: Bolao): 'Aberto' | 'Fechado' | 'Finalizado' => {
     if (bolao.status === 'Finalizado') return 'Finalizado';
     
-    const closingDate = new Date(bolao.closingTime);
+    const closingDate = bolao.closingTime ? new Date(bolao.closingTime) : null;
 
-    if(isValid(closingDate) && isPast(closingDate)) return 'Fechado';
+    if(closingDate && isValid(closingDate) && isPast(closingDate)) return 'Fechado';
 
     return 'Aberto';
   };

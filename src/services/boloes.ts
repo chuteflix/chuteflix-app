@@ -15,9 +15,7 @@ import { db } from "@/lib/firebase";
 import { getTeamById } from "@/services/teams"; 
 import { Bolao, Team } from "@/types"; 
 import { isValid, isPast } from "date-fns"; 
-import { getAllCategories, Category } from "./categories";
-
-type RawBolao = Omit<Bolao, 'homeTeam' | 'awayTeam'> & { homeTeamId: string; awayTeamId: string };
+import { getAllCategories } from "./categories";
 
 const safeParseDate = (dateInput: any): Date | null => {
     if (!dateInput) return null;
@@ -30,8 +28,8 @@ const safeParseDate = (dateInput: any): Date | null => {
 const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
   const data = docSnap.data();
   
-  const homeTeamId = data.homeTeamId || data.teamAId;
-  const awayTeamId = data.awayTeamId || data.teamBId;
+  const homeTeamId = data.homeTeamId;
+  const awayTeamId = data.awayTeamId;
 
   let homeTeam: Team | null = null;
   let awayTeam: Team | null = null;
@@ -45,17 +43,15 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
 
   const allCategories = await getAllCategories();
   const categoryNames = data.categoryIds
-    .map((id: string) => allCategories.find(cat => cat.id === id)?.name)
-    .filter(Boolean);
+    ?.map((id: string) => allCategories.find(cat => cat.id === id)?.name)
+    .filter(Boolean) || [];
 
 
-  const defaultHomeTeam: Team = homeTeam || { id: homeTeamId || 'unknown_home_team', name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
-  const defaultAwayTeam: Team = awayTeam || { id: awayTeamId || 'unknown_away_team', name: 'Time Desconhecido', logoUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
+  const defaultHomeTeam: Team = homeTeam || { id: homeTeamId || 'unknown_home_team', name: 'Time Desconhecido', shieldUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
+  const defaultAwayTeam: Team = awayTeam || { id: awayTeamId || 'unknown_away_team', name: 'Time Desconhecido', shieldUrl: '', level: 'Amador/Várzea', location: '', scope: 'Nacional' }; 
 
   return {
     id: docSnap.id,
-    championshipId: data.championshipId,
-    championship: data.championship,
     homeTeam: defaultHomeTeam, 
     awayTeam: defaultAwayTeam, 
     matchStartDate: safeParseDate(data.matchStartDate),
@@ -84,7 +80,7 @@ export const getBoloes = async (): Promise<Bolao[]> => {
   try {
     const boloesSnapshot = await getDocs(collection(db, "boloes"));
     const boloesWithTeams = await Promise.all(boloesSnapshot.docs.map(fromFirestore));
-    return boloesWithTeams; // Não aplicar filtro aqui para o admin
+    return boloesWithTeams;
   } catch (error) {
     console.error("Erro ao buscar bolões: ", error);
     throw new Error("Não foi possível buscar os bolões.");
@@ -96,7 +92,7 @@ export const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]
       const q = query(collection(db, "boloes"), where("categoryIds", "array-contains", categoryId));
       const querySnapshot = await getDocs(q);
       const boloesWithTeams = await Promise.all(querySnapshot.docs.map(fromFirestore));
-      return filterAvailableBoloes(boloesWithTeams); // Manter filtro para páginas públicas
+      return filterAvailableBoloes(boloesWithTeams);
     } catch (error) {
       console.error("Erro ao buscar bolões por categoria: ", error);
       throw new Error("Não foi possível buscar os bolões para esta categoria.");
@@ -117,7 +113,7 @@ export const getBolaoById = async (id: string): Promise<Bolao | null> => {
     }
 };
 
-export const addBolao = async (data: Omit<Bolao, "id" | "status">): Promise<string> => {
+export const addBolao = async (data: Omit<Bolao, "id" | "status" | "categoryNames">): Promise<string> => {
   try {
     const { homeTeam, awayTeam, ...rest } = data;
     const docRef = await addDoc(collection(db, "boloes"), {
@@ -136,7 +132,7 @@ export const addBolao = async (data: Omit<Bolao, "id" | "status">): Promise<stri
 
 export const updateBolao = async (
   id: string,
-  data: Partial<Omit<Bolao, "id" | "createdAt" | "status">>
+  data: Partial<Omit<Bolao, "id" | "createdAt" | "status" | "categoryNames">>
 ): Promise<void> => {
   try {
     const { homeTeam, awayTeam, ...rest } = data;

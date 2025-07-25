@@ -7,7 +7,6 @@ import {
 import { getAuth } from "firebase/auth";
 import { getBolaoById, Bolao } from "./boloes";
 import { getTeamById, Team } from "./teams";
-import { getChampionshipById, Championship } from "./championships";
 import { getUserProfile, UserProfile } from "./users";
 
 export type PalpiteStatus = "Em Aberto" | "Ganho" | "Perdido" | "Anulado";
@@ -29,7 +28,6 @@ export interface PalpiteComDetalhes extends Palpite {
   bolaoDetails?: Bolao & {
     teamADetails?: Team;
     teamBDetails?: Team;
-    championshipDetails?: Championship;
   };
 }
 
@@ -177,10 +175,9 @@ export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteCom
           const bolaoDetails = await getBolaoById(palpite.bolaoId);
           if (!bolaoDetails) return palpite;
 
-          const [teamADetails, teamBDetails, championshipDetails] = await Promise.all([
+          const [teamADetails, teamBDetails] = await Promise.all([
               getTeamById(bolaoDetails.homeTeam.id),
               getTeamById(bolaoDetails.awayTeam.id),
-              getChampionshipById(bolaoDetails.championshipId),
           ]);
 
           return {
@@ -189,7 +186,6 @@ export const getPalpitesComDetalhes = async (userId: string): Promise<PalpiteCom
               ...bolaoDetails,
               teamADetails,
               teamBDetails,
-              championshipDetails,
             },
           }
         })
