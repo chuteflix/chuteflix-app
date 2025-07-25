@@ -22,7 +22,8 @@ export const getSettings = async (): Promise<Settings | null> => {
 
   catch (error) {
     console.error("Error getting settings:", error);
-    throw new Error("Could not fetch settings.");
+    // Em vez de lançar um erro, retorna null para que a UI possa lidar com isso
+    return null;
   }
 };
 
