@@ -2,7 +2,6 @@
 import { getBoloes, getBolaoById } from "@/services/boloes";
 import { BolaoPageClient } from "@/components/bolao-page-client";
 import { getTeamById } from "@/services/teams";
-import { getChampionshipById } from "@/services/championships";
 import { notFound } from "next/navigation";
 
 export async function generateStaticParams() {
@@ -19,17 +18,15 @@ export default async function BolaoPage({ params }: { params: { id: string } }) 
     return notFound();
   }
 
-  const [teamADetails, teamBDetails, championshipDetails] = await Promise.all([
+  const [teamADetails, teamBDetails] = await Promise.all([
     getTeamById(bolaoBase.teamAId),
     getTeamById(bolaoBase.teamBId),
-    getChampionshipById(bolaoBase.championshipId),
   ]);
 
   const bolaoDetails = {
     ...bolaoBase,
     teamADetails,
     teamBDetails,
-    championshipDetails,
   };
   
   return <BolaoPageClient bolaoDetails={bolaoDetails} />;
