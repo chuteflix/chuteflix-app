@@ -9,6 +9,7 @@ import {
   updateDoc,
   serverTimestamp,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -52,4 +53,15 @@ export const updateCategory = async (
 export const deleteCategory = async (categoryId: string): Promise<void> => {
   const categoryDoc = doc(db, "categories", categoryId);
   await deleteDoc(categoryDoc);
+};
+
+export const updateCategoryOrder = async (
+  updates: { id: string; updates: Partial<Category> }[]
+): Promise<void> => {
+  const batch = writeBatch(db);
+  updates.forEach(({ id, updates }) => {
+    const categoryDoc = doc(db, "categories", id);
+    batch.update(categoryDoc, updates);
+  });
+  await batch.commit();
 };
