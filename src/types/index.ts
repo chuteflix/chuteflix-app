@@ -74,9 +74,9 @@ export interface Settings {
   minDeposit: number;
   minWithdrawal: number;
   // App Settings
-  appName?: string;
-  logoUrl?: string;
-  faviconUrl?: string;
-  metaDescription?: string;
-  metaKeywords?: string;
+  appName: string;
+  logoUrl: string;
+  faviconUrl: string;
+  metaDescription: string;
+  metaKeywords: string;
 }

@@ -20,7 +20,7 @@ const Sidebar = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <aside
     ref={ref}
-    className={cn("flex flex-col", className)}
+    className={cn("hidden md:flex flex-col", className)}
     {...props}
   >
     {children}
@@ -48,7 +48,7 @@ const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-4", className)} {...props} />
+  <div ref={ref} className={cn("mt-auto", className)} {...props} />
 ))
 SidebarFooter.displayName = "SidebarFooter"
 
@@ -69,11 +69,11 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "flex w-full items-center gap-2 rounded-md p-2 text-left text-sm font-medium outline-none transition-colors hover:bg-muted focus:bg-muted disabled:pointer-events-none disabled:opacity-50",
+  "flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm font-medium outline-none transition-colors hover:bg-muted focus:bg-muted disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       isActive: {
-        true: "bg-primary text-primary-foreground",
+        true: "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
       },
     },
   }

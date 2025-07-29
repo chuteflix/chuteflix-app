@@ -1,4 +1,5 @@
-"use client";
+
+"use client"
 
 import { useState, useEffect } from "react";
 import { getAllCategories, Category } from "@/services/categories";
@@ -8,7 +9,8 @@ import { CategoryShelf } from "@/components/category-shelf";
 import { HeroSection } from "@/components/hero-section";
 import { Tv, Medal, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { PublicHeader } from "@/components/public-header";
+import { getSettings } from "@/services/settings";
+import { Settings } from "@/types";
 
 const features = [
     {
@@ -51,12 +53,17 @@ export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // O cabeçalho é agora renderizado pelo layout principal.
+  // Esta página não precisa mais se preocupar com ele.
+
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
       try {
         const fetchedCategories = await getAllCategories();
-        setCategories(fetchedCategories);
+        // Ordena as categorias principais pela propriedade 'order'
+        const mainCategories = fetchedCategories.filter(c => !c.parentId).sort((a,b) => a.order - b.order);
+        setCategories(mainCategories);
       } catch (error) {
         console.error("Falha ao buscar categorias para a home page:", error);
       } finally {
@@ -83,7 +90,7 @@ export default function PublicHomePage() {
 
   return (
     <div className="bg-background text-foreground">
-      <PublicHeader />
+      {/* O PublicHeader foi movido para o layout */}
       <HeroSection />
       
       <main>

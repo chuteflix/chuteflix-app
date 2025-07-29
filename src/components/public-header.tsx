@@ -1,6 +1,5 @@
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { auth } from "@/lib/firebase"
 import { Logo } from "@/components/icons"
@@ -14,18 +13,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User as UserIcon, LayoutDashboard, Wallet } from "lucide-react"
+import { LogOut, User as UserIcon, LayoutDashboard, Wallet, Menu } from "lucide-react"
 import { Settings } from "@/types"
 import { Skeleton } from "./ui/skeleton"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
 // O cabeçalho agora recebe as configurações como uma propriedade.
 export function PublicHeader({ settings }: { settings: Settings | null }) {
-  const { user, userProfile, loading } = useAuth()
-  const router = useRouter()
+  const { userProfile, loading } = useAuth()
 
   const handleLogout = async () => {
     await auth.signOut()
-    router.push("/login")
+    // A página irá recarregar ou o AuthProvider irá redirecionar
   }
   
   const scrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -42,12 +45,8 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
-            {/* 
-              Não há mais estado de carregamento para as configurações.
-              Elas chegam prontas do servidor.
-            */}
-            <Logo logoUrl={settings?.logoUrl} appName={settings?.appName} />
-            <span className="text-xl font-bold">{settings?.appName || "ChuteFlix"}</span>
+            <Logo logoUrl={settings?.logoUrl} />
+            <span className="text-xl font-bold hidden sm:inline">{settings?.appName || "ChuteFlix"}</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
             <Link href="#features" onClick={scrollTo('features')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -67,10 +66,10 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
         ) : userProfile ? (
             <div className="flex items-center gap-4">
                 {userProfile.balance !== null && (
-                    <div className="flex items-center gap-2">
+                    <div className="hidden sm:flex items-center gap-2">
                         <Wallet className="h-5 w-5 text-primary" />
                         <span className="text-sm font-semibold text-foreground">
-                            {userProfile.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {(userProfile.balance ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </span>
                     </div>
                 )}
@@ -79,7 +78,7 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
                         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                             <Avatar className="h-9 w-9">
                                 <AvatarImage src={userProfile.photoURL || ""} alt={userProfile.name || ""} />
-                                <AvatarFallback>{firstName.charAt(0).toUpperCase()}</AvatarFallback>
+                                <AvatarFallback>{firstName?.charAt(0)?.toUpperCase()}</AvatarFallback>
                             </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
@@ -107,7 +106,7 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
                 </DropdownMenu>
             </div>
         ) : (
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
                 <Button variant="ghost" asChild>
                     <Link href="/login">Entrar</Link>
                 </Button>
@@ -116,6 +115,28 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
                 </Button>
             </div>
         )}
+         <Sheet>
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Abrir menu</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+                 <nav className="grid gap-6 text-lg font-medium mt-10">
+                    <Link href="#features" onClick={scrollTo('features')} className="text-muted-foreground hover:text-foreground">Funcionalidades</Link>
+                    <Link href="#boloes" onClick={scrollTo('boloes')} className="text-muted-foreground hover:text-foreground">Bolões</Link>
+                    <Link href="#faq" onClick={scrollTo('faq')} className="text-muted-foreground hover:text-foreground">Dúvidas</Link>
+                    <Separator />
+                     {!loading && !userProfile && (
+                        <>
+                            <Button variant="ghost" asChild><Link href="/login">Entrar</Link></Button>
+                            <Button asChild><Link href="/register">Criar Conta</Link></Button>
+                        </>
+                    )}
+                 </nav>
+            </SheetContent>
+        </Sheet>
       </div>
     </header>
   )

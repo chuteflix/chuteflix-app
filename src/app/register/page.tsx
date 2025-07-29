@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // 1. Importar serverTimestamp
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { IMaskInput } from 'react-imask';
@@ -23,6 +23,7 @@ import { Logo } from "@/components/icons";
 import { PasswordInput } from "@/components/ui/password-input";
 import { getSettings } from "@/services/settings";
 import { Settings } from "@/types";
+import { useAuth } from "@/context/auth-context";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -34,6 +35,15 @@ export default function RegisterPage() {
   const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    // Se o usuário já estiver logado, redireciona para a página de início
+    if (!loading && user) {
+      router.replace('/inicio');
+    }
+  }, [user, loading, router]);
+
 
   useEffect(() => {
     const fetchAppSettings = async () => {
@@ -55,8 +65,8 @@ export default function RegisterPage() {
         displayName: fullName
       });
 
-      // 2. Adicionar o campo createdAt ao criar o documento do usuário
       await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
         firstName,
         lastName,
         name: fullName,
@@ -64,14 +74,15 @@ export default function RegisterPage() {
         cpf,
         email: user.email,
         balance: 0,
-        createdAt: serverTimestamp(), // Adiciona a data de criação do usuário
+        createdAt: serverTimestamp(),
+        role: 'user', // Define a role padrão
       });
 
       toast({
         title: "Conta criada com sucesso!",
         description: "Você já pode fazer seus palpites.",
       });
-      router.push('/inicio');
+      // O redirecionamento agora é tratado pelo useEffect acima
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",
@@ -83,11 +94,16 @@ export default function RegisterPage() {
 
   const inputClasses = "bg-background border-border focus:ring-primary flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
+  // Enquanto verifica o status do usuário, não mostra nada para evitar um "flash" da tela de registro
+  if (loading || user) {
+    return null; 
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
       <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
-            <Logo logoUrl={appSettings?.logoUrl} appName={appSettings?.appName} />
+            <Logo logoUrl={appSettings?.logoUrl} />
         </Link>
       </div>
       <Card className="mx-auto w-full max-w-lg bg-card border-border text-card-foreground">
@@ -127,7 +143,7 @@ export default function RegisterPage() {
                   <IMaskInput
                     mask="(00) 00000-0000"
                     value={phone}
-                    onAccept={(value) => setPhone(value)}
+                    onAccept={(value) => setPhone(value as string)}
                     placeholder="(11) 99999-9999"
                     className={inputClasses}
                   />
@@ -137,7 +153,7 @@ export default function RegisterPage() {
                   <IMaskInput
                     mask="000.000.000-00"
                     value={cpf}
-                    onAccept={(value) => setCpf(value)}
+                    onAccept={(value) => setCpf(value as string)}
                     placeholder="000.000.000-00"
                     className={inputClasses}
                   />

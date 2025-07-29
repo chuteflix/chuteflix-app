@@ -47,9 +47,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
       <body className="font-body antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        {/* AuthProvider foi movido para o MainLayout para ter acesso às props do servidor */}
+        {children}
         <Toaster />
       </body>
     </html>

@@ -44,9 +44,12 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export default function SettingsPage() {
   const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   
   const [qrCodePreview, setQrCodePreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,6 +83,7 @@ export default function SettingsPage() {
           setValue("metaKeywords", settings.metaKeywords || "");
           if (settings.qrCodeUrl) setQrCodePreview(settings.qrCodeUrl);
           if (settings.logoUrl) setLogoPreview(settings.logoUrl);
+          if (settings.faviconUrl) setFaviconPreview(settings.faviconUrl);
         }
       } catch (error) {
         toast({ title: "Erro ao carregar configurações.", variant: "destructive" });
@@ -103,6 +107,7 @@ export default function SettingsPage() {
     try {
       let finalQrCodeUrl = qrCodePreview;
       let finalLogoUrl = logoPreview;
+      let finalFaviconUrl = faviconPreview;
 
       if (qrCodeFile) {
         finalQrCodeUrl = await uploadFileToApi(qrCodeFile);
@@ -110,16 +115,20 @@ export default function SettingsPage() {
       if (logoFile) {
         finalLogoUrl = await uploadFileToApi(logoFile);
       }
+      if (faviconFile) {
+        finalFaviconUrl = await uploadFileToApi(faviconFile);
+      }
       
       const settingsToSave: Settings = {
         ...data,
         qrCodeUrl: finalQrCodeUrl || '',
         logoUrl: finalLogoUrl || '',
+        faviconUrl: finalFaviconUrl || '',
       };
       
       await saveSettings(settingsToSave);
 
-      toast({ title: "Configurações salvas com sucesso!", variant: "success" });
+      toast({ title: "Configurações salvas com sucesso!", description: "Pode ser necessário recarregar a página para ver todas as alterações.", variant: "success" });
     } catch (error) {
       console.error("Erro ao salvar configurações:", error);
       toast({ title: "Erro ao salvar as configurações.", description: (error as Error).message, variant: "destructive" });
@@ -247,14 +256,26 @@ export default function SettingsPage() {
                     {errors.appName && <p className="text-red-500 text-sm">{errors.appName.message}</p>}
                 </div>
                 
-                <div className="grid gap-2">
-                    <Label htmlFor="logo">Logotipo</Label>
-                    <Input id="logo" type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleFileChange(setLogoFile, setLogoPreview)} />
-                    {logoPreview && (
-                        <div className="mt-4 bg-gray-800 p-4 rounded-md inline-block">
-                        <Image src={logoPreview} alt="Logo Preview" className="h-16 w-auto" width={150} height={64} />
-                        </div>
-                    )}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid gap-2">
+                        <Label htmlFor="logo">Logotipo</Label>
+                        <Input id="logo" type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleFileChange(setLogoFile, setLogoPreview)} />
+                        {logoPreview && (
+                            <div className="mt-4 bg-gray-800 p-4 rounded-md inline-block">
+                                <Image src={logoPreview} alt="Logo Preview" className="h-16 w-auto" width={150} height={64} />
+                            </div>
+                        )}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="favicon">Favicon</Label>
+                        <Input id="favicon" type="file" accept="image/x-icon, image/png, image/svg+xml" onChange={handleFileChange(setFaviconFile, setFaviconPreview)} />
+                        {faviconPreview && (
+                            <div className="mt-4 bg-gray-800 p-2 rounded-md inline-block">
+                                <Image src={faviconPreview} alt="Favicon Preview" className="h-8 w-8" width={32} height={32} />
+                            </div>
+                        )}
+                        <p className="text-xs text-muted-foreground">Recomendado: .ico ou .png 32x32px.</p>
+                    </div>
                 </div>
 
                 <div className="grid gap-2">

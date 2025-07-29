@@ -22,6 +22,7 @@ import { Logo } from "@/components/icons";
 import { PasswordInput } from "@/components/ui/password-input";
 import { getSettings } from "@/services/settings";
 import { Settings } from "@/types";
+import { useAuth } from "@/context/auth-context";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,6 +30,14 @@ export default function LoginPage() {
   const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    // Se o usuário já estiver logado, redireciona para a página de início
+    if (!loading && user) {
+      router.replace('/inicio');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchAppSettings = async () => {
@@ -42,16 +51,7 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        // Salva o nome completo para uso imediato na UI
-        localStorage.setItem('userFullName', `${userData.firstName} ${userData.lastName}`);
-      }
-      
-      router.push('/inicio'); 
+      // O redirecionamento agora é tratado pelo useEffect acima
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",
@@ -61,18 +61,23 @@ export default function LoginPage() {
     }
   };
 
+  // Enquanto verifica o status do usuário, não mostra nada para evitar um "flash" da tela de login
+  if (loading || user) {
+    return null; 
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
        <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
-            <Logo logoUrl={appSettings?.logoUrl} appName={appSettings?.appName} />
+            <Logo logoUrl={appSettings?.logoUrl} />
         </Link>
       </div>
       <Card className="mx-auto w-full max-w-md bg-card border-border text-card-foreground">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Entrar</CardTitle>
+          <CardTitle className="text-3xl font-bold">{appSettings?.appName || "Bem-vindo"}</CardTitle>
           <CardDescription className="text-muted-foreground pt-2">
-            Bem-vindo(a) de volta! Faça login para continuar.
+            Faça login para continuar na maior plataforma de bolões.
           </CardDescription>
         </CardHeader>
         <CardContent>

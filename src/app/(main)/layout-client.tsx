@@ -53,12 +53,20 @@ function DashboardLayout({ children }: { children: React.ReactNode; }) {
 // Componente "roteador" que decide qual layout renderizar.
 function AppLayoutRouter({ children, settings }: { children: React.ReactNode; settings: Settings | null; }) {
     const pathname = usePathname();
-    const { loading } = useAuth();
+    const { loading, user } = useAuth();
 
+    // Define quais rotas usarão o layout de dashboard
     const dashboardRoutes = [
         '/admin', '/inicio', '/meus-chutes', '/profile', 
         '/recarga', '/saque', '/transacoes', '/settings'
     ];
+    
+    // As rotas de login/registro são tratadas separadamente e não usam nenhum destes layouts
+    const authRoutes = ['/login', '/register'];
+    
+    if (authRoutes.includes(pathname)) {
+        return <>{children}</>;
+    }
 
     const isDashboardRoute = dashboardRoutes.some(route => pathname.startsWith(route));
 
@@ -71,12 +79,15 @@ function AppLayoutRouter({ children, settings }: { children: React.ReactNode; se
         );
     }
     
-    if (isDashboardRoute) {
+    // Se a rota é de dashboard E o usuário está logado, mostra o dashboard
+    if (isDashboardRoute && user) {
         return <DashboardLayout>{children}</DashboardLayout>;
     }
-
+    
+    // Por padrão (ou se o usuário tentar acessar uma rota de dashboard sem estar logado), mostra o layout público
     return <PublicLayout settings={settings}>{children}</PublicLayout>;
 }
+
 
 // Componente final que envolve tudo no provedor de autenticação.
 export function LayoutClient({ children, settings }: { children: React.ReactNode; settings: Settings | null; }) {
