@@ -68,7 +68,8 @@ function AppLayoutRouter({ children, settings }: { children: React.ReactNode; se
         return <>{children}</>;
     }
 
-    const isDashboardRoute = dashboardRoutes.some(route => pathname.startsWith(route));
+    // A rota é de dashboard se começar com um dos caminhos definidos E o usuário estiver logado
+    const isDashboardRoute = user && dashboardRoutes.some(route => pathname.startsWith(route));
 
     // Loader para evitar o "flash" do layout incorreto durante a verificação de auth.
     if (loading) {
@@ -79,12 +80,12 @@ function AppLayoutRouter({ children, settings }: { children: React.ReactNode; se
         );
     }
     
-    // Se a rota é de dashboard E o usuário está logado, mostra o dashboard
-    if (isDashboardRoute && user) {
+    // Se a rota é de dashboard, mostra o dashboard
+    if (isDashboardRoute) {
         return <DashboardLayout>{children}</DashboardLayout>;
     }
     
-    // Por padrão (ou se o usuário tentar acessar uma rota de dashboard sem estar logado), mostra o layout público
+    // Por padrão (rotas públicas ou se tentar acessar dashboard sem logar), mostra o layout público
     return <PublicLayout settings={settings}>{children}</PublicLayout>;
 }
 
