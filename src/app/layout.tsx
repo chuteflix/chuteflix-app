@@ -1,55 +1,31 @@
-import type { Metadata, Viewport } from "next";
-import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/context/auth-context";
-import { getSettings } from "@/services/settings";
 import { Inter } from "next/font/google";
+import "./globals.css";
+import { ToastProvider } from "@/components/toast-provider";
+import { AuthProvider } from "@/context/auth-context";
+import { PublicHeader } from "@/components/public-header";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
+const inter = Inter({ subsets: ["latin"] });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
-  const appName = settings?.appName || "ChuteFlix Bolão App";
-  const description = settings?.metaDescription || "Apostas e diversão no mundo do futebol.";
-  const keywords = settings?.metaKeywords || "bolão, futebol, apostas, prêmios";
-  const favicon = settings?.faviconUrl || "/favicon.ico"; 
-
-  return {
-    title: {
-      default: appName,
-      template: `%s | ${appName}`,
-    },
-    description: description,
-    keywords: keywords,
-    icons: {
-      icon: favicon,
-      shortcut: favicon,
-      apple: favicon,
-    },
-  };
-}
-
-export const viewport: Viewport = {
-  themeColor: "#000000",
-  width: 'device-width',
-  initialScale: 1,
-}
-
+export const metadata = {
+  title: "ChuteFlix",
+  description: "A plataforma definitiva para os amantes de futebol. Participe de bolões, dê seus palpites e concorra a prêmios incríveis.",
+};
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="pt-BR" className={`${inter.variable}`}>
-      <body className="font-body antialiased">
-        {/* AuthProvider foi movido para o MainLayout para ter acesso às props do servidor */}
-        {children}
-        <Toaster />
+    <html lang="pt-br">
+      <body className={inter.className}>
+        <AuthProvider>
+          <ToastProvider />
+          <div className="flex flex-col min-h-screen">
+            <PublicHeader />
+            <main className="flex-grow">{children}</main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,51 +1,30 @@
-
 "use client";
 
 import { useState, FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { Logo } from "@/components/icons";
-import { PasswordInput } from "@/components/ui/password-input";
-import { getSettings } from "@/services/settings";
-import { Settings } from "@/types";
-import { useAuth } from "@/context/auth-context";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [appSettings, setAppSettings] = useState<Settings | null>(null);
-  const { toast } = useToast();
-  const router = useRouter();
   const { user, loading } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Se o usuário já estiver logado, redireciona para a página de início
     if (!loading && user) {
-      router.replace('/inicio');
+      router.push("/inicio");
     }
   }, [user, loading, router]);
-
-  useEffect(() => {
-    const fetchAppSettings = async () => {
-        const settings = await getSettings();
-        setAppSettings(settings);
-    }
-    fetchAppSettings();
-  }, []);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,64 +40,60 @@ export default function LoginPage() {
     }
   };
 
-  // Enquanto verifica o status do usuário, não mostra nada para evitar um "flash" da tela de login
+  // Enquanto verifica o status do usuário, mostra um skeleton para evitar um "flash" da tela de login
   if (loading || user) {
-    return null; 
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="p-4 rounded-lg">
+          <p className="text-center text-gray-500 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
-       <div className="mb-8">
-        <Link href="/" aria-label="Voltar para a página inicial">
-            <Logo logoUrl={appSettings?.logoUrl} />
-        </Link>
-      </div>
-      <Card className="mx-auto w-full max-w-md bg-card border-border text-card-foreground">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">{appSettings?.appName || "Bem-vindo"}</CardTitle>
-          <CardDescription className="text-muted-foreground pt-2">
-            Faça login para continuar na maior plataforma de bolões.
-          </CardDescription>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Login</CardTitle>
+          <CardDescription>Entre com seu e-mail e senha para continuar.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="seunome@email.com"
+                placeholder="m@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-background border-border focus:ring-primary"
               />
             </div>
-            <div className="grid gap-2">
+            <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <PasswordInput
+              <Input
                 id="password"
+                type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Sua senha"
-                className="bg-background border-border focus:ring-primary"
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full mt-4 bg-primary text-primary-foreground font-bold hover:bg-primary/90"
-            >
+            <Button type="submit" className="w-full">
               Entrar
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Não tem uma conta? </span>
-            <Link href="/register" className="underline text-primary hover:text-primary/90">
-              Cadastre-se
-            </Link>
-          </div>
         </CardContent>
+        <CardFooter className="flex justify-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+                Não tem uma conta?{" "}
+                <Link href="/register" className="font-semibold text-blue-600 hover:underline">
+                    Cadastre-se
+                </Link>
+            </p>
+        </CardFooter>
       </Card>
     </div>
   );

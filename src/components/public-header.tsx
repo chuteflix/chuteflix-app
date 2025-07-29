@@ -1,3 +1,4 @@
+"use client"
 
 import Link from "next/link"
 import { useAuth } from "@/context/auth-context"
@@ -21,10 +22,11 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { Separator } from "./ui/separator"
 
 // O cabeçalho agora recebe as configurações como uma propriedade.
-export function PublicHeader({ settings }: { settings: Settings | null }) {
-  const { userProfile, loading } = useAuth()
+export function PublicHeader() {
+  const { userProfile, loading, settings } = useAuth()
 
   const handleLogout = async () => {
     await auth.signOut()
@@ -49,13 +51,13 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
             <span className="text-xl font-bold hidden sm:inline">{settings?.appName || "ChuteFlix"}</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
-            <Link href="#features" onClick={scrollTo('features')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/#features" onClick={scrollTo('features')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Funcionalidades
             </Link>
-            <Link href="#boloes" onClick={scrollTo('boloes')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/#boloes" onClick={scrollTo('boloes')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Bolões
             </Link>
-            <Link href="#faq" onClick={scrollTo('faq')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/#faq" onClick={scrollTo('faq')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Dúvidas
             </Link>
         </nav>
@@ -124,15 +126,15 @@ export function PublicHeader({ settings }: { settings: Settings | null }) {
             </SheetTrigger>
             <SheetContent side="right">
                  <nav className="grid gap-6 text-lg font-medium mt-10">
-                    <Link href="#features" onClick={scrollTo('features')} className="text-muted-foreground hover:text-foreground">Funcionalidades</Link>
-                    <Link href="#boloes" onClick={scrollTo('boloes')} className="text-muted-foreground hover:text-foreground">Bolões</Link>
-                    <Link href="#faq" onClick={scrollTo('faq')} className="text-muted-foreground hover:text-foreground">Dúvidas</Link>
+                    <Link href="/#features" onClick={scrollTo('features')} className="text-muted-foreground hover:text-foreground">Funcionalidades</Link>
+                    <Link href="/#boloes" onClick={scrollTo('boloes')} className="text-muted-foreground hover:text-foreground">Bolões</Link>
+                    <Link href="/#faq" onClick={scrollTo('faq')} className="text-muted-foreground hover:text-foreground">Dúvidas</Link>
                     <Separator />
                      {!loading && !userProfile && (
-                        <>
-                            <Button variant="ghost" asChild><Link href="/login">Entrar</Link></Button>
+                        <div className="flex flex-col gap-4 mt-4">
+                            <Button variant="outline" asChild><Link href="/login">Entrar</Link></Button>
                             <Button asChild><Link href="/register">Criar Conta</Link></Button>
-                        </>
+                        </div>
                     )}
                  </nav>
             </SheetContent>

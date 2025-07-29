@@ -1,21 +1,24 @@
+"use client";
 
-import { getSettings } from "@/services/settings";
-import { LayoutClient } from "./layout-client";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { AuthProvider } from '@/context/auth-context';
+import { PublicHeader } from '@/components/public-header';
+import { LayoutClient } from '@/app/(main)/layout-client';
 
-// Este componente permanece no servidor para buscar os dados.
-export default async function MainLayout({
+export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Busca as configurações no servidor, uma única vez.
-  const settings = await getSettings();
 
-  // A lógica de renderização, provedores de contexto e componentes de cliente
-  // são todos delegados para o LayoutClient.
   return (
-    <LayoutClient settings={settings}>
-      {children}
-    </LayoutClient>
+    <AuthProvider>
+      <div className="flex flex-col min-h-screen">
+        {/* O PublicHeader é renderizado no layout raiz agora */}
+        <LayoutClient>{children}</LayoutClient>
+      </div>
+    </AuthProvider>
   );
 }
