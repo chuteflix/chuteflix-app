@@ -15,31 +15,31 @@ export default {
         code: ['monospace'],
       },
       colors: {
-        background: '#000000',
-        foreground: '#F9FAFB',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: '#39FF14', // Verde Neon
-          foreground: '#000000',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT: '#FF073A', // Vermelho Neon
-          foreground: '#FFFFFF',
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         accent: {
-          DEFAULT: '#FF8C00', // Laranja
-          foreground: '#FFFFFF',
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         card: {
-          DEFAULT: '#111827', // Cinza Escuro
-          foreground: '#F9FAFB',
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
         muted: {
-          DEFAULT: '#1F2937', // Cinza Médio
-          foreground: '#9CA3AF', // Cinza Claro
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
-        border: '#1F2937',
-        input: '#1F2937',
-        ring: '#39FF14',
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
         destructive: 'hsl(var(--destructive))',
         success: {
           DEFAULT: 'hsl(var(--success))',

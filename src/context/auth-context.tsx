@@ -5,11 +5,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
-import { UserProfile } from '@/services/users'; 
+import { UserProfile } from '@/types'; 
+import { getSettings } from '@/services/settings';
+import { Settings } from '@/types';
 
 interface AuthContextType {
   user: FirebaseUser | null;
   userProfile: UserProfile | null;
+  settings: Settings | null;
   userRole: string | null;
   loading: boolean;
   balance: number | null;
@@ -18,6 +21,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
+  settings: null,
   userRole: null,
   loading: true,
   balance: null,
@@ -26,60 +30,71 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Listener para as configurações do aplicativo
+  useEffect(() => {
+    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'app'), (doc) => {
+      if (doc.exists()) {
+        setSettings(doc.data() as Settings);
+      } else {
+        console.warn("Documento de configurações do app não encontrado!");
+        setSettings(null);
+      }
+    }, (error) => {
+      console.error("Erro ao buscar configurações do app:", error);
+      setSettings(null);
+    });
+
+    return () => unsubscribeSettings();
+  }, []);
+  
+  // Listener para o estado de autenticação do usuário
   useEffect(() => {
     let unsubscribeFirestore: Unsubscribe | undefined;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true); // Garante que o estado seja de carregamento ao reavaliar
+      setLoading(true);
       
       if (unsubscribeFirestore) {
-        unsubscribeFirestore(); // Cancela o listener anterior para evitar leaks
+        unsubscribeFirestore();
       }
 
       if (firebaseUser) {
         try {
-          // Força a atualização do token para garantir que as custom claims (role) estão atualizadas
           const idTokenResult = await firebaseUser.getIdTokenResult(true);
           const role = idTokenResult.claims.role as string | null;
           
-          setUser(firebaseUser); // Define o usuário base do Firebase
-          setUserRole(role); // Define a permissão (role)
+          setUser(firebaseUser);
+          setUserRole(role);
 
-          // Se for um usuário, busca o perfil no Firestore
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
-            if (doc.exists()) {
-              setUserProfile({ uid: doc.id, ...doc.data() } as UserProfile);
-            } else {
-              setUserProfile(null); // Usuário autenticado mas sem perfil no DB
-            }
-            setLoading(false); // Finaliza o carregamento após buscar o perfil
+            setUserProfile(doc.exists() ? { uid: doc.id, ...doc.data() } as UserProfile : null);
+            setLoading(false);
           }, (error) => {
-              console.error("Erro ao buscar perfil do usuário no Firestore:", error);
+              console.error("Erro ao buscar perfil do usuário:", error);
               setUserProfile(null);
-              setLoading(false); // Finaliza mesmo em caso de erro
+              setLoading(false);
           });
 
         } catch (error) {
-          console.error("Erro ao buscar token ou permissão do usuário:", error);
-          setUser(firebaseUser); // Mantém o usuário base
+          console.error("Erro ao buscar token do usuário:", error);
+          setUser(firebaseUser);
           setUserProfile(null);
           setUserRole(null);
-          setLoading(false); // Finaliza o carregamento em caso de erro de token/role
+          setLoading(false);
         }
       } else {
-        // Nenhum usuário logado
         setUser(null);
         setUserProfile(null);
         setUserRole(null);
-        setLoading(false); // Finaliza o carregamento
+        setLoading(false);
       }
     });
 
-    // Função de limpeza para desmontar os listeners quando o componente for destruído
     return () => {
       unsubscribeAuth();
       if (unsubscribeFirestore) {
@@ -89,7 +104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const balance = userProfile?.balance ?? null;
-  const value = { user, userProfile, userRole, loading, balance };
+  // Agora as configurações também fazem parte do contexto
+  const value = { user, userProfile, settings, userRole, loading, balance };
 
   return (
     <AuthContext.Provider value={value}>

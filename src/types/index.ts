@@ -1,3 +1,4 @@
+
 export interface Team {
   id: string;
   name: string;
@@ -67,16 +68,11 @@ export interface Transaction {
 }
 
 export interface Settings {
-  // Payment Settings
-  pixKey: string;
-  qrCodeUrl: string;
-  whatsappNumber: string;
-  minDeposit: number;
-  minWithdrawal: number;
-  // App Settings
   appName: string;
-  logoUrl: string;
-  faviconUrl: string;
-  metaDescription: string;
-  metaKeywords: string;
+  logoUrl?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+  pixKey?: string;
+  qrCodeBase64?: string;
+  whatsappNumber?: string;
 }
