@@ -1,7 +1,4 @@
 
-"use client"
-
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
@@ -18,26 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, User as UserIcon, LayoutDashboard, Wallet } from "lucide-react"
-import { getSettings } from "@/services/settings"
 import { Settings } from "@/types"
 import { Skeleton } from "./ui/skeleton"
 
-export function PublicHeader() {
+// O cabeçalho agora recebe as configurações como uma propriedade.
+export function PublicHeader({ settings }: { settings: Settings | null }) {
   const { user, userProfile, loading } = useAuth()
   const router = useRouter()
-  const [appSettings, setAppSettings] = useState<Settings | null>(null);
-  const [settingsLoading, setSettingsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAppSettings = async () => {
-        setSettingsLoading(true);
-        const settings = await getSettings();
-        setAppSettings(settings);
-        setSettingsLoading(false);
-    }
-    fetchAppSettings();
-  }, []);
-
 
   const handleLogout = async () => {
     await auth.signOut()
@@ -58,14 +42,12 @@ export function PublicHeader() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
-            {settingsLoading ? (
-                <Skeleton className="h-8 w-32" />
-            ) : (
-                <>
-                    <Logo logoUrl={appSettings?.logoUrl} appName={appSettings?.appName} />
-                    <span className="text-xl font-bold">{appSettings?.appName || "ChuteFlix"}</span>
-                </>
-            )}
+            {/* 
+              Não há mais estado de carregamento para as configurações.
+              Elas chegam prontas do servidor.
+            */}
+            <Logo logoUrl={settings?.logoUrl} appName={settings?.appName} />
+            <span className="text-xl font-bold">{settings?.appName || "ChuteFlix"}</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
             <Link href="#features" onClick={scrollTo('features')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -79,8 +61,9 @@ export function PublicHeader() {
             </Link>
         </nav>
         
+        {/* O carregamento agora é apenas para os dados do usuário */}
         {loading ? (
-            <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse" />
+            <Skeleton className="w-24 h-8 rounded-md" />
         ) : userProfile ? (
             <div className="flex items-center gap-4">
                 {userProfile.balance !== null && (

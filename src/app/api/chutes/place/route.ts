@@ -1,103 +1,69 @@
+
 import { NextResponse } from 'next/server';
-import { db, auth, admin } from '@/lib/firebase-admin'; // Usar o admin SDK
+import { db, auth } from '@/lib/firebase-admin'; // <-- IMPORTAÇÃO CORRETA
 import { FieldValue } from 'firebase-admin/firestore';
 
-const USERS_COLLECTION = 'users';
-const BOLOES_COLLECTION = 'boloes';
-const CHUTES_COLLECTION = 'chutes';
-const TRANSACTIONS_COLLECTION = 'transactions';
-
+// Rota para fazer uma aposta
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ message: 'Não autenticado.' }, { status: 401 });
+    const { bolaoId, userId, palpites } = await req.json();
+
+    if (!userId || !bolaoId || !palpites || palpites.length === 0) {
+      return NextResponse.json({ error: 'Dados da aposta inválidos.' }, { status: 400 });
     }
-    const idToken = authHeader.split('Bearer ')[1];
 
-    let decodedToken;
-    try {
-      decodedToken = await auth.verifyIdToken(idToken);
-    } catch (error) {
-      return NextResponse.json({ message: 'Token inválido.' }, { status: 401 });
-    }
-    
-    const userId = decodedToken.uid;
-    const { bolaoId, scoreTeam1, scoreTeam2, comment } = await req.json();
+    const userRef = db.collection('users').doc(userId);
+    const bolaoRef = db.collection('boloes').doc(bolaoId);
+    const apostaRef = db.collection('apostas').doc(); // Cria uma nova aposta
 
-    const userRef = db.collection(USERS_COLLECTION).doc(userId);
-    const bolaoRef = db.collection(BOLOES_COLLECTION).doc(bolaoId);
-
-    const result = await db.runTransaction(async (transaction) => {
-      // 1. LEITURAS PRIMEIRO
-      const bolaoDoc = await transaction.get(bolaoRef);
-      if (!bolaoDoc.exists) {
-        throw new Error('Bolão não encontrado.');
-      }
-      
+    // Inicia uma transação para garantir a consistência dos dados
+    await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
+      const bolaoDoc = await transaction.get(bolaoRef);
+
       if (!userDoc.exists) {
         throw new Error('Usuário não encontrado.');
       }
-
-      // 2. LÓGICA E VALIDAÇÕES
-      const bolaoData = bolaoDoc.data();
-      if (bolaoData?.status !== 'Aberto') {
-        throw new Error('Este bolão não está aberto para novas apostas.');
+      if (!bolaoDoc.exists) {
+        throw new Error('Bolão não encontrado.');
       }
 
-      const betAmount = bolaoData?.betAmount || 0;
-      if (betAmount <= 0) {
-          throw new Error('O valor da aposta para este bolão é inválido.');
-      }
+      const userData = userDoc.data()!;
+      const bolaoData = bolaoDoc.data()!;
+      const valorAposta = bolaoData.valorAposta || 0;
 
-      const userData = userDoc.data();
-      const userBalance = userData?.balance || 0;
-
-      if (userBalance < betAmount) {
+      // Verifica se o usuário tem saldo suficiente
+      if (userData.balance < valorAposta) {
         throw new Error('Saldo insuficiente para fazer a aposta.');
       }
 
-      // 3. ESCRITAS NO FINAL
-      // Deduz o valor da aposta do saldo do usuário
-      transaction.update(userRef, { balance: FieldValue.increment(-betAmount) });
+      // Debita o valor da aposta do saldo do usuário
+      transaction.update(userRef, {
+        balance: FieldValue.increment(-valorAposta)
+      });
 
-      // Cria o novo chute
-      const chuteRef = db.collection(CHUTES_COLLECTION).doc();
-      transaction.set(chuteRef, {
-        bolaoId,
+      // Cria a nova aposta
+      transaction.set(apostaRef, {
         userId,
-        scoreTeam1,
-        scoreTeam2,
-        amount: betAmount, // Usa o valor do bolão
-        comment,
-        createdAt: FieldValue.serverTimestamp(),
-        status: 'Em Aberto' // Status inicial
+        bolaoId,
+        palpites,
+        valor: valorAposta,
+        status: 'pendente',
+        createdAt: FieldValue.serverTimestamp()
       });
 
-      // Cria a transação de débito
-      const transactionRef = db.collection(TRANSACTIONS_COLLECTION).doc();
-      transaction.set(transactionRef, {
-        uid: userId,
-        type: 'bet_placement',
-        amount: -betAmount, // Valor negativo para débito
-        description: `Aposta no bolão: ${bolaoData.name || bolaoId}`,
-        status: 'completed',
-        createdAt: FieldValue.serverTimestamp(),
-        metadata: {
-            bolaoId: bolaoId,
-            chuteId: chuteRef.id
-        }
+      // Incrementa o contador de apostas e o total arrecadado no bolão
+      transaction.update(bolaoRef, {
+        totalApostas: FieldValue.increment(1),
+        totalArrecadado: FieldValue.increment(valorAposta)
       });
-
-      return { chuteId: chuteRef.id };
     });
 
-    return NextResponse.json({ message: 'Aposta realizada com sucesso!', chuteId: result.chuteId }, { status: 201 });
+    return NextResponse.json({ success: true, apostaId: apostaRef.id }, { status: 200 });
 
-  } catch (error: any) {
-    console.error('Erro ao realizar aposta:', error);
-    // Retorna a mensagem de erro específica da transação ou uma genérica
-    return NextResponse.json({ message: error.message || 'Erro interno do servidor.' }, { status: 400 }); // Status 400 para erros de regra de negócio
+  } catch (error) {
+    console.error('Erro ao fazer aposta:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

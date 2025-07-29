@@ -1,12 +1,21 @@
 
-import React from 'react';
-import { MainLayoutClient } from './layout-client'; // Importa o novo componente de cliente
+import { getSettings } from "@/services/settings";
+import { LayoutClient } from "./layout-client";
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
-  // Este é um Server Component. A lógica foi movida.
+// Este componente permanece no servidor para buscar os dados.
+export default async function MainLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Busca as configurações no servidor, uma única vez.
+  const settings = await getSettings();
+
+  // A lógica de renderização, provedores de contexto e componentes de cliente
+  // são todos delegados para o LayoutClient.
   return (
-    <MainLayoutClient>
+    <LayoutClient settings={settings}>
       {children}
-    </MainLayoutClient>
+    </LayoutClient>
   );
 }
