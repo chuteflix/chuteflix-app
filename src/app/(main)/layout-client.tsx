@@ -55,21 +55,8 @@ function AppLayoutRouter({ children, settings }: { children: React.ReactNode; se
     const pathname = usePathname();
     const { loading, user } = useAuth();
 
-    // Define quais rotas usarão o layout de dashboard
-    const dashboardRoutes = [
-        '/admin', '/inicio', '/meus-chutes', '/profile', 
-        '/recarga', '/saque', '/transacoes', '/settings'
-    ];
-    
-    // As rotas de login/registro são tratadas separadamente e não usam nenhum destes layouts
+    // Define quais rotas são de autenticação e não usam nenhum layout principal
     const authRoutes = ['/login', '/register'];
-    
-    if (authRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-
-    // A rota é de dashboard se começar com um dos caminhos definidos E o usuário estiver logado
-    const isDashboardRoute = user && dashboardRoutes.some(route => pathname.startsWith(route));
 
     // Loader para evitar o "flash" do layout incorreto durante a verificação de auth.
     if (loading) {
@@ -80,13 +67,23 @@ function AppLayoutRouter({ children, settings }: { children: React.ReactNode; se
         );
     }
     
-    // Se a rota é de dashboard, mostra o dashboard
-    if (isDashboardRoute) {
-        return <DashboardLayout>{children}</DashboardLayout>;
+    // Rotas de autenticação são renderizadas sem layout
+    if (authRoutes.includes(pathname)) {
+        return <>{children}</>;
     }
     
-    // Por padrão (rotas públicas ou se tentar acessar dashboard sem logar), mostra o layout público
-    return <PublicLayout settings={settings}>{children}</PublicLayout>;
+    // Se o usuário não estiver logado, sempre mostra o layout público
+    if (!user) {
+        return <PublicLayout settings={settings}>{children}</PublicLayout>;
+    }
+
+    // Se o usuário está logado
+    // Verifica se a rota é a página inicial (pública) ou uma rota do painel
+    if (pathname === '/') {
+        return <PublicLayout settings={settings}>{children}</PublicLayout>;
+    } else {
+        return <DashboardLayout>{children}</DashboardLayout>;
+    }
 }
 
 
