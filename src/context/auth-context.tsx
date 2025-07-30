@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Listener para as configurações do aplicativo
   useEffect(() => {
-    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'app'), (doc) => {
+    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'main_settings'), (doc) => { // Alterado de 'app' para 'main_settings'
       if (doc.exists()) {
         setSettings(doc.data() as Settings);
       } else {
@@ -85,7 +85,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } finally {
           setLoading(false); // Garante que o loading seja false após a tentativa de autenticação e busca de perfil
         }
-      } else {
+      }
+      else {
         setUser(null);
         setUserProfile(null);
         setUserRole(null);

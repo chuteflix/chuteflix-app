@@ -17,23 +17,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getSettings, saveSettings } from "@/services/settings";
-import { uploadFileToApi } from "@/services/upload"; // Importar a função de upload
+import { uploadFileToApi } from "@/services/upload";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "@/types";
 import Image from "next/image";
 import { ColorInput } from "@/components/admin/color-input";
+import { hexToHSL } from "@/lib/colors";
 
-// Funções para aplicar máscaras (simplificadas para o front-end)
 const applyCnpjMask = (value: string) => {
   if (!value) return "";
-  value = value.replace(/\D/g, ""); // Remove tudo que não é dígito
+  value = value.replace(/\D/g, "");
   value = value.replace(/^(\d{2})(\d)/, "$1.$2");
   value = value.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
   value = value.replace(/\.(\d{3})(\d)/, ".$1/$2");
   value = value.replace(/(\d{4})(\d)/, "$1-$2");
-  return value.slice(0, 18); // Limita ao tamanho do CNPJ formatado
+  return value.slice(0, 18);
 };
 
 const applyPhoneMask = (value: string) => {
@@ -41,14 +41,13 @@ const applyPhoneMask = (value: string) => {
   value = value.replace(/\D/g, "");
   value = value.replace(/^(\d\d)(\d)/g, "($1) $2");
   value = value.replace(/(\d{5})(\d)/, "$1-$2");
-  return value.slice(0, 15); // Limita ao tamanho do telefone formatado (XX) XXXXX-XXXX
+  return value.slice(0, 15);
 };
-
 
 const settingsSchema = z.object({
   appName: z.string().min(1, "Nome do aplicativo é obrigatório"),
   logoUrl: z.string().optional(),
-  faviconUrl: z.string().optional(), // Adicionado faviconUrl
+  faviconUrl: z.string().optional(),
   metaDescription: z.string().optional(),
   metaKeywords: z.string().optional(),
   pixKey: z.string().optional(),
@@ -57,11 +56,11 @@ const settingsSchema = z.object({
   minDeposit: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(0, "O depósito mínimo não pode ser negativo.").optional()
-  ), // Adicionado minDeposit
+  ),
   minWithdrawal: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(0, "O saque mínimo não pode ser negativo.").optional()
-  ), // Adicionado minWithdrawal
+  ),
   colors: z.object({
     primary: z.string().optional().nullable(),
     secondary: z.string().optional().nullable(),
@@ -73,38 +72,40 @@ const settingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
+// Cores padrão definidas
+const defaultColors = {
+  primary: "#39D353",
+  secondary: "#3F444E",
+  accent: "#39D353",
+  background: "#121212",
+  text: "#FFFFFF",
+};
+
 export default function SettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [faviconFile, setFaviconFile] = useState<File | null>(null); // Novo estado para favicon
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
-  const [previewFavicon, setPreviewFavicon] = useState<string | null>(null); // Novo estado para preview favicon
+  const [previewFavicon, setPreviewFavicon] = useState<string | null>(null);
   const [previewQr, setPreviewQr] = useState<string | null>(null);
-
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       appName: "",
       logoUrl: "",
-      faviconUrl: "", // Inicializar
+      faviconUrl: "",
       metaDescription: "",
       metaKeywords: "",
       pixKey: "",
       qrCodeBase64: "",
       whatsappNumber: "",
-      minDeposit: 0, // Inicializar
-      minWithdrawal: 0, // Inicializar
-      colors: {
-        primary: "#000000",
-        secondary: "#000000",
-        accent: "#000000",
-        background: "#000000",
-        text: "#000000",
-      },
+      minDeposit: 0,
+      minWithdrawal: 0,
+      colors: defaultColors, // Usando as cores padrão
     },
   });
 
@@ -114,17 +115,11 @@ export default function SettingsPage() {
       const settingsData = await getSettings();
       if (settingsData) {
         form.reset({
-          ...settingsData as SettingsFormValues,
-          colors: settingsData.colors || {
-            primary: "#000000",
-            secondary: "#000000",
-            accent: "#000000",
-            background: "#000000",
-            text: "#000000",
-          }
-        });
+          ...settingsData,
+          colors: settingsData.colors || defaultColors,
+        } as SettingsFormValues);
         if(settingsData.logoUrl) setPreviewLogo(settingsData.logoUrl);
-        if(settingsData.faviconUrl) setPreviewFavicon(settingsData.faviconUrl); // Carregar preview do favicon
+        if(settingsData.faviconUrl) setPreviewFavicon(settingsData.faviconUrl);
         if(settingsData.qrCodeBase64) setPreviewQr(settingsData.qrCodeBase64);
       }
       setLoading(false);
@@ -149,7 +144,7 @@ export default function SettingsPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        form.setValue('faviconUrl', base64String); // Set base64 directly to form
+        form.setValue('faviconUrl', base64String);
         setPreviewFavicon(base64String);
       };
       reader.readAsDataURL(file);
@@ -162,12 +157,12 @@ export default function SettingsPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        form.setValue('qrCodeBase64', base64String); // Define a string base64 diretamente
+        form.setValue('qrCodeBase64', base64String);
         setPreviewQr(base64String);
       };
       reader.readAsDataURL(file);
     } else {
-      form.setValue('qrCodeBase64', ""); // Define como string vazia se nenhum arquivo for selecionado
+      form.setValue('qrCodeBase64', "");
       setPreviewQr(null);
     }
   };
@@ -177,12 +172,12 @@ export default function SettingsPage() {
     try {
       let finalLogoUrl = values.logoUrl;
       if (logoFile) {
-        finalLogoUrl = await uploadFileToApi(logoFile); // Realiza o upload do logo
+        finalLogoUrl = await uploadFileToApi(logoFile);
       }
       
       let finalFaviconUrl = values.faviconUrl;
       if (faviconFile) {
-        finalFaviconUrl = await uploadFileToApi(faviconFile); // Realiza o upload do favicon
+        finalFaviconUrl = await uploadFileToApi(faviconFile);
       }
 
       const dataToSave = { 
@@ -191,11 +186,11 @@ export default function SettingsPage() {
         faviconUrl: finalFaviconUrl,
         qrCodeBase64: values.qrCodeBase64 || "", 
         colors: {
-          primary: values.colors?.primary || "#000000",
-          secondary: values.colors?.secondary || "#000000",
-          accent: values.colors?.accent || "#000000",
-          background: values.colors?.background || "#000000",
-          text: values.colors?.text || "#000000",
+          primary: values.colors?.primary || defaultColors.primary,
+          secondary: values.colors?.secondary || defaultColors.secondary,
+          accent: values.colors?.accent || defaultColors.accent,
+          background: values.colors?.background || defaultColors.background,
+          text: values.colors?.text || defaultColors.text,
         },
         minDeposit: Number(values.minDeposit),
         minWithdrawal: Number(values.minWithdrawal),
@@ -323,7 +318,6 @@ export default function SettingsPage() {
                         </div>
                         <FormMessage>{form.formState.errors.qrCodeBase64?.message}</FormMessage>
                     </FormItem>
-                     {/* Campo oculto para qrCodeBase64, pois é preenchido via onChange */}
                      <FormField
                         control={form.control}
                         name="qrCodeBase64"
