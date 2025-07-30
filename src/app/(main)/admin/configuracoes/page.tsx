@@ -20,7 +20,7 @@ import { getSettings, saveSettings } from "@/services/settings";
 import { uploadFileToApi } from "@/services/upload";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Settings } from "@/types";
 import Image from "next/image";
 import { ColorInput } from "@/components/admin/color-input";
@@ -68,6 +68,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingColors, setIsSavingColors] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
@@ -132,6 +133,26 @@ export default function SettingsPage() {
     }
   };
 
+  const onSaveColors = async () => {
+    setIsSavingColors(true);
+    const colors = form.getValues('colors');
+    try {
+      await saveSettings({ colors });
+      toast({
+        title: "Cores Salvas",
+        description: "As cores do aplicativo foram atualizadas.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao Salvar Cores",
+        description: "Não foi possível salvar as cores.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingColors(false);
+    }
+  };
 
   async function onSubmit(values: SettingsFormValues) {
     setIsSaving(true);
@@ -147,17 +168,15 @@ export default function SettingsPage() {
       }
 
       const dataToSave: Partial<Settings> = {
-        ...values,
+        appName: values.appName,
+        metaDescription: values.metaDescription,
+        metaKeywords: values.metaKeywords,
+        pixKey: values.pixKey,
+        whatsappNumber: values.whatsappNumber,
         logoUrl: finalLogoUrl,
         faviconUrl: finalFaviconUrl,
         qrCodeBase64: values.qrCodeBase64 || "",
-        colors: {
-          primary: values.colors?.primary || defaultColors.primary,
-          secondary: values.colors?.secondary || defaultColors.secondary,
-          accent: values.colors?.accent || defaultColors.accent,
-          background: values.colors?.background || defaultColors.background,
-          text: values.colors?.text || defaultColors.text,
-        },
+        colors: values.colors,
         minDeposit: Number(values.minDeposit) || 0,
         minWithdrawal: Number(values.minWithdrawal) || 0,
       };
@@ -262,10 +281,15 @@ export default function SettingsPage() {
                 />
               ))}
             </CardContent>
+            <CardFooter>
+              <Button type="button" onClick={onSaveColors} disabled={isSavingColors}>
+                {isSavingColors ? <Spinner /> : "Salvar Cores"}
+              </Button>
+            </CardFooter>
           </Card>
 
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? <Spinner /> : "Salvar Alterações"}
+            {isSaving ? <Spinner /> : "Salvar Alterações Gerais"}
           </Button>
         </form>
       </Form>
