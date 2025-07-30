@@ -6,6 +6,7 @@ import { PublicHeader } from "@/components/public-header";
 import { Settings } from "@/types";
 import { usePathname } from 'next/navigation';
 import { Loader2 } from "lucide-react";
+import { BottomTabBar } from "@/components/bottom-tab-bar"; // Importar o novo componente
 
 // Layout para páginas públicas (homepage, etc.)
 function PublicLayout({ children, settings }: { children: React.ReactNode; settings: Settings | null; }) {
@@ -41,10 +42,12 @@ function DashboardLayout({ children, settings }: { children: React.ReactNode; se
     <div className="flex h-screen bg-background">
       <Sidebar role={displayRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <PublicHeader /> {/* PublicHeader adicionado aqui para o layout do painel */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <PublicHeader />
+        {/* Adicionar pb-16 para dar espaço à BottomTabBar em mobile (md:hidden) */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-16 md:pb-8"> 
           {children}
         </main>
+        <BottomTabBar /> {/* Renderizar a barra de navegação inferior */}
       </div>
     </div>
   );
