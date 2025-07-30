@@ -35,6 +35,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Separator } from "./ui/separator"
+import { useState } from "react"
 
 interface PublicHeaderProps {
   showNavLinks?: boolean;
@@ -51,6 +52,7 @@ const userMenu = [
 export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
   const { userProfile, loading, settings } = useAuth()
   const pathname = usePathname()
+  const [isSheetOpen, setIsSheetOpen] = useState(false); // Novo estado para controlar o Sheet
 
   const handleLogout = async () => {
     await auth.signOut()
@@ -61,6 +63,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
     const element = document.getElementById(id)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' })
+      setIsSheetOpen(false); // Fecha o sheet ao clicar em um link de scroll
     }
   }
   
@@ -140,7 +143,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
             </div>
         )}
         <div className="md:hidden">
-            <Sheet>
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}> {/* Controla o estado do sheet */}
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
                         <Menu className="h-5 w-5" />
@@ -150,7 +153,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                 <SheetContent side="right" className="w-full max-w-sm">
                     <div className="flex flex-col h-full">
                         <div className="flex items-center justify-between border-b pb-4">
-                           <Link href={userProfile ? "/inicio" : "/"} className="flex items-center gap-2">
+                           <Link href={userProfile ? "/inicio" : "/"} className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}> {/* Fecha ao clicar no logo */}
                                 <Logo logoUrl={settings?.logoUrl} />
                                 <span className="text-xl font-bold">{settings?.appName || "ChuteFlix"}</span>
                             </Link>
@@ -169,6 +172,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                                             key={item.label}
                                             href={item.href}
                                             className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-muted ${pathname === item.href ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
+                                            onClick={() => setIsSheetOpen(false)} // Fecha o sheet ao clicar no link
                                         >
                                             <item.icon className="h-5 w-5" />
                                             {item.label}
@@ -191,11 +195,11 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                         <div className="border-t mt-auto pt-4">
                             {userProfile ? (
                                 <div className="space-y-2">
-                                     <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted">
+                                     <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted" onClick={() => setIsSheetOpen(false)}> {/* Fecha ao clicar no link de perfil */}
                                         <UserIcon className="h-5 w-5" />
                                         Editar Perfil
                                      </Link>
-                                     <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted">
+                                     <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted" onClick={() => setIsSheetOpen(false)}> {/* Fecha ao clicar no link de settings */}
                                         <SettingsIcon className="h-5 w-5" />
                                         Chave PIX
                                      </Link>
@@ -207,8 +211,8 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-4">
-                                    <Button variant="outline" asChild><Link href="/login">Entrar</Link></Button>
-                                    <Button asChild><Link href="/register">Criar Conta</Link></Button>
+                                    <Button variant="outline" asChild><Link href="/login" onClick={() => setIsSheetOpen(false)}>Entrar</Link></Button> {/* Fecha ao clicar em Entrar */}
+                                    <Button asChild><Link href="/register" onClick={() => setIsSheetOpen(false)}>Criar Conta</Link></Button> {/* Fecha ao clicar em Criar Conta */}
                                 </div>
                             )}
                         </div>
