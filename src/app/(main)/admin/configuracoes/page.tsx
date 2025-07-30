@@ -16,12 +16,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getSettings, saveSettings, uploadQrCode } from "@/services/settings";
+import { getSettings, saveSettings } from "@/services/settings";
+import { uploadFileToApi } from "@/services/upload"; // Importar a função de upload
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "@/types";
 import Image from "next/image";
+import { ColorInput } from "@/components/admin/color-input";
 
 // Funções para aplicar máscaras (simplificadas para o front-end)
 const applyCnpjMask = (value: string) => {
@@ -60,6 +62,13 @@ const settingsSchema = z.object({
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(0, "O saque mínimo não pode ser negativo.").optional()
   ), // Adicionado minWithdrawal
+  colors: z.object({
+    primary: z.string().optional().nullable(),
+    secondary: z.string().optional().nullable(),
+    accent: z.string().optional().nullable(),
+    background: z.string().optional().nullable(),
+    text: z.string().optional().nullable(),
+  }).optional().nullable(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -70,7 +79,6 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null); // Novo estado para favicon
-  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
   
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
   const [previewFavicon, setPreviewFavicon] = useState<string | null>(null); // Novo estado para preview favicon
@@ -90,6 +98,13 @@ export default function SettingsPage() {
       whatsappNumber: "",
       minDeposit: 0, // Inicializar
       minWithdrawal: 0, // Inicializar
+      colors: {
+        primary: "#000000",
+        secondary: "#000000",
+        accent: "#000000",
+        background: "#000000",
+        text: "#000000",
+      },
     },
   });
 
@@ -98,7 +113,16 @@ export default function SettingsPage() {
       setLoading(true);
       const settingsData = await getSettings();
       if (settingsData) {
-        form.reset(settingsData as SettingsFormValues);
+        form.reset({
+          ...settingsData as SettingsFormValues,
+          colors: settingsData.colors || {
+            primary: "#000000",
+            secondary: "#000000",
+            accent: "#000000",
+            background: "#000000",
+            text: "#000000",
+          }
+        });
         if(settingsData.logoUrl) setPreviewLogo(settingsData.logoUrl);
         if(settingsData.faviconUrl) setPreviewFavicon(settingsData.faviconUrl); // Carregar preview do favicon
         if(settingsData.qrCodeBase64) setPreviewQr(settingsData.qrCodeBase64);
@@ -138,35 +162,41 @@ export default function SettingsPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        form.setValue('qrCodeBase64', base64String);
+        form.setValue('qrCodeBase64', base64String); // Define a string base64 diretamente
         setPreviewQr(base64String);
       };
       reader.readAsDataURL(file);
+    } else {
+      form.setValue('qrCodeBase64', ""); // Define como string vazia se nenhum arquivo for selecionado
+      setPreviewQr(null);
     }
   };
 
   async function onSubmit(values: SettingsFormValues) {
     setIsSaving(true);
     try {
-      let finalLogoUrl = form.getValues("logoUrl");
+      let finalLogoUrl = values.logoUrl;
       if (logoFile) {
-        // Simulação do upload, em um caso real usaria um serviço de upload
-        finalLogoUrl = "https://placehold.co/128x32/png"; // URL de placeholder
-        console.log("Logo uploaded, URL:", finalLogoUrl);
+        finalLogoUrl = await uploadFileToApi(logoFile); // Realiza o upload do logo
       }
       
-      let finalFaviconUrl = form.getValues("faviconUrl");
+      let finalFaviconUrl = values.faviconUrl;
       if (faviconFile) {
-        // Simulação do upload, em um caso real usaria um serviço de upload
-        finalFaviconUrl = "https://placehold.co/32x32/png"; // URL de placeholder
-        console.log("Favicon uploaded, URL:", finalFaviconUrl);
+        finalFaviconUrl = await uploadFileToApi(faviconFile); // Realiza o upload do favicon
       }
 
       const dataToSave = { 
         ...values, 
         logoUrl: finalLogoUrl,
         faviconUrl: finalFaviconUrl,
-        // Convert number inputs back to number if they came as string from form
+        qrCodeBase64: values.qrCodeBase64 || "", 
+        colors: {
+          primary: values.colors?.primary || "#000000",
+          secondary: values.colors?.secondary || "#000000",
+          accent: values.colors?.accent || "#000000",
+          background: values.colors?.background || "#000000",
+          text: values.colors?.text || "#000000",
+        },
         minDeposit: Number(values.minDeposit),
         minWithdrawal: Number(values.minWithdrawal),
       };
@@ -178,8 +208,10 @@ export default function SettingsPage() {
         variant: "success",
       });
     } catch (error) {
+      console.error("Erro ao salvar configurações:", error);
       toast({
         title: "Erro ao salvar configurações",
+        description: "Ocorreu um erro ao tentar salvar as configurações.",
         variant: "destructive",
       });
     } finally {
@@ -261,6 +293,7 @@ export default function SettingsPage() {
                                 <FormLabel>Depósito Mínimo (R$)</FormLabel>
                                 <FormControl>
                                     <Input type="number" placeholder="10.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                               
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -372,6 +405,71 @@ export default function SettingsPage() {
                             </FormControl>
                             <FormMessage />
                             <p className="text-muted-foreground text-sm">Separe as palavras-chave por vírgula.</p>
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
+
+            {/* Módulo 3: Cores do Aplicativo */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Cores do Aplicativo</CardTitle>
+                    <CardDescription>Personalize as cores do seu site.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="colors.primary"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <ColorInput label="Primária" {...field} />
+                            </FormControl>
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="colors.secondary"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <ColorInput label="Secundária" {...field} />
+                            </FormControl>
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="colors.accent"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <ColorInput label="Destaque" {...field} />
+                            </FormControl>
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="colors.background"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <ColorInput label="Fundo" {...field} />
+                            </FormControl>
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="colors.text"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <ColorInput label="Texto" {...field} />
+                            </FormControl>
                         </FormItem>
                         )}
                     />

@@ -1,43 +1,32 @@
-'use client';
 
-import { Controller, Control } from 'react-hook-form';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+"use client"
 
-interface ColorInputProps {
-  name: string;
+import * as React from "react"
+import { Input, InputProps } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+interface ColorInputProps extends InputProps {
   label: string;
-  control: Control<any>;
-  error?: string;
 }
 
-export function ColorInput({ name, label, control, error }: ColorInputProps) {
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
+const ColorInput = React.forwardRef<HTMLInputElement, ColorInputProps>(
+  ({ label, ...props }, ref) => {
+    return (
       <div className="flex items-center gap-2">
-        <Controller
-          name={name}
-          control={control}
-          render={({ field }) => (
-            <>
-              <Input
-                id={name}
-                type="color"
-                className="w-12 h-10 p-1"
-                {...field}
-              />
-              <Input
-                type="text"
-                className="flex-1"
-                placeholder="#000000"
-                {...field}
-              />
-            </>
-          )}
-        />
+        <Label htmlFor={props.id} className="w-20">{label}</Label>
+        <div className="relative flex items-center">
+            <Input
+            type="color"
+            className="w-12 h-10 p-1 border-none cursor-pointer"
+            ref={ref}
+            {...props}
+            />
+            <span className="ml-2 uppercase">{props.value}</span>
+        </div>
       </div>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-    </div>
-  );
-}
+    )
+  }
+)
+ColorInput.displayName = "ColorInput"
+
+export { ColorInput }

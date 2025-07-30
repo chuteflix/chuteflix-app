@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -13,45 +14,20 @@ const DynamicStyler = () => {
 
     const {
       primary,
-      primaryForeground,
       secondary,
-      secondaryForeground,
       accent,
-      accentForeground,
       background,
-      foreground,
-      card,
-      cardForeground,
-      border,
-      input,
-      ring,
+      text: foreground,
     } = settings.colors;
 
-    const css = `
-      :root {
-        --background: ${background};
-        --foreground: ${foreground};
-        --card: ${card};
-        --card-foreground: ${cardForeground};
-        --primary: ${primary};
-        --primary-foreground: ${primaryForeground};
-        --secondary: ${secondary};
-        --secondary-foreground: ${secondaryForeground};
-        --accent: ${accent};
-        --accent-foreground: ${accentForeground};
-        --border: ${border};
-        --input: ${input};
-        --ring: ${ring};
-      }
-    `;
+    const root = document.documentElement;
 
-    const style = document.createElement('style');
-    style.innerHTML = css;
-    document.head.appendChild(style);
+    if (primary) root.style.setProperty('--primary', primary);
+    if (secondary) root.style.setProperty('--secondary', secondary);
+    if (accent) root.style.setProperty('--accent', accent);
+    if (background) root.style.setProperty('--background', background);
+    if (foreground) root.style.setProperty('--foreground', foreground);
 
-    return () => {
-      document.head.removeChild(style);
-    };
   }, [settings, loading]);
 
   return null;
