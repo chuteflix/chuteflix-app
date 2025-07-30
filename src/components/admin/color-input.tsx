@@ -11,25 +11,29 @@ interface ColorInputProps extends InputProps {
 
 const ColorInput = React.forwardRef<HTMLInputElement, ColorInputProps>(
   ({ label, value, onChange, id, ...props }, ref) => {
+    
+    // Garante que o valor exibido seja sempre uma string, evitando erros com 'null' ou 'undefined'
+    const displayValue = typeof value === 'string' ? value : '';
 
     return (
       <div className="flex flex-col gap-2">
         <Label htmlFor={id}>{label}</Label>
         <div className="flex items-center gap-2 border rounded-md pr-2">
-            {/* O seletor de cores atua como um botão para alterar o estado */}
+            {/* O seletor de cores atua como um auxiliar visual */}
             <Input
               type="color"
               id={`${id}-picker`}
               className="w-12 h-10 p-1 border-none cursor-pointer bg-transparent"
-              value={String(value) || '#000000'}
+              // O seletor de cor precisa de um valor hexadecimal válido para funcionar
+              value={displayValue.startsWith('#') ? displayValue : '#000000'}
               onChange={onChange} 
             />
-            {/* O input de texto é a fonte de verdade para o react-hook-form */}
+            {/* O input de texto é a fonte principal de dados para o formulário */}
             <Input
                 ref={ref} 
                 id={id}
                 type="text"
-                value={String(value) || ''}
+                value={displayValue}
                 onChange={onChange} 
                 className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none uppercase"
                 placeholder="#RRGGBB"
