@@ -23,14 +23,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Settings } from "@/types";
 import Image from "next/image";
 
+// Funções para aplicar máscaras (simplificadas para o front-end)
+const applyCnpjMask = (value: string) => {
+  if (!value) return "";
+  value = value.replace(/\D/g, ""); // Remove tudo que não é dígito
+  value = value.replace(/^(\d{2})(\d)/, "$1.$2");
+  value = value.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+  value = value.replace(/\.(\d{3})(\d)/, ".$1/$2");
+  value = value.replace(/(\d{4})(\d)/, "$1-$2");
+  return value.slice(0, 18); // Limita ao tamanho do CNPJ formatado
+};
+
+const applyPhoneMask = (value: string) => {
+  if (!value) return "";
+  value = value.replace(/\D/g, "");
+  value = value.replace(/^(\d\d)(\d)/g, "($1) $2");
+  value = value.replace(/(\d{5})(\d)/, "$1-$2");
+  return value.slice(0, 15); // Limita ao tamanho do telefone formatado (XX) XXXXX-XXXX
+};
+
+
 const settingsSchema = z.object({
   appName: z.string().min(1, "Nome do aplicativo é obrigatório"),
   logoUrl: z.string().optional(),
+  faviconUrl: z.string().optional(), // Adicionado faviconUrl
   metaDescription: z.string().optional(),
   metaKeywords: z.string().optional(),
   pixKey: z.string().optional(),
-  qrCodeBase64: z.string().optional(), // Mantido como base64
+  qrCodeBase64: z.string().optional(),
   whatsappNumber: z.string().optional(),
+  minDeposit: z.preprocess(
+    (val) => (val === "" ? undefined : Number(val)),
+    z.number().min(0, "O depósito mínimo não pode ser negativo.").optional()
+  ), // Adicionado minDeposit
+  minWithdrawal: z.preprocess(
+    (val) => (val === "" ? undefined : Number(val)),
+    z.number().min(0, "O saque mínimo não pode ser negativo.").optional()
+  ), // Adicionado minWithdrawal
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -39,21 +68,28 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null); // Novo estado para favicon
+  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
+  
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
+  const [previewFavicon, setPreviewFavicon] = useState<string | null>(null); // Novo estado para preview favicon
   const [previewQr, setPreviewQr] = useState<string | null>(null);
+
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       appName: "",
       logoUrl: "",
+      faviconUrl: "", // Inicializar
       metaDescription: "",
       metaKeywords: "",
       pixKey: "",
       qrCodeBase64: "",
       whatsappNumber: "",
+      minDeposit: 0, // Inicializar
+      minWithdrawal: 0, // Inicializar
     },
   });
 
@@ -64,6 +100,7 @@ export default function SettingsPage() {
       if (settingsData) {
         form.reset(settingsData as SettingsFormValues);
         if(settingsData.logoUrl) setPreviewLogo(settingsData.logoUrl);
+        if(settingsData.faviconUrl) setPreviewFavicon(settingsData.faviconUrl); // Carregar preview do favicon
         if(settingsData.qrCodeBase64) setPreviewQr(settingsData.qrCodeBase64);
       }
       setLoading(false);
@@ -81,6 +118,20 @@ export default function SettingsPage() {
     }
   };
 
+  const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFaviconFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        form.setValue('faviconUrl', base64String); // Set base64 directly to form
+        setPreviewFavicon(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleQrCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -94,7 +145,6 @@ export default function SettingsPage() {
     }
   };
 
-
   async function onSubmit(values: SettingsFormValues) {
     setIsSaving(true);
     try {
@@ -105,7 +155,21 @@ export default function SettingsPage() {
         console.log("Logo uploaded, URL:", finalLogoUrl);
       }
       
-      const dataToSave = { ...values, logoUrl: finalLogoUrl };
+      let finalFaviconUrl = form.getValues("faviconUrl");
+      if (faviconFile) {
+        // Simulação do upload, em um caso real usaria um serviço de upload
+        finalFaviconUrl = "https://placehold.co/32x32/png"; // URL de placeholder
+        console.log("Favicon uploaded, URL:", finalFaviconUrl);
+      }
+
+      const dataToSave = { 
+        ...values, 
+        logoUrl: finalLogoUrl,
+        faviconUrl: finalFaviconUrl,
+        // Convert number inputs back to number if they came as string from form
+        minDeposit: Number(values.minDeposit),
+        minWithdrawal: Number(values.minWithdrawal),
+      };
       await saveSettings(dataToSave);
       
       toast({
@@ -136,7 +200,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2 text-foreground">
-              Configurações Gerais
+              Configurações
           </h1>
           <p className="text-muted-foreground">
               Gerencie as informações e a identidade da sua plataforma.
@@ -145,68 +209,11 @@ export default function SettingsPage() {
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* Módulo 1: Informações de Pagamento */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Configurações do Aplicativo</CardTitle>
-                    <CardDescription>Personalize o nome, logo e SEO do seu site.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="appName"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nome do Aplicativo</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Nome do aplicativo" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormItem>
-                        <FormLabel>Logotipo</FormLabel>
-                        <div className="flex items-center gap-4">
-                            {previewLogo && <Image src={previewLogo} alt="Preview do Logo" width={128} height={32} className="h-8 w-auto bg-muted p-1 rounded-md" />}
-                            <FormControl>
-                                <Input type="file" onChange={handleLogoFileChange} accept="image/*" />
-                            </FormControl>
-                        </div>
-                        <FormMessage />
-                    </FormItem>
-                     <FormField
-                        control={form.control}
-                        name="metaDescription"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Meta Descrição (SEO)</FormLabel>
-                            <FormControl>
-                               <Textarea placeholder="Descreva seu site para os motores de busca." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="metaKeywords"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Palavras-chave (SEO)</FormLabel>
-                            <FormControl>
-                               <Input placeholder="bolão, futebol, apostas, ..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Configurações de Pagamento</CardTitle>
-                    <CardDescription>Configure os métodos para depósitos e saques na plataforma.</CardDescription>
+                    <CardTitle>Informações de Pagamento</CardTitle>
+                    <CardDescription>Gerencie os dados de pagamento que serão exibidos aos usuários.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <FormField
@@ -214,9 +221,14 @@ export default function SettingsPage() {
                         name="pixKey"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Chave Pix</FormLabel>
+                            <FormLabel>Chave PIX (CNPJ)</FormLabel>
                             <FormControl>
-                                <Input placeholder="Sua chave pix" {...field} />
+                                <Input 
+                                    placeholder="XX.XXX.XXX/XXXX-XX" 
+                                    {...field} 
+                                    value={applyCnpjMask(field.value || "")}
+                                    onChange={(e) => field.onChange(applyCnpjMask(e.target.value))}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -227,24 +239,58 @@ export default function SettingsPage() {
                         name="whatsappNumber"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Número do WhatsApp para Suporte</FormLabel>
+                            <FormLabel>Número de WhatsApp</FormLabel>
                             <FormControl>
-                                <Input placeholder="+5511999999999" {...field} />
+                                <Input 
+                                    placeholder="(XX) XXXXX-XXXX" 
+                                    {...field} 
+                                    value={applyPhoneMask(field.value || "")}
+                                    onChange={(e) => field.onChange(applyPhoneMask(e.target.value))}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                         )}
                     />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="minDeposit"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Depósito Mínimo (R$)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="10.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="minWithdrawal"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Saque Mínimo (R$)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="10.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
                     <FormItem>
-                        <FormLabel>QR Code PIX (gerado pelo seu banco)</FormLabel>
+                        <FormLabel>QR Code de Pagamento</FormLabel>
                         <div className="flex items-center gap-4">
-                            {previewQr && <Image src={previewQr} alt="Preview do QR Code" width={100} height={100} />}
+                            {previewQr && <Image src={previewQr} alt="Preview do QR Code" width={100} height={100} className="bg-muted p-1 rounded-md" />}
                             <FormControl>
                                 <Input type="file" onChange={handleQrCodeFileChange} accept="image/*"/>
                             </FormControl>
                         </div>
                         <FormMessage>{form.formState.errors.qrCodeBase64?.message}</FormMessage>
                     </FormItem>
+                     {/* Campo oculto para qrCodeBase64, pois é preenchido via onChange */}
                      <FormField
                         control={form.control}
                         name="qrCodeBase64"
@@ -259,8 +305,81 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
+            {/* Módulo 2: Configurações do Aplicativo */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Configurações do Aplicativo</CardTitle>
+                    <CardDescription>Personalize a identidade e as informações de SEO do seu site.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="appName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nome do Aplicativo</FormLabel>
+                            <FormControl>
+                            <Input placeholder="ChuteFlix" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem>
+                            <FormLabel>Logotipo</FormLabel>
+                            <div className="flex items-center gap-4">
+                                {previewLogo && <Image src={previewLogo} alt="Preview do Logo" width={128} height={32} className="h-8 w-auto bg-muted p-1 rounded-md" />}
+                                <FormControl>
+                                    <Input type="file" onChange={handleLogoFileChange} accept="image/*" />
+                                </FormControl>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                        <FormItem>
+                            <FormLabel>Favicon</FormLabel>
+                            <div className="flex items-center gap-4">
+                                {previewFavicon && <Image src={previewFavicon} alt="Preview do Favicon" width={32} height={32} className="h-8 w-auto bg-muted p-1 rounded-md" />}
+                                <FormControl>
+                                    <Input type="file" onChange={handleFaviconFileChange} accept=".ico,.png" />
+                                </FormControl>
+                            </div>
+                            <p className="text-muted-foreground text-sm">Recomendado: .ico ou .png 32x32px</p>
+                            <FormMessage />
+                        </FormItem>
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name="metaDescription"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Meta Descrição (SEO)</FormLabel>
+                            <FormControl>
+                               <Textarea placeholder="Descreva seu site para os mecanismos de busca." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="metaKeywords"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Palavras-chave (SEO)</FormLabel>
+                            <FormControl>
+                               <Input placeholder="Ex: bolão, futebol, apostas, prêmios" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            <p className="text-muted-foreground text-sm">Separe as palavras-chave por vírgula.</p>
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
+
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? <Spinner /> : "Salvar Configurações"}
+            {isSaving ? <Spinner /> : "Salvar Alterações"}
           </Button>
         </form>
       </Form>

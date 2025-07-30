@@ -1,4 +1,3 @@
-
 "use client";
 
 import { AuthProvider, useAuth } from "@/context/auth-context";
@@ -12,7 +11,7 @@ import { Loader2 } from "lucide-react";
 function PublicLayout({ children, settings }: { children: React.ReactNode; settings: Settings | null; }) {
   return (
     <div className="flex flex-col min-h-screen">
-      <PublicHeader settings={settings} />
+      <PublicHeader />
       <main className="flex-grow">
         {children}
       </main>
@@ -21,7 +20,7 @@ function PublicLayout({ children, settings }: { children: React.ReactNode; setti
 }
 
 // Layout para páginas de painel (admin e usuário)
-function DashboardLayout({ children }: { children: React.ReactNode; }) {
+function DashboardLayout({ children, settings }: { children: React.ReactNode; settings: Settings | null; }) {
   const { userRole, loading } = useAuth();
   const pathname = usePathname();
 
@@ -42,6 +41,7 @@ function DashboardLayout({ children }: { children: React.ReactNode; }) {
     <div className="flex h-screen bg-background">
       <Sidebar role={displayRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
+        <PublicHeader /> {/* PublicHeader adicionado aqui para o layout do painel */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           {children}
         </main>
@@ -77,13 +77,9 @@ function AppLayoutRouter({ children, settings }: { children: React.ReactNode; se
         return <PublicLayout settings={settings}>{children}</PublicLayout>;
     }
 
-    // Se o usuário está logado
-    // Verifica se a rota é a página inicial (pública) ou uma rota do painel
-    if (pathname === '/') {
-        return <PublicLayout settings={settings}>{children}</PublicLayout>;
-    } else {
-        return <DashboardLayout>{children}</DashboardLayout>;
-    }
+    // Se o usuário está logado (e não é uma rota de autenticação), sempre usa o DashboardLayout
+    // Este layout agora incluirá tanto o sidebar quanto o header do painel.
+    return <DashboardLayout settings={settings}>{children}</DashboardLayout>;
 }
 
 

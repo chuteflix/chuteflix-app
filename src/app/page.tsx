@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react";
@@ -9,8 +8,7 @@ import { CategoryShelf } from "@/components/category-shelf";
 import { HeroSection } from "@/components/hero-section";
 import { Tv, Medal, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { getSettings } from "@/services/settings";
-import { Settings } from "@/types";
+import { PublicHeader } from "@/components/public-header";
 
 const features = [
     {
@@ -53,9 +51,6 @@ export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // O cabeçalho é agora renderizado pelo layout principal.
-  // Esta página não precisa mais se preocupar com ele.
-
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
@@ -90,7 +85,7 @@ export default function PublicHomePage() {
 
   return (
     <div className="bg-background text-foreground">
-      {/* O PublicHeader foi movido para o layout */}
+      <PublicHeader showNavLinks={true} /> {/* Passando showNavLinks como true */}
       <HeroSection />
       
       <main>

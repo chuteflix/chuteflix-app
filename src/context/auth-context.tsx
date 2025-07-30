@@ -56,7 +56,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let unsubscribeFirestore: Unsubscribe | undefined;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
       
       if (unsubscribeFirestore) {
         unsubscribeFirestore();
@@ -73,11 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
             setUserProfile(doc.exists() ? { uid: doc.id, ...doc.data() } as UserProfile : null);
-            setLoading(false);
           }, (error) => {
               console.error("Erro ao buscar perfil do usuário:", error);
               setUserProfile(null);
-              setLoading(false);
           });
 
         } catch (error) {
@@ -85,7 +82,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(firebaseUser);
           setUserProfile(null);
           setUserRole(null);
-          setLoading(false);
+        } finally {
+          setLoading(false); // Garante que o loading seja false após a tentativa de autenticação e busca de perfil
         }
       } else {
         setUser(null);

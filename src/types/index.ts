@@ -70,9 +70,12 @@ export interface Transaction {
 export interface Settings {
   appName: string;
   logoUrl?: string;
+  faviconUrl?: string; // Adicionado faviconUrl
   metaDescription?: string;
   metaKeywords?: string;
   pixKey?: string;
   qrCodeBase64?: string;
   whatsappNumber?: string;
+  minDeposit?: number; // Adicionado minDeposit
+  minWithdrawal?: number; // Adicionado minWithdrawal
 }
