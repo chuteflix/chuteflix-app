@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowDown } from "lucide-react"
 
-export function HeroSection() {
+export function HeroSection({ title, subtitle }: { title: string, subtitle: string }) {
     
   const scrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
@@ -16,19 +16,20 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative w-full h-screen max-h-[1080px] flex items-center justify-center text-center text-white overflow-hidden">
+    <section className="relative w-full h-screen max-h-[900px] flex items-center justify-center text-center text-white overflow-hidden">
         {/* Dark overlay for better text contrast */}
         <div className="absolute inset-0 bg-black/60 z-10" />
         
-        {/* Video de fundo */}
+        {/* Background video to reinforce the "streaming" feel */}
         <video 
           className="absolute inset-0 w-full h-full object-cover z-0" 
           autoPlay 
           loop 
           muted 
           playsInline
-          poster="/placeholder-video-poster.jpg" // Adicionar um poster para quando o vídeo não carregar
+          poster="/placeholder-video-poster.jpg"
         >
+          {/* Using a high-quality, subtle video related to football emotion */}
           <source src="https://assets.mixkit.co/videos/preview/mixkit-top-view-of-a-soccer-game-50796-large.mp4" type="video/mp4" />
           Seu navegador não suporta a tag de vídeo.
         </video>
@@ -37,16 +38,16 @@ export function HeroSection() {
       {/* Content */}
       <div className="relative z-20 p-4 sm:p-6 md:p-8 flex flex-col items-center">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white drop-shadow-lg">
-          ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas.
+          {title}
         </h1>
         <p className="mt-4 text-lg sm:text-xl text-slate-200 max-w-3xl mx-auto drop-shadow-md">
-          O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes.
+          {subtitle}
         </p>
         
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
-          <Button size="lg" asChild>
+          <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg transition-transform hover:scale-105">
             <Link href="/register">
-              Começar Agora
+              Criar Conta Grátis
             </Link>
           </Button>
           <Button 
@@ -55,8 +56,8 @@ export function HeroSection() {
             className="text-white border-white/80 hover:bg-white/20 hover:text-white transition-colors" 
             asChild
           >
-            <Link href="#boloes" onClick={scrollTo('boloes')}>
-              Ver Catálogo de Bolões
+            <Link href="#features" onClick={scrollTo('features')}>
+              Como Funciona?
             </Link>
           </Button>
         </div>
