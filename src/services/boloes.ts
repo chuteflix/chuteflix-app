@@ -62,13 +62,14 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     betAmount: data.betAmount,
     initialPrize: data.initialPrize || 0,
     status: data.status || 'Aberto',
-    homeScore: data.homeScore,
-    awayScore: data.awayScore,
+    homeScore: data.finalScoreTeam1,
+    awayScore: data.finalScoreTeam2,
     categoryIds: data.categoryIds || [],
     categoryNames: categoryNames,
     userGuess: data.userGuess,
     finalScoreTeam1: data.finalScoreTeam1, 
     finalScoreTeam2: data.finalScoreTeam2, 
+    championship: (await getAllCategories()).find(c => c.id === data.categoryIds?.[0])?.name || 'Campeonato',
   };
 };
 

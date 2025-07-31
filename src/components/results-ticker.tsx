@@ -38,7 +38,8 @@ export const ResultsTicker = () => {
       try {
         const finishedBoloes = await getFinishedBoloes();
         if (finishedBoloes.length > 0) {
-          setResults([...finishedBoloes, ...finishedBoloes]); // Duplica para efeito de loop
+          // Duplica o array para dar a ilusão de um loop infinito e contínuo
+          setResults([...finishedBoloes, ...finishedBoloes]); 
         }
       } catch (error) {
         console.error("Failed to fetch results for ticker:", error);
@@ -54,16 +55,19 @@ export const ResultsTicker = () => {
   }
 
   if (results.length === 0) {
-    return null; 
+    return null; // Não renderiza nada se não houver resultados
   }
 
-  const animationDuration = results.length * 5; // Velocidade da animação
+  // Ajusta a duração da animação com base no número de itens
+  const animationDuration = results.length * 5; 
 
   return (
     <>
       <div 
         className="flex items-center h-full"
         style={{ 
+          // A animação move o contêiner para a esquerda em 50% de sua largura total.
+          // Como o conteúdo está duplicado, isso cria um loop perfeito.
           animation: `ticker ${animationDuration}s linear infinite`,
         }}
       >
