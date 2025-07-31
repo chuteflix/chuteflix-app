@@ -14,13 +14,20 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Countdown from "react-countdown"
-import { ArrowLeft, Crown, TrendingUp, MessageSquare, Clock, Users, Trophy, Info } from "lucide-react"
+import { ArrowLeft, Crown, TrendingUp, MessageSquare, Clock, Users, Trophy, Info, Share2, Copy, MessageCircle, Facebook } from "lucide-react"
 import { isPast, format, isValid } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Bolao } from "@/services/boloes"
 import { Team } from "@/services/teams"
 import { Championship } from "@/services/championships"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useToast } from "@/hooks/use-toast"
 
 
 interface TopBettor {
@@ -38,6 +45,7 @@ interface BolaoPageClientProps {
 
 export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientProps) {
   const { user, loading: authLoading } = useAuth()
+  const { toast } = useToast();
   
   const [bolao, setBolao] = useState(initialBolao)
   const [comments, setComments] = useState<PalpiteComDetalhes[]>([])
@@ -45,6 +53,13 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isWebShareSupported, setIsWebShareSupported] = useState(false);
+
+  useEffect(() => {
+    if (navigator.share) {
+      setIsWebShareSupported(true);
+    }
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -68,6 +83,30 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
       fetchData()
     }
   }, [bolao?.id])
+
+    const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareTitle = `Bolão: ${bolao.homeTeam?.name} vs ${bolao.awayTeam?.name}`;
+    const shareText = `Venha dar o seu palpite no bolão entre ${bolao.homeTeam?.name} e ${bolao.awayTeam?.name} no ChuteFlix! Prêmio estimado de ${totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error("Erro ao compartilhar:", error);
+      }
+    }
+    // O fallback é o DropdownMenu, então não há 'else' aqui.
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({ title: "Link Copiado!", description: "O link do bolão foi copiado para sua área de transferência." });
+  };
   
   const topBettors = useMemo(() => {
     if (!comments.length) return [];
@@ -158,10 +197,46 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
     return <div className="container mx-auto p-4"><Alert variant="destructive"><AlertTitle>Erro</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>
   }
   
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const shareTitle = `Bolão: ${bolao.homeTeam?.name} vs ${bolao.awayTeam?.name}`;
+  const shareText = `Venha dar o seu palpite no bolão entre ${bolao.homeTeam?.name} e ${bolao.awayTeam?.name} no ChuteFlix! Prêmio estimado de ${totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+  
+  const ShareButton = () => {
+    if (isWebShareSupported) {
+        return (
+            <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" />Compartilhar
+            </Button>
+        );
+    }
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm"><Share2 className="mr-2 h-4 w-4" />Compartilhar</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                 <DropdownMenuItem onSelect={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareTitle} - ${shareText}\n${shareUrl}`)}`, '_blank')}>
+                    <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank')}>
+                    <Facebook className="mr-2 h-4 w-4" /> Facebook
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleCopyLink}>
+                    <Copy className="mr-2 h-4 w-4" /> Copiar Link
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+  };
+  
   return (
     <>
       <div className="max-w-4xl mx-auto space-y-6 pb-10">
-        <Button variant="outline" size="sm" asChild><Link href="/inicio"><ArrowLeft className="mr-2 h-4 w-4" />Voltar ao Início</Link></Button>
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" asChild><Link href="/inicio"><ArrowLeft className="mr-2 h-4 w-4" />Voltar ao Início</Link></Button>
+          <ShareButton />
+        </div>
         <Card className="overflow-hidden shadow-lg">
             <CardHeader className="p-4 bg-card">
               <div className="flex justify-between items-start">
