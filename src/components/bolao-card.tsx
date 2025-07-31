@@ -30,7 +30,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
   const [loadingParticipants, setLoadingParticipants] = useState(true)
   const [isClosingTimePassed, setIsClosingTimePassed] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const [isHovering, setIsHovering] = useState(false);
+  const [isHovering, setIsHovering] = useState(false)
 
 
   const isHighDemand = participantCount > 50 && bolao.status === 'Aberto';
@@ -135,13 +135,23 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
   
   const countdownRenderer = ({ days, hours, minutes, seconds, completed }: any) => {
     if (completed || isClosingTimePassed) {
-      return <span className="font-bold text-sm text-destructive">{displayStatus === 'Finalizado' ? 'Finalizado' : 'Encerrado'}</span>;
+      return <div className="text-center font-bold text-sm text-destructive">{displayStatus === 'Finalizado' ? 'Finalizado' : 'Encerrado'}</div>;
     } else {
         const d = String(days).padStart(2, '0');
         const h = String(hours).padStart(2, '0');
         const m = String(minutes).padStart(2, '0');
         const s = String(seconds).padStart(2, '0');
-        return <span className="font-mono text-xs text-muted-foreground tabular-nums tracking-wider">{d}:{h}:{m}:{s}</span>;
+        return (
+             <div className="flex items-center justify-center gap-2 font-mono text-center tabular-nums">
+                <div><div className="text-lg font-bold">{d}</div><div className="text-[10px] text-muted-foreground">DIAS</div></div>
+                <div>:</div>
+                <div><div className="text-lg font-bold">{h}</div><div className="text-[10px] text-muted-foreground">HORAS</div></div>
+                <div>:</div>
+                <div><div className="text-lg font-bold">{m}</div><div className="text-[10px] text-muted-foreground">MIN</div></div>
+                <div>:</div>
+                <div><div className="text-lg font-bold">{s}</div><div className="text-[10px] text-muted-foreground">SEG</div></div>
+             </div>
+        );
     }
   };
 
@@ -188,7 +198,6 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                 <p className="text-sm font-semibold text-foreground">
                     {bolao.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? format(new Date(bolao.matchStartDate), "dd/MM 'às' HH:mm'h'") : 'Data a definir'}
                 </p>
-                {bolao.closingTime && <Countdown date={new Date(bolao.closingTime)} renderer={countdownRenderer} />}
             </div>
         </CardHeader>
         
@@ -230,6 +239,15 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                     </TooltipContent>
                 </Tooltip>
             </div>
+
+            {bolao.closingTime && bolao.status === 'Aberto' && !isClosingTimePassed && (
+                <div className="w-full p-2 border border-dashed rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-1">
+                       <Clock className="h-3 w-3"/> <span>Tempo para chutar</span>
+                    </div>
+                    <Countdown date={new Date(bolao.closingTime)} renderer={countdownRenderer} />
+                </div>
+            )}
             
             <div className="w-full flex justify-between items-center text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
