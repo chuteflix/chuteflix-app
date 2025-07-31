@@ -14,12 +14,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Countdown from "react-countdown"
-import { ArrowLeft, Crown, TrendingUp, MessageSquare, Clock } from "lucide-react"
+import { ArrowLeft, Crown, TrendingUp, MessageSquare, Clock, Users, Trophy, Info } from "lucide-react"
 import { isPast, format, isValid } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Bolao } from "@/services/boloes"
 import { Team } from "@/services/teams"
 import { Championship } from "@/services/championships"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 interface TopBettor {
     user: PalpiteComDetalhes['user'];
@@ -103,18 +105,25 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
 
   const countdownRenderer = ({ days, hours, minutes, seconds, completed }: any) => {
     if (completed || isBettingClosed) {
-      return <span className="text-destructive font-bold text-lg">{bolao?.status === 'Finalizado' ? 'Finalizado' : 'Chutes Encerrados'}</span>
+      return <div className="text-center font-bold text-lg text-destructive">{bolao?.status === 'Finalizado' ? 'Finalizado' : 'Chutes Encerrados'}</div>;
     } else {
-      return (
-        <div className="flex space-x-2 text-center">
-          <div><span className="text-2xl font-bold tabular-nums tracking-tighter">{String(days).padStart(2, '0')}</span><span className="text-xs">DIAS</span></div>
-          <div><span className="text-2xl font-bold tabular-nums tracking-tighter">{String(hours).padStart(2, '0')}</span><span className="text-xs">HORAS</span></div>
-          <div><span className="text-2xl font-bold tabular-nums tracking-tighter">{String(minutes).padStart(2, '0')}</span><span className="text-xs">MIN</span></div>
-          <div className="relative w-12"><span className="text-2xl font-bold tabular-nums tracking-tighter transition-opacity duration-500">{String(seconds).padStart(2, '0')}</span><span className="text-xs">SEG</span></div>
-        </div>
-      )
+        const d = String(days).padStart(2, '0');
+        const h = String(hours).padStart(2, '0');
+        const m = String(minutes).padStart(2, '0');
+        const s = String(seconds).padStart(2, '0');
+        return (
+             <div className="flex items-center justify-center gap-2 font-mono text-center tabular-nums">
+                <div><div className="text-2xl font-bold">{d}</div><div className="text-[10px] text-muted-foreground">DIAS</div></div>
+                <div className="pt-2 text-2xl">:</div>
+                <div><div className="text-2xl font-bold">{h}</div><div className="text-[10px] text-muted-foreground">HORAS</div></div>
+                <div className="pt-2 text-2xl">:</div>
+                <div><div className="text-2xl font-bold">{m}</div><div className="text-[10px] text-muted-foreground">MIN</div></div>
+                <div className="pt-2 text-2xl">:</div>
+                <div><div className="text-2xl font-bold">{s}</div><div className="text-[10px] text-muted-foreground">SEG</div></div>
+             </div>
+        );
     }
-  }
+  };
   
   const getBettingLine = (palpite: PalpiteComDetalhes) => {
     let line = `${palpite.user?.name || "Anônimo"} apostou <strong>${palpite.scoreTeam1} x ${palpite.scoreTeam2}</strong>`;
@@ -163,28 +172,51 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
                   <Badge variant={bolao.status === 'Aberto' ? 'success' : 'destructive'} className="text-sm">{bolao.status}</Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 flex flex-col gap-4">
               <div className="flex justify-center items-center my-4 space-x-4 md:space-x-8">
                 <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.homeTeam?.shieldUrl} /><AvatarFallback>{bolao.homeTeam?.name.slice(0,2)}</AvatarFallback></Avatar>
                 <span className="text-3xl md:text-4xl font-bold text-muted-foreground">VS</span>
                 <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.awayTeam?.shieldUrl} /><AvatarFallback>{bolao.awayTeam?.name.slice(0,2)}</AvatarFallback></Avatar>
               </div>
-              <Separator className="my-4"/>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">Encerra em</p>
-                    <Countdown date={closingDateTime} renderer={countdownRenderer} />
-                    {fullClosingDateString && <p className="text-xs text-muted-foreground mt-1">({fullClosingDateString})</p>}
-                  </div>
-                  <div><p className="text-sm text-muted-foreground">Prêmio Estimado</p><p className="text-3xl font-bold text-primary">{totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">Participantes</p>
-                    <div className="flex items-center gap-2">
-                        <p className="text-3xl font-bold">{participantCount}</p>
-                    </div>
-                  </div>
+              <Separator />
+
+              <div className="w-full text-center border-2 border-dashed border-primary/50 bg-primary/10 rounded-lg py-3">
+                <p className="text-sm text-primary font-semibold">Prêmio estimado</p>
+                <p className="text-3xl font-bold text-primary drop-shadow-sm">
+                    {totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <p className="text-xs text-muted-foreground cursor-help flex items-center justify-center gap-1">
+                                <span>Valor dividido entre os acertadores</span>
+                                <Info className="h-3 w-3" />
+                            </p>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-center">
+                            <p>O prêmio é o valor inicial mais 90% do total arrecadado com as taxas, e será dividido igualmente entre todos que acertarem o placar exato.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
               </div>
-              <Separator className="my-4"/>
+
+               <div className="w-full p-3 border border-dashed rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-1">
+                       <Clock className="h-4 w-4"/> <span>Tempo para chutar</span>
+                    </div>
+                    <Countdown date={closingDateTime} renderer={countdownRenderer} />
+                    {fullClosingDateString && <p className="text-xs text-muted-foreground mt-1 text-center">({fullClosingDateString})</p>}
+                </div>
+              
+                <div className="w-full flex justify-center items-center text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        {loading ? <div className="h-4 w-4 rounded-full bg-muted-foreground/50 animate-pulse" /> : <span className="font-semibold text-foreground">{participantCount}</span>}
+                        <span>participantes</span>
+                    </div>
+                </div>
+
+              <Separator/>
               <div className="text-center"><Button size="lg" className="font-bold text-lg" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>{isBettingClosed ? "Apostas Encerradas" : `Chutar Placar por ${bolao.betAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}</Button></div>
             </CardContent>
         </Card>
@@ -228,3 +260,5 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
     </>
   )
 }
+
+    
