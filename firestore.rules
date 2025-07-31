@@ -52,10 +52,8 @@ service cloud.firestore {
     // Transações: Usuário só pode ver as próprias. Admins podem ver todas.
     match /transactions/{transactionId} {
       allow create: if request.auth.uid == request.resource.data.uid;
-      // Um usuário pode ler sua própria transação, um admin pode ler qualquer uma.
+      // Um usuário pode ler sua própria transação, um admin pode ler qualquer uma (get ou list).
       allow read: if request.auth.uid == resource.data.uid || request.auth.token.role == 'admin';
-      // Apenas admins podem listar todas as transações (para o dashboard).
-      allow list: if request.auth.token.role == 'admin';
       allow update, delete: if request.auth.token.role == 'admin';
     }
   }

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useMemo } from "react";
@@ -5,14 +6,15 @@ import { getAllCategories, Category } from "@/services/categories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { HeroSection } from "@/components/hero-section";
-import { Search, Rocket, Banknote, ShieldCheck } from "lucide-react";
+import { Search, Rocket, Banknote, ShieldCheck, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { PublicHeader } from "@/components/public-header";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { CategoryShelf } from "@/components/category-shelf";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/auth-context"; // Importando o useAuth
+import { useAuth } from "@/context/auth-context"; 
+import { useRouter } from 'next/navigation'; 
 
 const features = [
     {
@@ -65,22 +67,32 @@ export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [faqSearchTerm, setFaqSearchTerm] = useState("");
-  const { settings } = useAuth(); // Usando settings do contexto
+  const { settings, user, loading: loadingAuth } = useAuth(); 
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoadingCategories(true);
-      try {
-        const fetchedCategories = await getAllCategories();
-        setCategories(fetchedCategories.filter(c => !c.parentId)); 
-      } catch (error) {
-        console.error("Falha ao buscar dados iniciais:", error);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchInitialData();
-  }, []);
+    if (!loadingAuth && user) {
+      router.replace('/inicio');
+    }
+  }, [user, loadingAuth, router]);
+
+  useEffect(() => {
+    // Only fetch data if user is not logged in
+    if (!user) {
+        const fetchInitialData = async () => {
+          setLoadingCategories(true);
+          try {
+            const fetchedCategories = await getAllCategories();
+            setCategories(fetchedCategories.filter(c => !c.parentId)); 
+          } catch (error) {
+            console.error("Falha ao buscar dados iniciais:", error);
+          } finally {
+            setLoadingCategories(false);
+          }
+        };
+        fetchInitialData();
+    }
+  }, [user]);
 
   const filteredFaqData = useMemo(() => {
     if (!faqSearchTerm) return faqData;
@@ -113,11 +125,18 @@ export default function PublicHomePage() {
     </div>
   );
 
+  if (loadingAuth || user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background text-foreground">
-      <PublicHeader showNavLinks={true} />
       <HeroSection 
-        title={settings?.homeHeroTitle || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
+        title={settings?.appName || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
         subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
       />
       
@@ -226,5 +245,5 @@ export default function PublicHomePage() {
           </div>
       </footer>
     </div>
-  )
+  );
 }

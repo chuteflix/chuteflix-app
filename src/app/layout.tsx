@@ -2,29 +2,44 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/context/auth-context";
-import DynamicStyler from "@/components/dynamic-styler";
+import { getSettings } from "@/services/settings";
+import { PublicHeader } from "@/components/public-header";
+import { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "ChuteFlix",
-  description: "A plataforma definitiva para os amantes de futebol. Participe de bolões, dê seus palpites e concorra a prêmios incríveis.",
-};
+// Função para gerar metadados dinamicamente
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings();
 
-export default function RootLayout({
+  return {
+    title: settings?.appName || "ChuteFlix",
+    description: settings?.metaDescription || "A plataforma definitiva para os amantes de futebol. Participe de bolões, dê seus palpites e concorra a prêmios incríveis.",
+    keywords: settings?.metaKeywords || "bolão, futebol, palpites, apostas, prêmios",
+    icons: {
+      icon: settings?.faviconUrl || '/favicon.ico',
+    },
+  };
+}
+
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const settings = await getSettings();
+
   return (
     <html lang="pt-br">
       <body className={inter.className}>
         <AuthProvider>
-          <DynamicStyler />
-          <ToastProvider />
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-grow">{children}</main>
-          </div>
+            <ToastProvider />
+            {/* O PublicHeader é renderizado aqui para páginas que não estão no (main) group */}
+            <PublicHeader settings={settings} />
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-grow">{children}</main>
+            </div>
         </AuthProvider>
       </body>
     </html>

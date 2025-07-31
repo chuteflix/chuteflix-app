@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, FormEvent, useEffect } from "react";
@@ -12,11 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Logo } from "@/components/icons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { user, loading } = useAuth();
+  const { user, loading, settings } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -74,10 +77,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+       <div className="mb-8">
+        <Link href="/" aria-label="Voltar para a página inicial">
+            <Logo logoUrl={settings?.logoUrl} />
+        </Link>
+      </div>
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Login</CardTitle>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Login</CardTitle>
           <CardDescription>Entre com seu e-mail e senha para continuar.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -100,9 +108,8 @@ export default function LoginPage() {
                   Esqueceu a senha?
                 </Button>
               </div>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
