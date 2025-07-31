@@ -137,7 +137,7 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
   
   const fullClosingDateString = useMemo(() => {
     if (!isValid(closingDateTime)) return null;
-    return `Encerra em ${format(closingDateTime, "eeee, dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`;
+    return `(Encerra em ${format(closingDateTime, "eeee, dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })})`;
   }, [closingDateTime]);
 
 
@@ -163,7 +163,7 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
       <div className="max-w-4xl mx-auto space-y-6 pb-10">
         <Button variant="outline" size="sm" asChild><Link href="/inicio"><ArrowLeft className="mr-2 h-4 w-4" />Voltar ao Início</Link></Button>
         <Card className="overflow-hidden shadow-lg">
-            <CardHeader className="p-4 bg-muted/20">
+            <CardHeader className="p-4 bg-card">
               <div className="flex justify-between items-start">
                   <div>
                       <h1 className="text-2xl font-bold">{bolao.homeTeam?.name} vs {bolao.awayTeam?.name}</h1>
@@ -178,8 +178,7 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
                 <span className="text-3xl md:text-4xl font-bold text-muted-foreground">VS</span>
                 <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2"><AvatarImage src={bolao.awayTeam?.shieldUrl} /><AvatarFallback>{bolao.awayTeam?.name.slice(0,2)}</AvatarFallback></Avatar>
               </div>
-              <Separator />
-
+              
               <div className="w-full text-center border-2 border-dashed border-primary/50 bg-primary/10 rounded-lg py-3">
                 <p className="text-sm text-primary font-semibold">Prêmio estimado</p>
                 <p className="text-3xl font-bold text-primary drop-shadow-sm">
@@ -199,13 +198,15 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
                     </Tooltip>
                 </TooltipProvider>
               </div>
+              
+              <Separator />
 
-               <div className="w-full p-3 border border-dashed rounded-lg">
+               <div className="w-full p-3 flex flex-col items-center">
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-1">
                        <Clock className="h-4 w-4"/> <span>Tempo para chutar</span>
                     </div>
                     <Countdown date={closingDateTime} renderer={countdownRenderer} />
-                    {fullClosingDateString && <p className="text-xs text-muted-foreground mt-1 text-center">({fullClosingDateString})</p>}
+                    {fullClosingDateString && <p className="text-xs text-muted-foreground mt-1 text-center">{fullClosingDateString}</p>}
                 </div>
               
                 <div className="w-full flex justify-center items-center text-sm">
@@ -217,7 +218,7 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
                 </div>
 
               <Separator/>
-              <div className="text-center"><Button size="lg" className="font-bold text-lg" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>{isBettingClosed ? "Apostas Encerradas" : `Chutar Placar por ${bolao.betAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}</Button></div>
+              <div className="text-center pt-4"><Button size="lg" className="font-bold text-lg h-12" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>{isBettingClosed ? "Apostas Encerradas" : `Chutar Placar por ${bolao.betAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}</Button></div>
             </CardContent>
         </Card>
         
@@ -260,5 +261,3 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
     </>
   )
 }
-
-    
