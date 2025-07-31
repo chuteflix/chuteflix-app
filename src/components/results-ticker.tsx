@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { getFinishedBoloes } from "@/services/boloes";
 import { Bolao } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 const TickerItem = ({ bolao }: { bolao: Bolao }) => (
   <div className="flex items-center gap-3 text-sm mx-4 whitespace-nowrap flex-shrink-0">
     <span className="font-light text-muted-foreground">{bolao.championship}</span>
-    <Separator orientation="vertical" className="h-4 bg-muted-foreground/30" />
     <div className="flex items-center gap-2">
       <Avatar className="h-5 w-5">
         <AvatarImage src={bolao.homeTeam.shieldUrl} alt={bolao.homeTeam.name} />
@@ -72,7 +71,11 @@ export const ResultsTicker = () => {
         }}
       >
         {results.map((bolao, index) => (
-          <TickerItem key={`${bolao.id}-${index}`} bolao={bolao} />
+           <Fragment key={`${bolao.id}-${index}`}>
+            <TickerItem bolao={bolao} />
+            {/* Adiciona o separador, exceto após o último item real (antes da duplicação) */}
+            {index < (results.length / 2) - 1 && <Separator orientation="vertical" className="h-4 bg-muted-foreground/30" />}
+          </Fragment>
         ))}
       </div>
       <style jsx>{`

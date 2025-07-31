@@ -50,8 +50,8 @@ export function DashboardHeader() {
           {/* Logo is in Sidebar for dashboard */}
         </div>
         
-        {/* Center Section: Ticker */}
-        <div className="flex-1 flex justify-center items-center h-full mx-4 relative overflow-hidden">
+        {/* Center Section: Ticker - Hidden on mobile */}
+        <div className="hidden md:flex flex-1 justify-center items-center h-full mx-4 relative overflow-hidden">
           {loading ? (
             <Skeleton className="w-full h-8" />
           ) : (
@@ -64,12 +64,12 @@ export function DashboardHeader() {
         </div>
         
         {/* Right Section: User actions */}
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex items-center gap-4 flex-shrink-0 ml-auto md:ml-0">
           {loading ? (
               <Skeleton className="w-24 h-8 rounded-md" />
           ) : (
               <>
-                  <div className="hidden sm:flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                       <Wallet className="h-5 w-5 text-primary" />
                       <span className="text-sm font-semibold text-foreground">
                           {(userProfile?.balance ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
