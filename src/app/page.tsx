@@ -15,7 +15,6 @@ import { CategoryShelf } from "@/components/category-shelf";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context"; 
 import { useRouter } from 'next/navigation'; 
-import { getSettings } from "@/services/settings";
 import { Settings } from "@/types";
 
 const features = [
@@ -69,31 +68,24 @@ export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [faqSearchTerm, setFaqSearchTerm] = useState("");
-  const { user, loading: loadingAuth } = useAuth(); 
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const { user, loading: loadingAuth, settings } = useAuth(); 
   const router = useRouter();
 
   useEffect(() => {
-    getSettings().then(s => {
-      setSettings(s);
-      setSettingsLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
+    // Se o estado de autenticação não estiver carregando e um usuário existir, redirecione.
     if (!loadingAuth && user) {
       router.replace('/inicio');
     }
   }, [user, loadingAuth, router]);
 
   useEffect(() => {
-    // Only fetch data if user is not logged in
-    if (!user) {
+    // Apenas busque os dados da landing page se o usuário NÃO estiver logado.
+    if (!loadingAuth && !user) {
         const fetchInitialData = async () => {
           setLoadingCategories(true);
           try {
             const fetchedCategories = await getAllCategories();
+            // Filtra para pegar apenas as categorias raiz para a prateleira da home.
             setCategories(fetchedCategories.filter(c => !c.parentId)); 
           } catch (error) {
             console.error("Falha ao buscar dados iniciais:", error);
@@ -103,7 +95,7 @@ export default function PublicHomePage() {
         };
         fetchInitialData();
     }
-  }, [user]);
+  }, [user, loadingAuth]);
 
   const filteredFaqData = useMemo(() => {
     if (!faqSearchTerm) return faqData;
@@ -136,7 +128,8 @@ export default function PublicHomePage() {
     </div>
   );
 
-  if (loadingAuth || settingsLoading || user) {
+  // Se o usuário estiver logado ou o auth estiver carregando, mostra um loader para evitar "piscar" a landing page.
+  if (loadingAuth || user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -144,6 +137,7 @@ export default function PublicHomePage() {
     );
   }
 
+  // Renderiza a landing page apenas se não houver usuário e o carregamento estiver concluído.
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
@@ -259,3 +253,5 @@ export default function PublicHomePage() {
     </div>
   );
 }
+
+    

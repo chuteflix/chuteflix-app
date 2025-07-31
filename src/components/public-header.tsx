@@ -8,26 +8,12 @@ import { useAuth } from "@/context/auth-context"
 import { auth } from "@/lib/firebase"
 import { Logo } from "@/components/icons"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { 
-    LogOut, 
-    User as UserIcon, 
-    Wallet,
-    Settings as SettingsIcon,
-    Menu,
-    Loader2
+  Menu,
+  Loader2
 } from "lucide-react"
 import { Skeleton } from "./ui/skeleton"
 import { cn } from "@/lib/utils"
-import { ResultsTicker } from "./results-ticker"
 import {
   Sheet,
   SheetContent,
@@ -39,25 +25,11 @@ interface PublicHeaderProps {
   settings: Settings | null;
 }
 
-export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
+export function PublicHeader({ settings }: PublicHeaderProps) {
   const { userProfile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [settings, setSettings] = useState(initialSettings);
-  const [settingsLoading, setSettingsLoading] = useState(!initialSettings);
-
-  useEffect(() => {
-    if (!initialSettings) {
-      import('@/services/settings').then(module => {
-        module.getSettings().then(s => {
-          setSettings(s);
-          setSettingsLoading(false);
-        });
-      });
-    }
-  }, [initialSettings]);
-
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,13 +39,7 @@ export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
     handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  const handleLogout = async () => {
-    await auth.signOut()
-    router.push('/')
-  }
   
-  const firstName = userProfile?.name?.split(" ")[0] || "";
   const isDashboard = !!userProfile;
 
   const scrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -87,13 +53,7 @@ export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
     }
   }
 
-  const isLoading = authLoading || settingsLoading;
-
-  // Não renderiza o header em rotas de dashboard
-  const pathname = usePathname();
-  if (isDashboard && pathname !== '/') {
-    return null;
-  }
+  const isLoading = authLoading;
 
   return (
     <header className={cn(
@@ -126,7 +86,7 @@ export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
           {isLoading ? (
               <Skeleton className="w-24 h-8 rounded-md" />
           ) : isDashboard ? (
-              <div className="hidden"></div>
+              <div className="hidden"></div> // Não mostra nada se estiver logado (será redirecionado)
           ) : (
               <div className="hidden md:flex items-center gap-2">
                   <Button variant="ghost" asChild><Link href="/login">Entrar</Link></Button>
@@ -170,3 +130,5 @@ export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
     </header>
   )
 }
+
+    
