@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
-import { getSettings, Settings } from "@/services/settings";
 import { createTransaction, updateTransaction, Transaction } from "@/services/transactions";
 import { uploadFileToApi } from "@/services/upload";
 import { Button } from "@/components/ui/button";
@@ -22,11 +21,9 @@ import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/f
 import { db } from '@/lib/firebase';
 
 export default function RechargePage() {
-  const { user } = useAuth();
+  const { user, settings, loading: loadingAuth } = useAuth(); // Obtenha settings do useAuth
   const { toast } = useToast();
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [amount, setAmount] = useState<number | undefined>(undefined);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -69,21 +66,6 @@ export default function RechargePage() {
     return () => unsubscribe();
   }, [user, toast]);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      setIsLoadingSettings(true);
-      try {
-        const settingsData = await getSettings();
-        setSettings(settingsData);
-      } catch (error) {
-        toast({ title: "Erro ao carregar dados de pagamento.", variant: "destructive" });
-      } finally {
-        setIsLoadingSettings(false);
-      }
-    };
-    fetchSettings();
-  }, [toast]);
-
   const handleRequestRecharge = async () => {
     if (!user) {
       toast({ title: "Você precisa estar logado.", variant: "destructive" });
@@ -93,7 +75,12 @@ export default function RechargePage() {
       toast({ title: "Preencha o valor da recarga.", variant: "destructive" });
       return;
     }
-    if (settings?.minDeposit && amount < settings.minDeposit) {
+    // Use settings diretamente do contexto, mas garanta que ele esteja carregado
+    if (loadingAuth || !settings) {
+        toast({ title: "Aguarde, carregando informações de pagamento...", variant: "info" });
+        return;
+    }
+    if (settings.minDeposit && amount < settings.minDeposit) {
       toast({ title: `O valor mínimo para depósito é de ${settings.minDeposit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, variant: "destructive" });
       return;
     }
@@ -137,8 +124,9 @@ export default function RechargePage() {
   };
 
   const handleWhatsappRedirect = () => {
-    if (!settings?.whatsappNumber || !amount || !currentTransactionId) {
-      toast({ title: "Não foi possível gerar o link do WhatsApp.", variant: "destructive" });
+    // Use settings diretamente do contexto, mas garanta que ele esteja carregado
+    if (loadingAuth || !settings?.whatsappNumber || !amount || !currentTransactionId) {
+      toast({ title: "Não foi possível gerar o link do WhatsApp (informações ausentes).", variant: "destructive" });
       return;
     }
     const message = `Olá! Acabei de fazer uma recarga de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.
@@ -223,7 +211,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
                         className="h-12 text-lg"
                     />
                     </div>
-                    <Button onClick={handleRequestRecharge} disabled={isSubmitting || isLoadingSettings} className="w-full h-12 text-lg">
+                    <Button onClick={handleRequestRecharge} disabled={isSubmitting || loadingAuth || !settings} className="w-full h-12 text-lg">
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
                     {isSubmitting ? "Processando..." : "Continuar para Pagamento"}
                     </Button>
@@ -287,6 +275,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
             onClose={() => setIsPaymentModalOpen(false)}
             onPaymentConfirmed={handlePaymentConfirmed}
             amount={amount}
+            settings={settings} // Passa settings para o modal
           />
       )}
 
@@ -297,6 +286,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
             onFileSelect={handleFileSelect}
             onWhatsappRedirect={handleWhatsappRedirect}
             isUploading={isUploading}
+            settings={settings} // Passa settings para o modal
         />
       )}
     </>

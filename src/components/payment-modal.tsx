@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getSettings, Settings } from "@/services/settings"
+import { Settings } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
@@ -13,30 +13,15 @@ interface PaymentModalProps {
   isOpen: boolean
   onClose: () => void;
   onPaymentConfirmed: () => void;
-  amount: number
+  amount: number;
+  settings: Settings | null; // Recebe settings como prop
 }
 
-export function PaymentModal({ isOpen, onClose, onPaymentConfirmed, amount }: PaymentModalProps) {
-  const [settings, setSettings] = useState<Settings | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+export function PaymentModal({ isOpen, onClose, onPaymentConfirmed, amount, settings }: PaymentModalProps) {
   const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false); // Não precisa carregar aqui, já vem do pai
 
-  useEffect(() => {
-    if (isOpen) {
-      const fetchSettings = async () => {
-        setIsLoading(true);
-        try {
-          const settingsData = await getSettings();
-          setSettings(settingsData);
-        } catch (error) {
-          toast({ title: "Erro ao carregar dados de pagamento.", variant: "destructive" });
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchSettings();
-    }
-  }, [isOpen, toast]);
+  // Não há mais useEffect para buscar settings aqui
 
   const handleCopy = () => {
     if (settings?.pixKey) {
@@ -55,10 +40,9 @@ export function PaymentModal({ isOpen, onClose, onPaymentConfirmed, amount }: Pa
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
-        ) : !settings ? (
-          <div className="text-center h-40"><p>Não foi possível carregar as informações de pagamento.</p></div>
+        {/* O modal agora só renderiza se settings não for nulo */}
+        {!settings ? (
+          <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /> <p>Carregando informações de pagamento...</p></div>
         ) : (
           <div className="my-4 flex flex-col items-center gap-4">
             {settings.qrCodeUrl && <Image src={settings.qrCodeUrl} alt="QR Code para pagamento" width={180} height={180} />}
@@ -95,7 +79,7 @@ export function PaymentModal({ isOpen, onClose, onPaymentConfirmed, amount }: Pa
         )}
 
         <DialogFooter>
-          <Button onClick={onPaymentConfirmed} className="w-full h-12 text-lg">
+          <Button onClick={onPaymentConfirmed} className="w-full h-12 text-lg" disabled={!settings}> {/* Desabilitar se settings ainda não carregou */}
             Já Paguei, Enviar Comprovante
           </Button>
         </DialogFooter>

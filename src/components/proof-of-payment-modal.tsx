@@ -12,13 +12,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Paperclip, MessageCircle, Loader2 } from "lucide-react";
+import { Settings } from "@/types";
 
 interface ProofOfPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWhatsappRedirect: () => void;
+  onWhatsappRedirect: () => void; // This function will use settings from its parent scope
   onFileSelect: (file: File) => Promise<void>; 
   isUploading: boolean; 
+  settings: Settings | null; // Added settings prop
 }
 
 export function ProofOfPaymentModal({
@@ -27,6 +29,7 @@ export function ProofOfPaymentModal({
   onWhatsappRedirect,
   onFileSelect,
   isUploading,
+  settings, // Destructure settings from props
 }: ProofOfPaymentModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,6 +43,9 @@ export function ProofOfPaymentModal({
   const handleAttachReceiptClick = () => {
     fileInputRef.current?.click();
   };
+
+  // Disable WhatsApp button if settings or whatsappNumber is missing
+  const isWhatsappDisabled = !settings || !settings.whatsappNumber;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -60,6 +66,7 @@ export function ProofOfPaymentModal({
             variant="success"
             size="lg"
             className="h-14 text-lg"
+            disabled={isWhatsappDisabled} // Disable button if no WhatsApp number
           >
             <MessageCircle className="mr-2 h-6 w-6" />
             Enviar pelo WhatsApp

@@ -25,7 +25,6 @@ import { Settings } from "@/types";
 import Image from "next/image";
 import { ColorInput } from "@/components/admin/color-input";
 
-// Schema para um código de cor hexadecimal válido
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Cor inválida. Use o formato #RRGGBB.");
 
 const settingsSchema = z.object({
@@ -35,7 +34,7 @@ const settingsSchema = z.object({
   metaDescription: z.string().optional(),
   metaKeywords: z.string().optional(),
   pixKey: z.string().optional(),
-  qrCodeBase64: z.string().optional(),
+  qrCodeUrl: z.string().optional(), // Alterado de qrCodeBase64 para qrCodeUrl
   whatsappNumber: z.string().optional(),
   minDeposit: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
@@ -68,9 +67,9 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSavingColors, setIsSavingColors] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
   const [previewFavicon, setPreviewFavicon] = useState<string | null>(null);
   const [previewQr, setPreviewQr] = useState<string | null>(null);
@@ -84,7 +83,7 @@ export default function SettingsPage() {
       metaDescription: "",
       metaKeywords: "",
       pixKey: "",
-      qrCodeBase64: "",
+      qrCodeUrl: "",
       whatsappNumber: "",
       minDeposit: 0,
       minWithdrawal: 0,
@@ -103,7 +102,7 @@ export default function SettingsPage() {
         });
         if (settingsData.logoUrl) setPreviewLogo(settingsData.logoUrl);
         if (settingsData.faviconUrl) setPreviewFavicon(settingsData.faviconUrl);
-        if (settingsData.qrCodeBase64) setPreviewQr(settingsData.qrCodeBase64);
+        if (settingsData.qrCodeUrl) setPreviewQr(settingsData.qrCodeUrl);
       }
       setLoading(false);
     }
@@ -119,40 +118,6 @@ export default function SettingsPage() {
       reader.readAsDataURL(file);
     }
   };
-  
-  const handleQrCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        form.setValue('qrCodeBase64', base64);
-        setPreviewQr(base64);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const onSaveColors = async () => {
-    setIsSavingColors(true);
-    const colors = form.getValues('colors');
-    try {
-      await saveSettings({ colors });
-      toast({
-        title: "Cores Salvas",
-        description: "As cores do aplicativo foram atualizadas.",
-        variant: "success",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao Salvar Cores",
-        description: "Não foi possível salvar as cores.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingColors(false);
-    }
-  };
 
   async function onSubmit(values: SettingsFormValues) {
     setIsSaving(true);
@@ -166,17 +131,17 @@ export default function SettingsPage() {
       if (faviconFile) {
         finalFaviconUrl = await uploadFileToApi(faviconFile);
       }
+      
+      let finalQrCodeUrl = values.qrCodeUrl;
+      if (qrCodeFile) {
+        finalQrCodeUrl = await uploadFileToApi(qrCodeFile);
+      }
 
       const dataToSave: Partial<Settings> = {
-        appName: values.appName,
-        metaDescription: values.metaDescription,
-        metaKeywords: values.metaKeywords,
-        pixKey: values.pixKey,
-        whatsappNumber: values.whatsappNumber,
+        ...values,
         logoUrl: finalLogoUrl,
         faviconUrl: finalFaviconUrl,
-        qrCodeBase64: values.qrCodeBase64 || "",
-        colors: values.colors,
+        qrCodeUrl: finalQrCodeUrl,
         minDeposit: Number(values.minDeposit) || 0,
         minWithdrawal: Number(values.minWithdrawal) || 0,
       };
@@ -200,6 +165,14 @@ export default function SettingsPage() {
     }
   }
   
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spinner />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-2">Configurações</h1>
@@ -207,23 +180,16 @@ export default function SettingsPage() {
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          
           <Card>
             <CardHeader>
-              <CardTitle>Configurações do Aplicativo</CardTitle>
+              <CardTitle>Identidade Visual e SEO</CardTitle>
               <CardDescription>Personalize a identidade e as informações de SEO do seu site.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="appName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Aplicativo</FormLabel>
-                    <FormControl><Input placeholder="ChuteFlix" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="appName" render={({ field }) => (
+                <FormItem><FormLabel>Nome do Aplicativo</FormLabel><FormControl><Input placeholder="ChuteFlix" {...field} /></FormControl><FormMessage /></FormItem>
+              )}/>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormItem>
                   <FormLabel>Logotipo</FormLabel>
@@ -236,60 +202,45 @@ export default function SettingsPage() {
                   <FormControl><Input type="file" onChange={(e) => handleFileChange(e, setFaviconFile, setPreviewFavicon)} accept=".ico,.png" /></FormControl>
                 </FormItem>
               </div>
-              <FormField
-                control={form.control}
-                name="metaDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meta Descrição (SEO)</FormLabel>
-                    <FormControl><Textarea placeholder="Descreva seu site..." {...field} /></FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="metaKeywords"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Palavras-chave (SEO)</FormLabel>
-                    <FormControl><Input placeholder="bolão, futebol, prêmios" {...field} /></FormControl>
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="metaDescription" render={({ field }) => (
+                <FormItem><FormLabel>Meta Descrição (SEO)</FormLabel><FormControl><Textarea placeholder="Descreva seu site..." {...field} /></FormControl></FormItem>
+              )}/>
+              <FormField control={form.control} name="metaKeywords" render={({ field }) => (
+                <FormItem><FormLabel>Palavras-chave (SEO)</FormLabel><FormControl><Input placeholder="bolão, futebol, prêmios" {...field} /></FormControl></FormItem>
+              )}/>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader>
-              <CardTitle>Cores do Aplicativo</CardTitle>
-              <CardDescription>Personalize as cores do seu site. Use o formato hexadecimal.</CardDescription>
+              <CardTitle>Configurações de Pagamento</CardTitle>
+              <CardDescription>Gerencie as informações para depósitos e saques na plataforma.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(Object.keys(defaultColors) as Array<keyof typeof defaultColors>).map((colorName) => (
-                <FormField
-                  key={colorName}
-                  control={form.control}
-                  name={`colors.${colorName}`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <ColorInput label={colorName.charAt(0).toUpperCase() + colorName.slice(1)} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
+            <CardContent className="space-y-4">
+              <FormField control={form.control} name="pixKey" render={({ field }) => (
+                <FormItem><FormLabel>Chave PIX Principal</FormLabel><FormControl><Input placeholder="email@dominio.com" {...field} /></FormControl></FormItem>
+              )}/>
+               <FormItem>
+                  <FormLabel>QR Code PIX</FormLabel>
+                  {previewQr && <Image src={previewQr} alt="Preview do QR Code" width={128} height={128} className="bg-muted p-1 rounded-md" />}
+                  <FormControl><Input type="file" onChange={(e) => handleFileChange(e, setQrCodeFile, setPreviewQr)} accept="image/*" /></FormControl>
+                </FormItem>
+              <FormField control={form.control} name="whatsappNumber" render={({ field }) => (
+                <FormItem><FormLabel>Número do WhatsApp (Suporte)</FormLabel><FormControl><Input placeholder="(99) 99999-9999" {...field} /></FormControl></FormItem>
+              )}/>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="minDeposit" render={({ field }) => (
+                  <FormItem><FormLabel>Depósito Mínimo (R$)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField control={form.control} name="minWithdrawal" render={({ field }) => (
+                  <FormItem><FormLabel>Saque Mínimo (R$)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+              </div>
             </CardContent>
-            <CardFooter>
-              <Button type="button" onClick={onSaveColors} disabled={isSavingColors}>
-                {isSavingColors ? <Spinner /> : "Salvar Cores"}
-              </Button>
-            </CardFooter>
           </Card>
 
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? <Spinner /> : "Salvar Alterações Gerais"}
+          <Button type="submit" disabled={isSaving} className="w-full">
+            {isSaving ? <Spinner /> : "Salvar Todas as Configurações"}
           </Button>
         </form>
       </Form>
