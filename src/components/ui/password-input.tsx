@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -14,7 +15,7 @@ const PasswordInput = React.forwardRef<HTMLInputElement, InputProps>(
       <div className="relative">
         <Input
           type={showPassword ? "text" : "password"}
-          className={cn("pr-10", className)}
+          className={cn("pr-10 text-base md:text-sm", className)}
           ref={ref}
           {...props}
         />

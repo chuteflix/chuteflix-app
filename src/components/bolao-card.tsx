@@ -128,7 +128,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <Card className="flex flex-col h-full w-full border-border hover:border-primary transition-all group overflow-hidden relative">
+      <Card className="flex flex-col h-full w-full border-border hover:border-primary transition-all group overflow-hidden relative active:border-primary/80 active:shadow-lg">
         {/* Favorite Button */}
         <Tooltip>
             <TooltipTrigger asChild>
@@ -154,7 +154,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                 </Badge>
             )}
             {isHighDemand && !isLastCall && (
-                <Badge variant="premium">
+                <Badge variant="default" className="bg-amber-500 text-black hover:bg-amber-500/90">
                     <Star className="h-3 w-3 mr-1" /> Popular
                 </Badge>
             )}
