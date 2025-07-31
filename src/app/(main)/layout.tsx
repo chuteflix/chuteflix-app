@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePathname } from 'next/navigation';
@@ -13,7 +12,7 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth(); // Corrigido para buscar userRole
   const pathname = usePathname();
   
   if (loading) {
@@ -25,13 +24,12 @@ export default function MainLayout({
   }
 
   if (!user) {
-    // This part should ideally not be hit if routing is correct,
-    // as public pages have their own layout. But as a fallback:
     return <>{children}</>;
   }
   
   const isAdminSection = pathname.startsWith('/admin');
-  const displayRole = (user.role === 'admin' && isAdminSection) ? 'admin' : 'user';
+  // Corrigido para usar userRole ao invés de user.role
+  const displayRole = (userRole === 'admin' && isAdminSection) ? 'admin' : 'user';
 
   return (
     <div className="flex h-screen bg-background">
