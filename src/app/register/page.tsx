@@ -1,7 +1,10 @@
 
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,8 +13,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -24,26 +35,54 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { getSettings } from "@/services/settings";
 import { Settings } from "@/types";
 import { useAuth } from "@/context/auth-context";
+import { cn } from "@/lib/utils";
+
+const formSchema = z.object({
+  firstName: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }),
+  lastName: z.string().min(2, { message: "Sobrenome deve ter pelo menos 2 caracteres." }),
+  email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
+  phone: z.string().refine(value => /^\(\d{2}\) \d{5}-\d{4}$/.test(value), {
+    message: "Número de telefone inválido.",
+  }),
+  cpf: z.string().refine(value => /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value), {
+    message: "CPF inválido.",
+  }),
+  password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
+  termsAccepted: z.boolean().refine(val => val === true, {
+    message: "Você deve aceitar os Termos de Uso."
+  }),
+  privacyAccepted: z.boolean().refine(val => val === true, {
+    message: "Você deve aceitar a Política de Privacidade."
+  }),
+});
 
 export default function RegisterPage() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [password, setPassword] = useState("");
   const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { user, loading } = useAuth();
 
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      cpf: "",
+      password: "",
+      termsAccepted: false,
+      privacyAccepted: false,
+    },
+  });
+
+  const { isSubmitting } = form.formState;
+
   useEffect(() => {
-    // Se o usuário já estiver logado, redireciona para a página de início
     if (!loading && user) {
       router.replace('/inicio');
     }
   }, [user, loading, router]);
-
 
   useEffect(() => {
     const fetchAppSettings = async () => {
@@ -53,48 +92,40 @@ export default function RegisterPage() {
     fetchAppSettings();
   }, []);
 
-  const handleRegister = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (values: z.infer<typeof formSchema>) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const fullName = `${firstName} ${lastName}`;
-
-      await updateProfile(user, {
-        displayName: fullName
-      });
+      const fullName = `${values.firstName} ${values.lastName}`;
+      await updateProfile(user, { displayName: fullName });
 
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
-        firstName,
-        lastName,
+        firstName: values.firstName,
+        lastName: values.lastName,
         name: fullName,
-        phone,
-        cpf,
+        phone: values.phone,
+        cpf: values.cpf,
         email: user.email,
         balance: 0,
         createdAt: serverTimestamp(),
-        role: 'user', // Define a role padrão
+        role: 'user',
       });
 
       toast({
         title: "Conta criada com sucesso!",
         description: "Você já pode fazer seus palpites.",
       });
-      // O redirecionamento agora é tratado pelo useEffect acima
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",
-        description: "Não foi possível criar sua conta. Verifique os dados e tente novamente.",
+        description: error.code === 'auth/email-already-in-use' ? "Este e-mail já está sendo utilizado." : "Não foi possível criar sua conta. Verifique os dados e tente novamente.",
         variant: "destructive",
       });
     }
   };
 
-  const inputClasses = "bg-background border-border focus:ring-primary flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
-
-  // Enquanto verifica o status do usuário, não mostra nada para evitar um "flash" da tela de registro
   if (loading || user) {
     return null; 
   }
@@ -114,74 +145,61 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleRegister} className="grid gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="first-name">Nome</Label>
-                <Input id="first-name" placeholder="Seu nome" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClasses} />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleRegister)} className="grid gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField control={form.control} name="firstName" render={({ field }) => (
+                  <FormItem><FormLabel>Nome</FormLabel><FormControl><Input placeholder="Seu nome" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="lastName" render={({ field }) => (
+                  <FormItem><FormLabel>Sobrenome</FormLabel><FormControl><Input placeholder="Seu sobrenome" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="last-name">Sobrenome</Label>
-                <Input id="last-name" placeholder="Seu sobrenome" required value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClasses} />
+              
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem><FormLabel>E-mail</FormLabel><FormControl><Input type="email" placeholder="seunome@email.com" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                  <FormItem><FormLabel>Telefone</FormLabel><FormControl>
+                    <IMaskInput mask="(00) 00000-0000" value={field.value} onAccept={field.onChange} placeholder="(11) 99999-9999" className={cn("flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background")} />
+                  </FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="cpf" render={({ field }) => (
+                  <FormItem><FormLabel>CPF</FormLabel><FormControl>
+                    <IMaskInput mask="000.000.000-00" value={field.value} onAccept={field.onChange} placeholder="000.000.000-00" className={cn("flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background")} />
+                  </FormControl><FormMessage /></FormItem>
+                )} />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seunome@email.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputClasses}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <IMaskInput
-                    mask="(00) 00000-0000"
-                    value={phone}
-                    onAccept={(value) => setPhone(value as string)}
-                    placeholder="(11) 99999-9999"
-                    className={inputClasses}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <IMaskInput
-                    mask="000.000.000-00"
-                    value={cpf}
-                    onAccept={(value) => setCpf(value as string)}
-                    placeholder="000.000.000-00"
-                    className={inputClasses}
-                  />
-                </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <PasswordInput 
-                id="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Crie uma senha forte"
-                className={inputClasses}
-              />
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full mt-4 bg-primary text-primary-foreground font-bold hover:bg-primary/90"
-            >
-              Finalizar Cadastro
-            </Button>
-          </form>
+
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem><FormLabel>Senha</FormLabel><FormControl><PasswordInput placeholder="Crie uma senha forte" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              <div className="grid gap-3 pt-2">
+                <FormField control={form.control} name="termsAccepted" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <div className="space-y-1 leading-none"><FormLabel className="font-normal">Eu li e concordo com os <Link href="/terms" target="_blank" className="underline text-primary">Termos de Uso</Link>.</FormLabel><FormMessage /></div>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="privacyAccepted" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <div className="space-y-1 leading-none"><FormLabel className="font-normal">Eu li e concordo com a <Link href="/privacy" target="_blank" className="underline text-primary">Política de Privacidade</Link>.</FormLabel><FormMessage /></div>
+                  </FormItem>
+                )} />
+              </div>
+
+              <Button type="submit" className="w-full mt-4" disabled={isSubmitting}>
+                {isSubmitting ? 'Finalizando Cadastro...' : 'Finalizar Cadastro'}
+              </Button>
+            </form>
+          </Form>
           <div className="mt-6 text-center text-sm">
-             <span className="text-muted-foreground">Já tem uma conta? </span>
-            <Link href="/login" className="underline text-primary hover:text-primary/90">
-              Entrar
-            </Link>
+            <span className="text-muted-foreground">Já tem uma conta? </span>
+            <Link href="/login" className="underline text-primary hover:text-primary/90">Entrar</Link>
           </div>
         </CardContent>
       </Card>
