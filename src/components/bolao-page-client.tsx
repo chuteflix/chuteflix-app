@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
@@ -13,8 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Countdown from "react-countdown"
-import { ArrowLeft, Crown, TrendingUp, MessageSquare } from "lucide-react"
+import { ArrowLeft, Crown, TrendingUp, MessageSquare, Clock } from "lucide-react"
 import { isPast, format, isValid } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import { Bolao } from "@/services/boloes"
 import { Team } from "@/services/teams"
 import { Championship } from "@/services/championships"
@@ -82,8 +84,8 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
   }, [comments]);
 
     const closingDateTime = useMemo(() => {
-        if (bolao?.closingTime && isValid(bolao.closingTime)) {
-            return bolao.closingTime;
+        if (bolao?.closingTime && isValid(new Date(bolao.closingTime))) {
+            return new Date(bolao.closingTime);
         }
         return new Date(0);
     }, [bolao]);
@@ -105,10 +107,10 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
     } else {
       return (
         <div className="flex space-x-2 text-center">
-          <div><span className="text-2xl font-bold">{String(days).padStart(2, '0')}</span><span className="text-xs">DIAS</span></div>
-          <div><span className="text-2xl font-bold">{String(hours).padStart(2, '0')}</span><span className="text-xs">HORAS</span></div>
-          <div><span className="text-2xl font-bold">{String(minutes).padStart(2, '0')}</span><span className="text-xs">MIN</span></div>
-          <div><span className="text-2xl font-bold">{String(seconds).padStart(2, '0')}</span><span className="text-xs">SEG</span></div>
+          <div><span className="text-2xl font-bold tabular-nums tracking-tighter">{String(days).padStart(2, '0')}</span><span className="text-xs">DIAS</span></div>
+          <div><span className="text-2xl font-bold tabular-nums tracking-tighter">{String(hours).padStart(2, '0')}</span><span className="text-xs">HORAS</span></div>
+          <div><span className="text-2xl font-bold tabular-nums tracking-tighter">{String(minutes).padStart(2, '0')}</span><span className="text-xs">MIN</span></div>
+          <div className="relative w-12"><span className="text-2xl font-bold tabular-nums tracking-tighter transition-opacity duration-500">{String(seconds).padStart(2, '0')}</span><span className="text-xs">SEG</span></div>
         </div>
       )
     }
@@ -123,6 +125,12 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
     }
     return line;
   }
+  
+  const fullClosingDateString = useMemo(() => {
+    if (!isValid(closingDateTime)) return null;
+    return `Encerra em ${format(closingDateTime, "eeee, dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`;
+  }, [closingDateTime]);
+
 
   if (authLoading || !bolao) {
     return (
@@ -163,9 +171,18 @@ export function BolaoPageClient({ bolaoDetails: initialBolao }: BolaoPageClientP
               </div>
               <Separator className="my-4"/>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                  <div><p className="text-sm text-muted-foreground">Encerra em</p><Countdown date={closingDateTime} renderer={countdownRenderer} /></div>
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="text-sm text-muted-foreground">Encerra em</p>
+                    <Countdown date={closingDateTime} renderer={countdownRenderer} />
+                    {fullClosingDateString && <p className="text-xs text-muted-foreground mt-1">({fullClosingDateString})</p>}
+                  </div>
                   <div><p className="text-sm text-muted-foreground">Prêmio Estimado</p><p className="text-3xl font-bold text-primary">{totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>
-                  <div><p className="text-sm text-muted-foreground">Participantes</p><p className="text-3xl font-bold">{participantCount}</p></div>
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="text-sm text-muted-foreground">Participantes</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-3xl font-bold">{participantCount}</p>
+                    </div>
+                  </div>
               </div>
               <Separator className="my-4"/>
               <div className="text-center"><Button size="lg" className="font-bold text-lg" onClick={() => setIsModalOpen(true)} disabled={isBettingClosed}>{isBettingClosed ? "Apostas Encerradas" : `Chutar Placar por ${bolao.betAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}</Button></div>

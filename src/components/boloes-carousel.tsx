@@ -31,7 +31,7 @@ export function BoloesCarousel({ boloes }: BoloesCarouselProps) {
             <CarouselItem key={bolao.id} className="basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4 p-2">
               <Link 
                 href={`/boloes/${bolao.id}`} 
-                className="block h-full hover:scale-[1.02] transition-transform duration-200 active:scale-[0.98]"
+                className="block h-full transition-transform duration-300 ease-in-out hover:scale-[1.03] active:scale-[0.99]"
               >
                 <div className="h-full">
                   <BolaoCard 

@@ -6,10 +6,13 @@ service cloud.firestore {
     // Usuários: Um usuário só pode acessar seu próprio documento. Admins podem acessar qualquer um.
     match /users/{userId} {
       allow create: if request.auth != null;
-      allow read, update: if request.auth.uid == userId || request.auth.token.role == 'admin';
+      // Permitir que qualquer pessoa leia os dados do usuário para fins de prova social (ex: nomes de apostadores).
+      // Considere restringir a campos específicos se nem todos os dados do usuário forem públicos.
+      allow read: if true; // Permite leitura pública de documentos de usuário
+      allow update: if request.auth.uid == userId || request.auth.token.role == 'admin';
       allow delete: if request.auth.token.role == 'admin';
-      // Listagem de todos os usuários é apenas para admins (ex: no dashboard).
-      allow list: if request.auth.token.role == 'admin';
+      // A listagem de usuários pode permanecer restrita ou ser aberta dependendo da necessidade.
+      allow list: if request.auth.token.role == 'admin'; // Mantendo listagem restrita para admins
     }
 
     // Configurações (Settings): Leitura para todos, escrita para admins.

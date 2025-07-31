@@ -13,10 +13,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Separator } from "@/components/ui/separator"
-import { Users, Trophy, Info, AlertCircle, Heart, Star } from "lucide-react"
-import { format, isValid } from "date-fns"
+import { Users, Trophy, Info, AlertCircle, Heart, Star, Clock, Flame } from "lucide-react"
+import { format, isValid, differenceInHours } from "date-fns"
 import { cn } from "@/lib/utils"
+import Countdown from "react-countdown"
 
 interface BolaoCardProps {
   bolao: Bolao;
@@ -30,6 +30,8 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
   const [loadingParticipants, setLoadingParticipants] = useState(true)
   const [isClosingTimePassed, setIsClosingTimePassed] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [isHovering, setIsHovering] = useState(false);
+
 
   const isHighDemand = participantCount > 50 && bolao.status === 'Aberto';
   const isLastCall = bolao.maxParticipants && participantCount / bolao.maxParticipants > 0.9 && bolao.status === 'Aberto';
@@ -49,15 +51,9 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
     fetchParticipantCount()
 
     const checkClosingTime = () => {
-        if (bolao.matchStartDate && bolao.closingTime) {
-            const matchDate = new Date(bolao.matchStartDate);
-            if (isValid(matchDate)) {
-                const datePart = format(matchDate, 'yyyy-MM-dd');
-                const closingDateTimeString = `${datePart}T${bolao.closingTime}`;
-                const closingDateTime = new Date(closingDateTimeString);
-                if (isValid(closingDateTime) && new Date() > closingDateTime) {
-                    setIsClosingTimePassed(true);
-                }
+        if (bolao.closingTime && isValid(new Date(bolao.closingTime))) {
+            if (new Date() > new Date(bolao.closingTime)) {
+                setIsClosingTimePassed(true);
             }
         }
     };
@@ -70,7 +66,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
     }
 
     return () => clearInterval(interval);
-  }, [bolao.id, bolao.matchStartDate, bolao.closingTime, user])
+  }, [bolao.id, bolao.closingTime, user])
 
   const handleChutarClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -123,22 +119,50 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
     return 'Chutar Placar';
   }
 
-  const matchDate = bolao.matchStartDate ? format(new Date(bolao.matchStartDate), 'dd/MM/yyyy') : 'N/A';
-  const matchTime = bolao.matchStartDate ? format(new Date(bolao.matchStartDate), 'HH:mm') : 'N/A';
+  const matchDate = bolao.matchStartDate ? new Date(bolao.matchStartDate) : null;
+  
+  const UrgencyBadge = () => {
+    if (!matchDate || !bolao.closingTime || bolao.status !== 'Aberto') return null;
+
+    const hoursUntilEnd = differenceInHours(new Date(bolao.closingTime), new Date());
+
+    if (hoursUntilEnd < 1) {
+        return <Badge variant="destructive" className="text-xs font-bold animate-pulse"><Flame className="mr-1 h-3 w-3" />ÚLTIMA HORA</Badge>
+    }
+    if (hoursUntilEnd < 24) {
+        return <Badge variant="outline" className="text-xs border-amber-500 text-amber-500"><Clock className="mr-1 h-3 w-3" />-24 HORAS</Badge>
+    }
+    return null;
+  }
+  
+  const countdownRenderer = ({ days, hours, minutes, seconds, completed }: any) => {
+    if (completed) {
+      return <span>Encerrado</span>;
+    }
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+    return <span className="font-mono tracking-tighter">{parts.join(' ')}</span>;
+  };
 
   return (
     <TooltipProvider delayDuration={100}>
-      <Card className="flex flex-col h-full w-full border-border hover:border-primary transition-all group overflow-hidden relative active:border-primary/80 active:shadow-lg">
-        {/* Favorite Button */}
+      <Card 
+        className="flex flex-col h-full w-full border-border hover:border-primary transition-all group overflow-hidden relative active:border-primary/80 active:shadow-lg"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={handleFavoriteClick} 
-                    className={cn("absolute top-2 right-2 z-10 text-muted-foreground hover:text-primary", isFavorite && "text-primary")}
+                    className={cn("absolute top-2 right-2 z-10 text-muted-foreground hover:text-primary transition-transform hover:scale-110", isFavorite && "text-primary")}
                 >
-                    <Heart className={cn(isFavorite && "fill-current")} />
+                    <Heart className={cn("transition-all", isFavorite && "fill-current")} />
                 </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -146,7 +170,6 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
             </TooltipContent>
         </Tooltip>
         
-        {/* Urgency Tags */}
         <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
             {isLastCall && (
                 <Badge variant="destructive" className="animate-pulse">
@@ -163,7 +186,14 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
         <CardHeader className="p-4 pb-2">
             <h3 className="font-bold leading-tight line-clamp-2 text-base pr-8">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
             <p className="text-xs text-muted-foreground">{bolao.championship}</p>
-            <p className="text-xs text-muted-foreground mt-1">{matchDate} às {matchTime}</p>
+            <div className="text-xs text-muted-foreground mt-1 h-5 flex items-center transition-all duration-300">
+              <div className={cn("transition-opacity duration-300", isHovering ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0')}>
+                {matchDate ? format(matchDate, 'dd/MM/yyyy HH:mm') : 'N/A'}
+              </div>
+              <div className={cn("absolute transition-opacity duration-300", isHovering ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2')}>
+                {bolao.closingTime && <Countdown date={new Date(bolao.closingTime)} renderer={countdownRenderer} />}
+              </div>
+            </div>
         </CardHeader>
         
         <CardContent className="flex-grow p-4 pt-2 flex flex-col items-center justify-center text-center">
@@ -205,17 +235,17 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                 </Tooltip>
             </div>
             
-            <div className="w-full flex justify-between text-sm">
+            <div className="w-full flex justify-between items-center text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-4 w-4" />
                     {loadingParticipants ? <div className="h-4 w-4 rounded-full bg-muted-foreground/50 animate-pulse" /> : <span className="font-semibold text-foreground">{participantCount}</span>}
                     <span>participantes</span>
                 </div>
-                <Badge variant={currentStatusStyle.variant} className="shrink-0">{currentStatusStyle.label}</Badge>
+                <UrgencyBadge />
             </div>
             
             <Button
-                className="w-full font-bold"
+                className="w-full font-bold transition-transform hover:scale-105"
                 onClick={handleChutarClick}
                 disabled={isButtonDisabled}
             >

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context"; 
 import { useRouter } from 'next/navigation'; 
 import { Settings } from "@/types";
+import { ResultsTicker } from "@/components/results-ticker"; // Importação adicionada
 
 const features = [
     {
@@ -141,6 +142,7 @@ export default function PublicHomePage() {
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
+      <ResultsTicker /> {/* Adicionado o componente ResultsTicker aqui */}
       <HeroSection 
         title={settings?.appName || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
         subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
