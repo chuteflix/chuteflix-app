@@ -122,7 +122,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
   const matchDate = bolao.matchStartDate ? new Date(bolao.matchStartDate) : null;
   
   const UrgencyBadge = () => {
-    if (!matchDate || !bolao.closingTime || bolao.status !== 'Aberto') return null;
+    if (!bolao.closingTime || bolao.status !== 'Aberto') return null;
 
     const hoursUntilEnd = differenceInHours(new Date(bolao.closingTime), new Date());
 
