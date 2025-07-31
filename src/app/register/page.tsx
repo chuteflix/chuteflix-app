@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,8 +32,6 @@ import { useRouter } from "next/navigation";
 import { IMaskInput } from 'react-imask';
 import { Logo } from "@/components/icons";
 import { PasswordInput } from "@/components/ui/password-input";
-import { getSettings } from "@/services/settings";
-import { Settings } from "@/types";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -57,10 +55,9 @@ const formSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const [appSettings, setAppSettings] = useState<Settings | null>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, settings } = useAuth(); // Usando settings do contexto
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -83,14 +80,6 @@ export default function RegisterPage() {
       router.replace('/inicio');
     }
   }, [user, loading, router]);
-
-  useEffect(() => {
-    const fetchAppSettings = async () => {
-        const settings = await getSettings();
-        setAppSettings(settings);
-    }
-    fetchAppSettings();
-  }, []);
 
   const handleRegister = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -134,7 +123,7 @@ export default function RegisterPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
       <div className="mb-8">
         <Link href="/" aria-label="Voltar para a página inicial">
-            <Logo logoUrl={appSettings?.logoUrl} />
+            <Logo logoUrl={settings?.logoUrl} />
         </Link>
       </div>
       <Card className="mx-auto w-full max-w-lg bg-card border-border text-card-foreground">

@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "boloes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "matchStartDate", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "chutes",
       "queryScope": "COLLECTION",
       "fields": [

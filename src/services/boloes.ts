@@ -10,6 +10,8 @@ import {
   deleteDoc,
   query,
   where,
+  orderBy,
+  limit
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getTeamById } from "@/services/teams"; 
@@ -60,6 +62,8 @@ const fromFirestore = async (docSnap: DocumentData): Promise<Bolao> => {
     betAmount: data.betAmount,
     initialPrize: data.initialPrize || 0,
     status: data.status || 'Aberto',
+    homeScore: data.homeScore,
+    awayScore: data.awayScore,
     categoryIds: data.categoryIds || [],
     categoryNames: categoryNames,
     userGuess: data.userGuess,
@@ -84,6 +88,23 @@ export const getBoloes = async (): Promise<Bolao[]> => {
   } catch (error) {
     console.error("Erro ao buscar bolões: ", error);
     throw new Error("Não foi possível buscar os bolões.");
+  }
+};
+
+export const getFinishedBoloes = async (): Promise<Bolao[]> => {
+  try {
+    const q = query(
+      collection(db, "boloes"), 
+      where("status", "==", "Finalizado"),
+      orderBy("matchStartDate", "desc"),
+      limit(20)
+    );
+    const querySnapshot = await getDocs(q);
+    const boloes = await Promise.all(querySnapshot.docs.map(fromFirestore));
+    return boloes.filter(b => b.homeScore !== undefined && b.awayScore !== undefined);
+  } catch (error) {
+    console.error("Erro ao buscar bolões finalizados: ", error);
+    throw new Error("Não foi possível buscar os resultados dos jogos.");
   }
 };
 
@@ -113,7 +134,7 @@ export const getBolaoById = async (id: string): Promise<Bolao | null> => {
     }
 };
 
-export const addBolao = async (data: Omit<Bolao, "id" | "status" | "categoryNames">): Promise<string> => {
+export const addBolao = async (data: Omit<Bolao, "id" | "status" | "categoryNames" | "homeScore" | "awayScore">): Promise<string> => {
   try {
     const { homeTeam, awayTeam, ...rest } = data;
     const docRef = await addDoc(collection(db, "boloes"), {

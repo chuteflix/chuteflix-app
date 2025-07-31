@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getAllCategories, Category } from "@/services/categories";
-import { getSettings, Settings } from "@/services/settings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { HeroSection } from "@/components/hero-section";
@@ -13,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { CategoryShelf } from "@/components/category-shelf";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/auth-context"; // Importando o useAuth
 
 const features = [
     {
@@ -63,24 +63,20 @@ const faqData = {
 
 export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [appSettings, setAppSettings] = useState<Settings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [faqSearchTerm, setFaqSearchTerm] = useState("");
+  const { settings } = useAuth(); // Usando settings do contexto
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      setLoading(true);
+      setLoadingCategories(true);
       try {
-        const [fetchedCategories, fetchedSettings] = await Promise.all([
-          getAllCategories(),
-          getSettings()
-        ]);
+        const fetchedCategories = await getAllCategories();
         setCategories(fetchedCategories.filter(c => !c.parentId)); 
-        setAppSettings(fetchedSettings);
       } catch (error) {
         console.error("Falha ao buscar dados iniciais:", error);
       } finally {
-        setLoading(false);
+        setLoadingCategories(false);
       }
     };
     fetchInitialData();
@@ -119,10 +115,10 @@ export default function PublicHomePage() {
 
   return (
     <div className="bg-background text-foreground">
-      <PublicHeader showNavLinks={true} settings={appSettings} />
+      <PublicHeader showNavLinks={true} />
       <HeroSection 
-        title={appSettings?.homeHeroTitle || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
-        subtitle={appSettings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
+        title={settings?.homeHeroTitle || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
+        subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
       />
       
       <main>
@@ -150,7 +146,7 @@ export default function PublicHomePage() {
               <p className="text-muted-foreground mt-3 max-w-2xl mx-auto text-lg">Seu próximo grande prêmio está a um clique de distância. Escolha um jogo e dê seu palpite.</p>
             </div>
             
-             {loading ? renderCategorySkeletons() : 
+             {loadingCategories ? renderCategorySkeletons() : 
                categories.length > 0 ? (
                 <div className="space-y-12">
                     {categories.map((category) => (
@@ -221,7 +217,7 @@ export default function PublicHomePage() {
       <footer className="border-t border-border/20 bg-muted/50">
           <div className="container mx-auto text-center py-8">
             <p className="text-sm text-muted-foreground mb-4">
-                © {new Date().getFullYear()} ChuteFlix. Todos os direitos reservados.
+                © {new Date().getFullYear()} {settings?.appName || "ChuteFlix"}. Todos os direitos reservados.
             </p>
             <div className="flex justify-center gap-6 text-sm">
                 <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Termos de Uso</Link>

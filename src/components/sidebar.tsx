@@ -1,147 +1,105 @@
-
 "use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/context/auth-context"
+import { Logo } from "@/components/icons"
+import { Button } from "@/components/ui/button"
 import {
+  Bell,
   Home,
   Users,
-  Flag,
   Trophy,
-  Ticket,
+  BarChart3,
   Settings,
-  ShieldCheck,
-  User,
+  Shield,
+  Palette,
+  ClipboardList,
+  Ticket,
   Wallet,
-  LogOut,
-  Bell,
-  BarChart2,
-  List,
-  CreditCard,
   Send,
-  MoreHorizontal
+  User as UserIcon,
+  LogOut,
+  ArrowLeftRight,
+  HandCoins,
+  DollarSign
 } from "lucide-react"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
-import {
-  Sidebar as SidebarPrimitive,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarHeader,
-  SidebarFooter
-} from "@/components/ui/sidebar"
-import { Logo } from "@/components/icons"
-import { useAuth } from "@/context/auth-context"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { Button } from "./ui/button"
-import { Skeleton } from "./ui/skeleton"
 
 const adminMenu = [
-  { href: "/admin", icon: BarChart2, label: "Dashboard" },
-  { href: "/admin/usuarios", icon: Users, label: "Usuários" },
-  { href: "/admin/times", icon: Flag, label: "Times" },
-  { href: "/admin/categorias", icon: List, label: "Categorias" },
+  { href: "/admin", icon: Home, label: "Dashboard" },
   { href: "/admin/boloes", icon: Trophy, label: "Bolões" },
-  { href: "/admin/chutes", icon: Ticket, label: "Chutes" },
-  { href: "/admin/depositos", icon: CreditCard, label: "Depósitos" },
-  { href: "/admin/saques", icon: Send, label: "Saques" },
-  // { href: "/admin/notificacoes", icon: Bell, label: "Notificações" },
-  { href: "/admin/equipe", icon: ShieldCheck, label: "Equipe" },
-  { href: "/admin/configuracoes", icon: Settings, label: "Configurações" },
-]
+  { href: "/admin/chutes", icon: ClipboardList, label: "Chutes" },
+  { href: "/admin/depositos", icon: HandCoins, label: "Depósitos" },
+  { href: "/admin/saques", icon: DollarSign, label: "Saques" },
+  { href: "/admin/usuarios", icon: Users, label: "Usuários" },
+  { href: "/admin/times", icon: Shield, label: "Times" },
+  { href: "/admin/categorias", icon: Palette, label: "Categorias" },
+  { href: "/admin/transacoes", icon: ArrowLeftRight, label: "Transações" },
+  { href: "/admin/configuracoes", icon: Settings, label: "Configurações do App" },
+];
 
 const userMenu = [
   { href: "/inicio", icon: Home, label: "Início" },
   { href: "/meus-chutes", icon: Ticket, label: "Meus Chutes" },
   { href: "/recarga", icon: Wallet, label: "Recarga" },
   { href: "/saque", icon: Send, label: "Saque" },
-  { href: "/transacoes", icon: BarChart2, label: "Transações" },
-]
+  { href: "/transacoes", icon: BarChart3, label: "Minhas Transações" },
+];
 
-export function Sidebar({ role }: { role: "admin" | "user" }) {
-  const pathname = usePathname()
-  const { userProfile, loading, auth } = useAuth()
-  const menu = role === "admin" ? adminMenu : userMenu
-  
-  const handleLogout = async () => {
-    await auth.signOut();
-  }
-  
-  const firstName = userProfile?.name?.split(" ")[0] || "";
+function MenuLink({ href, icon: Icon, label, currentPath }: { href: string, icon: React.ElementType, label: string, currentPath: string }) {
+  const isActive = currentPath === href;
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </Link>
+  );
+}
+
+export function Sidebar({ role }: { role: 'admin' | 'user' }) {
+  const pathname = usePathname();
+  const { userProfile, settings } = useAuth();
+  const menuItems = role === 'admin' ? adminMenu : userMenu;
 
   return (
-    <SidebarPrimitive className="w-64 border-r bg-card text-card-foreground">
-        <SidebarHeader className="border-b">
-            <Link href={role === 'admin' ? '/admin' : '/inicio'}>
-                <Logo />
-            </Link>
-        </SidebarHeader>
-      <SidebarContent className="p-4">
-        <SidebarMenu>
-          {menu.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith(item.href) && (item.href !== '/admin' || pathname === '/admin')}
-              >
-                <Link href={item.href}>
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+    <aside className="hidden md:flex flex-col h-full w-64 border-r bg-background">
+      <div className="flex items-center justify-center h-16 border-b px-4">
+        <Link href={role === 'admin' ? '/admin' : '/inicio'} className="flex items-center gap-2 font-semibold">
+          <Logo logoUrl={settings?.logoUrl} />
+          <span className="text-lg">{settings?.appName || 'ChuteFlix'}</span>
+        </Link>
+      </div>
+      <nav className="flex-1 overflow-y-auto p-4">
+        <div className="grid items-start gap-1 text-sm font-medium">
+          {menuItems.map((item) => (
+            <MenuLink
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              currentPath={pathname}
+            />
           ))}
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter className="border-t p-4">
-        {loading ? (
-            <div className="flex items-center gap-3">
-                <Skeleton className="h-9 w-9 rounded-full" />
-                <div className="flex-1 space-y-1">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-3 w-16" />
-                </div>
+        </div>
+      </nav>
+      {userProfile && (
+        <div className="border-t p-4">
+          <div className="flex items-center gap-3">
+            <UserIcon className="h-8 w-8 rounded-full bg-muted text-muted-foreground p-1.5" />
+            <div>
+              <p className="text-sm font-semibold">{userProfile.name}</p>
+              <p className="text-xs text-muted-foreground">{userProfile.email}</p>
             </div>
-        ) : userProfile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start items-center gap-3 h-auto p-2">
-                    <Avatar className="h-9 w-9">
-                        <AvatarImage src={userProfile.photoURL || ""} alt={userProfile.name || ""} />
-                        <AvatarFallback>{firstName?.charAt(0)?.toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 text-left">
-                        <p className="text-sm font-semibold truncate">{userProfile.name}</p>
-                        <p className="text-xs text-muted-foreground">{role === 'admin' ? 'Administrador' : 'Usuário'}</p>
-                    </div>
-                    <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56" side="top">
-                <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <Link href="/profile"><User className="mr-2 h-4 w-4" /> Editar Perfil</Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                    <Link href="/settings"><Settings className="mr-2 h-4 w-4" /> Chave PIX</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
-                    <LogOut className="mr-2 h-4 w-4" /> Sair
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-      </SidebarFooter>
-    </SidebarPrimitive>
-  )
+          </div>
+        </div>
+      )}
+    </aside>
+  );
 }

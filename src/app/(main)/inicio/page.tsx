@@ -25,27 +25,28 @@ export default function InicioPage() {
     fetchCategories();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        <WelcomeBanner />
-        {/* Skeleton para as prateleiras */}
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i}>
-            <Skeleton className="h-8 w-1/3 mb-4" />
-            <div className="flex space-x-4">
-                <Skeleton className="h-48 w-64 rounded-lg" />
-                <Skeleton className="h-48 w-64 rounded-lg" />
-                <Skeleton className="h-48 w-64 rounded-lg" />
-            </div>
+  const skeletonContent = (
+    <div className="space-y-8 pt-20">
+      <WelcomeBanner />
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i}>
+          <Skeleton className="h-8 w-1/3 mb-4" />
+          <div className="flex space-x-4">
+              <Skeleton className="h-48 w-64 rounded-lg" />
+              <Skeleton className="h-48 w-64 rounded-lg" />
+              <Skeleton className="h-48 w-64 rounded-lg" />
           </div>
-        ))}
-      </div>
-    );
+        </div>
+      ))}
+    </div>
+  );
+
+  if (loading) {
+    return skeletonContent;
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-20">
       <WelcomeBanner />
 
       {categories.map((category) => (

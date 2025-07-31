@@ -1,116 +1,79 @@
-
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
-import { UserProfile } from '@/types'; 
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { UserProfile, Settings } from '@/types';
 import { getSettings } from '@/services/settings';
-import { Settings } from '@/types';
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: User | null;
   userProfile: UserProfile | null;
-  settings: Settings | null;
-  userRole: string | null;
+  userRole: 'admin' | 'user' | null;
   loading: boolean;
-  balance: number | null;
+  settings: Settings | null; // Adicionando settings ao contexto
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  userProfile: null,
-  settings: null,
-  userRole: null,
-  loading: true,
-  balance: null,
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Listener para as configurações do aplicativo
   useEffect(() => {
-    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'main_settings'), (doc) => { // Alterado de 'app' para 'main_settings'
-      if (doc.exists()) {
-        setSettings(doc.data() as Settings);
-      } else {
-        console.warn("Documento de configurações do app não encontrado!");
-        setSettings(null);
-      }
-    }, (error) => {
-      console.error("Erro ao buscar configurações do app:", error);
-      setSettings(null);
-    });
-
-    return () => unsubscribeSettings();
-  }, []);
-  
-  // Listener para o estado de autenticação do usuário
-  useEffect(() => {
-    let unsubscribeFirestore: Unsubscribe | undefined;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
-      }
-
-      if (firebaseUser) {
+    // Carrega as configurações do aplicativo uma vez
+    const fetchAppSettings = async () => {
         try {
-          const idTokenResult = await firebaseUser.getIdTokenResult(true);
-          const role = idTokenResult.claims.role as string | null;
-          
-          setUser(firebaseUser);
-          setUserRole(role);
-
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          unsubscribeFirestore = onSnapshot(userDocRef, (doc) => {
-            setUserProfile(doc.exists() ? { uid: doc.id, ...doc.data() } as UserProfile : null);
-          }, (error) => {
-              console.error("Erro ao buscar perfil do usuário:", error);
-              setUserProfile(null);
-          });
-
+            const appSettings = await getSettings();
+            setSettings(appSettings);
         } catch (error) {
-          console.error("Erro ao buscar token do usuário:", error);
-          setUser(firebaseUser);
-          setUserProfile(null);
-          setUserRole(null);
-        } finally {
-          setLoading(false); // Garante que o loading seja false após a tentativa de autenticação e busca de perfil
+            console.error("Erro ao buscar configurações globais do app:", error);
         }
-      }
-      else {
-        setUser(null);
+    };
+
+    fetchAppSettings();
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      if (user) {
+        // Se o usuário estiver logado, ouve as atualizações do perfil em tempo real
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubProfile = onSnapshot(userDocRef, (doc) => {
+          if (doc.exists()) {
+            const data = doc.data() as UserProfile;
+            setUserProfile(data);
+            setUserRole(data.role || 'user');
+          } else {
+            setUserProfile(null);
+            setUserRole(null);
+          }
+          setLoading(false);
+        });
+        return () => unsubProfile();
+      } else {
+        // Se não houver usuário, para de carregar
         setUserProfile(null);
         setUserRole(null);
         setLoading(false);
       }
     });
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
-      }
-    };
+    return () => unsubscribe();
   }, []);
 
-  const balance = userProfile?.balance ?? null;
-  // Agora as configurações também fazem parte do contexto
-  const value = { user, userProfile, settings, userRole, loading, balance };
+  const value = { user, userProfile, userRole, settings, loading };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+}
