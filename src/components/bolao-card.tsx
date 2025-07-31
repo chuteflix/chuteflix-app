@@ -192,7 +192,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
         </div>
 
         <CardHeader className="p-4 pb-2">
-            <h3 className="font-bold leading-tight line-clamp-2 text-base pr-8">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
+            <h3 className="font-bold leading-tight text-base">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
             <p className="text-xs text-muted-foreground">{bolao.championship}</p>
             <div className="flex items-center justify-between mt-1">
                 <p className="text-sm font-semibold text-foreground">
@@ -208,7 +208,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                         <AvatarImage src={bolao.homeTeam.shieldUrl} alt={bolao.homeTeam.name} />
                         <AvatarFallback>{bolao.homeTeam.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <span className="font-semibold text-sm max-w-[100px] truncate">{bolao.homeTeam.name}</span>
+                    <span className="font-semibold text-sm min-h-[40px]">{bolao.homeTeam.name}</span>
                 </div>
                 <div className="text-2xl font-bold text-muted-foreground px-2">VS</div>
                 <div className="flex flex-col items-center gap-2">
@@ -216,7 +216,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
                         <AvatarImage src={bolao.awayTeam.shieldUrl} alt={bolao.awayTeam.name} />
                         <AvatarFallback>{bolao.awayTeam.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <span className="font-semibold text-sm max-w-[100px] truncate">{bolao.awayTeam.name}</span>
+                    <span className="font-semibold text-sm min-h-[40px]">{bolao.awayTeam.name}</span>
                 </div>
             </div>
         </CardContent>
