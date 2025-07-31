@@ -38,7 +38,7 @@ export default function MainLayout({
       <Sidebar role={displayRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <DashboardHeader />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-20 md:pt-24 pb-16 md:pb-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-20 pb-16 md:pb-8">
           {children}
         </main>
         <BottomTabBar />
