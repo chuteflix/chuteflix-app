@@ -28,6 +28,11 @@ export interface Bolao {
   };
   finalScoreTeam1?: number; 
   finalScoreTeam2?: number; 
+  // Adicionado para filtragem na prateleira
+  type?: 'national' | 'international';
+  championship?: string;
+  homeScore?: number;
+  awayScore?: number;
 }
 
 export interface UserProfile {
@@ -70,12 +75,20 @@ export interface Transaction {
 export interface Settings {
   appName: string;
   logoUrl?: string;
-  faviconUrl?: string; // Adicionado faviconUrl
+  faviconUrl?: string;
   metaDescription?: string;
   metaKeywords?: string;
   pixKey?: string;
-  qrCodeBase64?: string;
+  qrCodeUrl?: string;
   whatsappNumber?: string;
-  minDeposit?: number; // Adicionado minDeposit
-  minWithdrawal?: number; // Adicionado minWithdrawal
+  minDeposit?: number;
+  minWithdrawal?: number;
+  homeHeroSubtitle?: string;
+  colors?: {
+    primary?: string | null;
+    secondary?: string | null;
+    accent?: string | null;
+    background?: string | null;
+    text?: string | null;
+  } | null;
 }

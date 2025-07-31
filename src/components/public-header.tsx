@@ -88,6 +88,12 @@ export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
 
   const isLoading = authLoading || settingsLoading;
 
+  // Não renderiza o header em rotas de dashboard
+  const pathname = usePathname();
+  if (isDashboard && pathname !== '/') {
+    return null;
+  }
+
   return (
     <header className={cn(
         "fixed top-0 left-0 right-0 z-40 transition-all duration-300",
@@ -119,7 +125,7 @@ export function PublicHeader({ settings: initialSettings }: PublicHeaderProps) {
           {isLoading ? (
               <Skeleton className="w-24 h-8 rounded-md" />
           ) : isDashboard ? (
-              <div className="hidden"></div> // No user menu on public pages
+              <div className="hidden"></div>
           ) : (
               <div className="hidden md:flex items-center gap-2">
                   <Button variant="ghost" asChild><Link href="/login">Entrar</Link></Button>

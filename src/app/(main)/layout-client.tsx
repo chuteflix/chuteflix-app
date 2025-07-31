@@ -28,7 +28,7 @@ function AppLayoutRouter({ children }: { children: React.ReactNode }) {
         return <>{children}</>;
     }
     
-    // If there is no user, it must be a public page, so no dashboard layout.
+    // If there is no user, it must be a public page.
     // The public header is handled by the root layout.
     if (!user) {
         return <>{children}</>;

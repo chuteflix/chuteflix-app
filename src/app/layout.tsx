@@ -3,7 +3,6 @@ import "./globals.css";
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/context/auth-context";
 import { getSettings } from "@/services/settings";
-import { PublicHeader } from "@/components/public-header";
 import { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -34,12 +33,9 @@ export default async function RootLayout({
     <html lang="pt-br">
       <body className={inter.className}>
         <AuthProvider>
-            <ToastProvider />
-            {/* O PublicHeader é renderizado aqui para páginas que não estão no (main) group */}
-            <PublicHeader settings={settings} />
-            <div className="flex flex-col min-h-screen">
-              <main className="flex-grow">{children}</main>
-            </div>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
         </AuthProvider>
       </body>
     </html>

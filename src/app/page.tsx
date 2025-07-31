@@ -15,6 +15,8 @@ import { CategoryShelf } from "@/components/category-shelf";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context"; 
 import { useRouter } from 'next/navigation'; 
+import { getSettings } from "@/services/settings";
+import { Settings } from "@/types";
 
 const features = [
     {
@@ -67,8 +69,17 @@ export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [faqSearchTerm, setFaqSearchTerm] = useState("");
-  const { settings, user, loading: loadingAuth } = useAuth(); 
+  const { user, loading: loadingAuth } = useAuth(); 
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    getSettings().then(s => {
+      setSettings(s);
+      setSettingsLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     if (!loadingAuth && user) {
@@ -125,7 +136,7 @@ export default function PublicHomePage() {
     </div>
   );
 
-  if (loadingAuth || user) {
+  if (loadingAuth || settingsLoading || user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -135,6 +146,7 @@ export default function PublicHomePage() {
 
   return (
     <div className="bg-background text-foreground">
+      <PublicHeader settings={settings} />
       <HeroSection 
         title={settings?.appName || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
         subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
