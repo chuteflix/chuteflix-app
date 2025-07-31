@@ -66,11 +66,24 @@ export async function POST(req: Request) {
     const bolaoRef = db.collection(BOLOES_COLLECTION).doc(bolaoId);
 
     const chuteId = await db.runTransaction(async (transaction) => {
+      // 1. LEITURAS
       const userDoc = await transaction.get(userRef);
       const bolaoDoc = await transaction.get(bolaoRef);
+      
+      const existingChuteQuery = db.collection(CHUTES_COLLECTION)
+        .where('userId', '==', userId)
+        .where('bolaoId', '==', bolaoId)
+        .where('scoreTeam1', '==', scoreTeam1)
+        .where('scoreTeam2', '==', scoreTeam2);
+      const existingChuteSnapshot = await transaction.get(existingChuteQuery);
 
+      // 2. VALIDAÇÕES
       if (!userDoc.exists) throw new Error('Usuário não encontrado.');
       if (!bolaoDoc.exists) throw new Error('Bolão não encontrado.');
+      
+      if (!existingChuteSnapshot.empty) {
+        throw new Error('Você já fez este palpite para este bolão.');
+      }
 
       const userData = userDoc.data()!;
       const bolaoData = bolaoDoc.data()!;
@@ -87,6 +100,7 @@ export async function POST(req: Request) {
         throw new Error('Saldo insuficiente para fazer a aposta.');
       }
 
+      // 3. ESCRITAS
       // Debita o valor do saldo do usuário
       transaction.update(userRef, {
         balance: admin.firestore.FieldValue.increment(-betAmount)
@@ -129,7 +143,7 @@ export async function POST(req: Request) {
     console.error('Erro ao fazer aposta:', error);
     const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
     // Retorna status 400 para erros de validação ou de negócio
-    if (errorMessage.includes('não encontrado') || errorMessage.includes('inválidos') || errorMessage.includes('Saldo insuficiente') || errorMessage.includes('não está aberto')) {
+    if (errorMessage.includes('não encontrado') || errorMessage.includes('inválidos') || errorMessage.includes('Saldo insuficiente') || errorMessage.includes('não está aberto') || errorMessage.includes('Você já fez este palpite')) {
         return NextResponse.json({ message: errorMessage }, { status: 400 });
     }
     return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });
