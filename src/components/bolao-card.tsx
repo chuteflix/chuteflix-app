@@ -186,13 +186,12 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
         <CardHeader className="p-4 pb-2">
             <h3 className="font-bold leading-tight line-clamp-2 text-base pr-8">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
             <p className="text-xs text-muted-foreground">{bolao.championship}</p>
-            <div className="text-xs text-muted-foreground mt-1 h-5 flex items-center transition-all duration-300">
-              <div className={cn("transition-opacity duration-300", isHovering ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0')}>
-                {matchDate ? format(matchDate, 'dd/MM/yyyy HH:mm') : 'N/A'}
-              </div>
-              <div className={cn("absolute transition-opacity duration-300", isHovering ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2')}>
-                {bolao.closingTime && <Countdown date={new Date(bolao.closingTime)} renderer={countdownRenderer} />}
-              </div>
+            <div className="text-xs text-muted-foreground mt-1 h-5 flex items-center">
+              {bolao.closingTime ? (
+                <Countdown date={new Date(bolao.closingTime)} renderer={countdownRenderer} />
+              ) : (
+                matchDate ? format(matchDate, 'dd/MM/yyyy HH:mm') : 'N/A'
+              )}
             </div>
         </CardHeader>
         
