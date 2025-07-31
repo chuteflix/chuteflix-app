@@ -1,8 +1,9 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from "@/context/auth-context"
 import { auth } from "@/lib/firebase"
 import { Logo } from "@/components/icons"
