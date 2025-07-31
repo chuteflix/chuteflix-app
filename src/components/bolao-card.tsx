@@ -135,31 +135,13 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
   
   const countdownRenderer = ({ days, hours, minutes, seconds, completed }: any) => {
     if (completed || isClosingTimePassed) {
-      return <span className="text-destructive font-bold text-lg">{displayStatus === 'Finalizado' ? 'Finalizado' : 'Chutes Encerrados'}</span>;
+      return <span className="font-bold text-sm text-destructive">{displayStatus === 'Finalizado' ? 'Finalizado' : 'Encerrado'}</span>;
     } else {
-      return (
-        <div className="flex space-x-2 text-center text-foreground">
-          <div className="flex flex-col items-center">
-            <span className="text-xl md:text-2xl font-bold tabular-nums tracking-tighter">{String(days).padStart(2, '0')}</span>
-            <span className="text-[10px] uppercase text-muted-foreground">Dias</span>
-          </div>
-          <div className="text-xl md:text-2xl font-bold text-muted-foreground">:</div>
-          <div className="flex flex-col items-center">
-            <span className="text-xl md:text-2xl font-bold tabular-nums tracking-tighter">{String(hours).padStart(2, '0')}</span>
-            <span className="text-[10px] uppercase text-muted-foreground">Horas</span>
-          </div>
-          <div className="text-xl md:text-2xl font-bold text-muted-foreground">:</div>
-          <div className="flex flex-col items-center">
-            <span className="text-xl md:text-2xl font-bold tabular-nums tracking-tighter">{String(minutes).padStart(2, '0')}</span>
-            <span className="text-[10px] uppercase text-muted-foreground">Min</span>
-          </div>
-          <div className="text-xl md:text-2xl font-bold text-muted-foreground">:</div>
-          <div className="flex flex-col items-center">
-            <span className="text-xl md:text-2xl font-bold tabular-nums tracking-tighter">{String(seconds).padStart(2, '0')}</span>
-            <span className="text-[10px] uppercase text-muted-foreground">Seg</span>
-          </div>
-        </div>
-      )
+        const d = String(days).padStart(2, '0');
+        const h = String(hours).padStart(2, '0');
+        const m = String(minutes).padStart(2, '0');
+        const s = String(seconds).padStart(2, '0');
+        return <span className="font-mono text-xs text-muted-foreground tabular-nums tracking-wider">{d}:{h}:{m}:{s}</span>;
     }
   };
 
@@ -202,7 +184,10 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
         <CardHeader className="p-4 pb-2">
             <h3 className="font-bold leading-tight line-clamp-2 text-base pr-8">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
             <p className="text-xs text-muted-foreground">{bolao.championship}</p>
-            <div className="text-xs text-muted-foreground mt-1 h-9 flex items-center">
+            <div className="flex items-center justify-between mt-1">
+                <p className="text-sm font-semibold text-foreground">
+                    {bolao.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? format(new Date(bolao.matchStartDate), "dd/MM 'às' HH:mm'h'") : 'Data a definir'}
+                </p>
                 {bolao.closingTime && <Countdown date={new Date(bolao.closingTime)} renderer={countdownRenderer} />}
             </div>
         </CardHeader>
@@ -256,7 +241,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
             </div>
             
             <Button
-                className="w-full font-bold transition-transform hover:scale-105"
+                className="w-full font-bold transition-transform hover:scale-105 active:scale-[1.02]"
                 onClick={handleChutarClick}
                 disabled={isButtonDisabled}
             >
