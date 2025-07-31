@@ -20,23 +20,33 @@ export function HeroSection() {
         {/* Dark overlay for better text contrast */}
         <div className="absolute inset-0 bg-black/60 z-10" />
         
-        {/* O elemento de vídeo foi removido */}
-        <div className="absolute inset-0 w-full h-full object-cover z-0 bg-black" />
+        {/* Video de fundo */}
+        <video 
+          className="absolute inset-0 w-full h-full object-cover z-0" 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          poster="/placeholder-video-poster.jpg" // Adicionar um poster para quando o vídeo não carregar
+        >
+          <source src="https://assets.mixkit.co/videos/preview/mixkit-top-view-of-a-soccer-game-50796-large.mp4" type="video/mp4" />
+          Seu navegador não suporta a tag de vídeo.
+        </video>
 
 
       {/* Content */}
       <div className="relative z-20 p-4 sm:p-6 md:p-8 flex flex-col items-center">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white drop-shadow-lg">
-          Bolões, palpites e muita emoção.
+          ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas.
         </h1>
         <p className="mt-4 text-lg sm:text-xl text-slate-200 max-w-3xl mx-auto drop-shadow-md">
-          A plataforma definitiva para os amantes de futebol. Participe de bolões, dê seus palpites e concorra a prêmios incríveis.
+          O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes.
         </p>
         
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
           <Button size="lg" asChild>
-            <Link href="#boloes" onClick={scrollTo('boloes')}>
-              Ver Bolões em Destaque
+            <Link href="/register">
+              Começar Agora
             </Link>
           </Button>
           <Button 
@@ -45,8 +55,8 @@ export function HeroSection() {
             className="text-white border-white/80 hover:bg-white/20 hover:text-white transition-colors" 
             asChild
           >
-            <Link href="#faq" onClick={scrollTo('faq')}>
-              Como Funciona?
+            <Link href="#boloes" onClick={scrollTo('boloes')}>
+              Ver Catálogo de Bolões
             </Link>
           </Button>
         </div>

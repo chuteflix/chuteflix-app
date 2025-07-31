@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
-import { Users, Trophy, Info, AlertCircle } from "lucide-react"
+import { Users, Trophy, Info, AlertCircle, Heart } from "lucide-react" // Importando Heart
 import { parse, format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -27,8 +27,10 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
   const [participantCount, setParticipantCount] = useState(0)
   const [loadingParticipants, setLoadingParticipants] = useState(true)
   const [isClosingTimePassed, setIsClosingTimePassed] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false) // Estado para favorito
 
   useEffect(() => {
+    // Lógica para buscar contagem de participantes
     const fetchParticipantCount = async () => {
       setLoadingParticipants(true);
       try {
@@ -42,6 +44,7 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
     };
     fetchParticipantCount()
 
+    // Lógica para verificar tempo de encerramento
     const checkClosingTime = () => {
         if (bolao.matchStartDate && bolao.closingTime) {
             try {
@@ -55,9 +58,12 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
             }
         }
     };
-
     checkClosingTime();
     const interval = setInterval(checkClosingTime, 60000);
+
+    // Lógica para carregar favoritos do localStorage
+    const favorites = JSON.parse(localStorage.getItem('favoriteBoloes') || '[]');
+    setIsFavorite(favorites.includes(bolao.id));
 
     return () => clearInterval(interval);
   }, [bolao.id, bolao.matchStartDate, bolao.closingTime])
@@ -71,6 +77,19 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
       router.push('/login')
     }
   }
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    let favorites = JSON.parse(localStorage.getItem('favoriteBoloes') || '[]');
+    if (isFavorite) {
+      favorites = favorites.filter((id: string) => id !== bolao.id);
+    } else {
+      favorites.push(bolao.id);
+    }
+    localStorage.setItem('favoriteBoloes', JSON.stringify(favorites));
+    setIsFavorite(!isFavorite);
+  };
   
   const totalArrecadado = bolao.betAmount * participantCount
   // @ts-ignore
@@ -93,20 +112,34 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
     return 'Chutar Placar';
   }
 
+  const matchDate = bolao.matchStartDate ? format(new Date(bolao.matchStartDate), 'dd/MM/yyyy') : 'N/A';
+  const matchTime = bolao.matchStartDate ? format(new Date(bolao.matchStartDate), 'HH:mm') : 'N/A';
+
   return (
     <TooltipProvider delayDuration={100}>
       <Card className="flex flex-col h-full w-full border-border hover:border-primary transition-all group overflow-hidden">
-        <CardHeader className="p-4">
+        <CardHeader className="p-4 pb-2">
           <div className="flex justify-between items-start gap-2">
             <div>
-              <h3 className="font-bold leading-tight line-clamp-2">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
+              <h3 className="font-bold leading-tight line-clamp-2 text-lg">{`${bolao.homeTeam.name} vs ${bolao.awayTeam.name}`}</h3>
               <p className="text-xs text-muted-foreground">{bolao.championship}</p>
+              <p className="text-xs text-muted-foreground mt-1">{matchDate} às {matchTime}</p>
             </div>
-            <Badge variant={currentStatusStyle.variant} className="shrink-0">{currentStatusStyle.label}</Badge>
+            <div className="flex flex-col items-end gap-2">
+                <Badge variant={currentStatusStyle.variant} className="shrink-0">{currentStatusStyle.label}</Badge>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleFavoriteClick} 
+                    className="text-muted-foreground hover:text-primary"
+                >
+                    <Heart className={isFavorite ? "fill-current text-primary" : ""} />
+                </Button>
+            </div>
           </div>
         </CardHeader>
         
-        <CardContent className="flex-grow p-4 flex flex-col items-center justify-center text-center">
+        <CardContent className="flex-grow p-4 pt-2 flex flex-col items-center justify-center text-center">
             <div className="flex items-center justify-around w-full">
                 <div className="flex flex-col items-center gap-2">
                     <Avatar className="h-16 w-16 sm:h-20 sm:w-20">

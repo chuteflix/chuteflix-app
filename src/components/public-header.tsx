@@ -34,11 +34,12 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Separator } from "./ui/separator"
+import { Separator } from "@/components/ui/separator"; // Adicionado importação do Separator
 import { useState } from "react"
 
 interface PublicHeaderProps {
   showNavLinks?: boolean;
+  settings?: Settings | null;
 }
 
 const userMenu = [
@@ -49,10 +50,12 @@ const userMenu = [
     { href: "/transacoes", icon: BarChart2, label: "Transações" },
 ];
 
-export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
-  const { userProfile, loading, settings } = useAuth()
+export function PublicHeader({ showNavLinks = false, settings: propSettings }: PublicHeaderProps) {
+  const { userProfile, loading } = useAuth()
   const pathname = usePathname()
-  const [isSheetOpen, setIsSheetOpen] = useState(false); // Novo estado para controlar o Sheet
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const currentSettings = propSettings || useAuth().settings; 
 
   const handleLogout = async () => {
     await auth.signOut()
@@ -63,7 +66,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
     const element = document.getElementById(id)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' })
-      setIsSheetOpen(false); // Fecha o sheet ao clicar em um link de scroll
+      setIsSheetOpen(false);
     }
   }
   
@@ -73,8 +76,8 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link href={userProfile ? "/inicio" : "/"} className="flex items-center gap-2">
-            <Logo logoUrl={settings?.logoUrl} />
-            <span className="text-xl font-bold hidden sm:inline">{settings?.appName || "ChuteFlix"}</span>
+            <Logo logoUrl={currentSettings?.logoUrl} />
+            <span className="text-xl font-bold hidden sm:inline">{currentSettings?.appName || "ChuteFlix"}</span>
         </Link>
         {showNavLinks && !userProfile && (
           <nav className="hidden md:flex items-center gap-6">
@@ -143,7 +146,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
             </div>
         )}
         <div className="md:hidden">
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}> {/* Controla o estado do sheet */}
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
                         <Menu className="h-5 w-5" />
@@ -153,9 +156,9 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                 <SheetContent side="right" className="w-full max-w-sm">
                     <div className="flex flex-col h-full">
                         <div className="flex items-center justify-between border-b pb-4">
-                           <Link href={userProfile ? "/inicio" : "/"} className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}> {/* Fecha ao clicar no logo */}
-                                <Logo logoUrl={settings?.logoUrl} />
-                                <span className="text-xl font-bold">{settings?.appName || "ChuteFlix"}</span>
+                           <Link href={userProfile ? "/inicio" : "/"} className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}> 
+                                <Logo logoUrl={currentSettings?.logoUrl} />
+                                <span className="text-xl font-bold">{currentSettings?.appName || "ChuteFlix"}</span>
                             </Link>
                         </div>
                         <div className="flex-grow overflow-y-auto">
@@ -172,7 +175,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                                             key={item.label}
                                             href={item.href}
                                             className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-muted ${pathname === item.href ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
-                                            onClick={() => setIsSheetOpen(false)} // Fecha o sheet ao clicar no link
+                                            onClick={() => setIsSheetOpen(false)}
                                         >
                                             <item.icon className="h-5 w-5" />
                                             {item.label}
@@ -186,7 +189,7 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                                         <Link href="/#features" onClick={scrollTo('features')} className="text-muted-foreground hover:text-foreground">Funcionalidades</Link>
                                         <Link href="/#boloes" onClick={scrollTo('boloes')} className="text-muted-foreground hover:text-foreground">Bolões</Link>
                                         <Link href="/#faq" onClick={scrollTo('faq')} className="text-muted-foreground hover:text-foreground">Dúvidas</Link>
-                                        <Separator />
+                                        <Separator /> {/* Este Separator estava faltando import */}
                                     </nav>
                                 )}
                                 </>
@@ -195,11 +198,11 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                         <div className="border-t mt-auto pt-4">
                             {userProfile ? (
                                 <div className="space-y-2">
-                                     <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted" onClick={() => setIsSheetOpen(false)}> {/* Fecha ao clicar no link de perfil */}
+                                     <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted" onClick={() => setIsSheetOpen(false)}> 
                                         <UserIcon className="h-5 w-5" />
                                         Editar Perfil
                                      </Link>
-                                     <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted" onClick={() => setIsSheetOpen(false)}> {/* Fecha ao clicar no link de settings */}
+                                     <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-muted" onClick={() => setIsSheetOpen(false)}> 
                                         <SettingsIcon className="h-5 w-5" />
                                         Chave PIX
                                      </Link>
@@ -211,8 +214,8 @@ export function PublicHeader({ showNavLinks = false }: PublicHeaderProps) {
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-4">
-                                    <Button variant="outline" asChild><Link href="/login" onClick={() => setIsSheetOpen(false)}>Entrar</Link></Button> {/* Fecha ao clicar em Entrar */}
-                                    <Button asChild><Link href="/register" onClick={() => setIsSheetOpen(false)}>Criar Conta</Link></Button> {/* Fecha ao clicar em Criar Conta */}
+                                    <Button variant="outline" asChild><Link href="/login" onClick={() => setIsSheetOpen(false)}>Entrar</Link></Button>
+                                    <Button asChild><Link href="/register" onClick={() => setIsSheetOpen(false)}>Criar Conta</Link></Button>
                                 </div>
                             )}
                         </div>

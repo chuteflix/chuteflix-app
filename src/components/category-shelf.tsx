@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Bolao, getBoloesByCategoryId } from "@/services/boloes";
 import { Category } from "@/services/categories";
-import { BoloesCarousel } from "@/components/boloes-carousel";
+import { BoloesCarousel } from "@/components/boloes-carousel"; // Re-importar BoloesCarousel
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface CategoryShelfProps {
@@ -34,10 +34,10 @@ export function CategoryShelf({ category }: CategoryShelfProps) {
     return (
       <div className="mb-8">
         <Skeleton className="h-8 w-1/3 mb-4" />
-        <div className="flex space-x-4">
-          <Skeleton className="h-48 w-64 rounded-lg" />
-          <Skeleton className="h-48 w-64 rounded-lg" />
-          <Skeleton className="h-48 w-64 rounded-lg" />
+        <div className="flex space-x-4 overflow-hidden">
+          <Skeleton className="h-48 w-64 rounded-lg flex-shrink-0" />
+          <Skeleton className="h-48 w-64 rounded-lg flex-shrink-0" />
+          <Skeleton className="h-48 w-64 rounded-lg flex-shrink-0" />
         </div>
       </div>
     );
