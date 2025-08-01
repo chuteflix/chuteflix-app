@@ -26,7 +26,7 @@ import { Skeleton } from "./ui/skeleton"
 import { cn } from "@/lib/utils"
 import { ResultsTicker } from "./results-ticker"
 
-export function DashboardHeader() {
+export function DashboardHeader({ isAdminSection }: { isAdminSection: boolean }) {
   const { userProfile, loading, settings } = useAuth()
   const router = useRouter()
 
@@ -50,18 +50,20 @@ export function DashboardHeader() {
           {/* Logo is in Sidebar for dashboard */}
         </div>
         
-        {/* Center Section: Ticker - Hidden on mobile */}
-        <div className="hidden md:flex flex-1 justify-center items-center h-full mx-4 relative overflow-hidden">
-          {loading ? (
-            <Skeleton className="w-full h-8" />
-          ) : (
-            <>
-              <ResultsTicker />
-              <div className="absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-background to-transparent" />
-              <div className="absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background to-transparent" />
-            </>
-          )}
-        </div>
+        {/* Center Section: Ticker - Hidden on mobile, and now also conditionally on isAdminSection */}
+        {!isAdminSection && (
+          <div className="hidden md:flex flex-1 justify-center items-center h-full mx-4 relative overflow-hidden">
+            {loading ? (
+              <Skeleton className="w-full h-8" />
+            ) : (
+              <>
+                <ResultsTicker />
+                <div className="absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-background to-transparent" />
+                <div className="absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background to-transparent" />
+              </>
+            )}
+          </div>
+        )}
         
         {/* Right Section: User actions */}
         <div className="flex items-center gap-4 flex-shrink-0 ml-auto md:ml-0">

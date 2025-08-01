@@ -12,7 +12,7 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, userRole } = useAuth(); // Corrigido para buscar userRole
+  const { user, loading, userRole } = useAuth();
   const pathname = usePathname();
   
   if (loading) {
@@ -28,14 +28,13 @@ export default function MainLayout({
   }
   
   const isAdminSection = pathname.startsWith('/admin');
-  // Corrigido para usar userRole ao invés de user.role
   const displayRole = (userRole === 'admin' && isAdminSection) ? 'admin' : 'user';
 
   return (
     <div className="flex h-screen bg-background">
       <Sidebar role={displayRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader />
+        <DashboardHeader isAdminSection={isAdminSection} /> {/* Passando isAdminSection */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-20 pb-16 md:pb-8">
           {children}
         </main>
