@@ -146,7 +146,6 @@ export default function PublicHomePage() {
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
-      <ResultsTicker />
       <HeroSection 
         title={settings?.appName || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
         subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
