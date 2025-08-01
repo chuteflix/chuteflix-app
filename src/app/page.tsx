@@ -36,22 +36,21 @@ const features = [
 ];
 
 function renderCategorySkeletons() {
-  return (
-    <div className="space-y-8">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i}>
-          <Skeleton className="h-8 w-1/3 mb-4" />
-          <div className="flex space-x-4 overflow-hidden">
-            <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-            <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-            <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+    return (
+      <div className="space-y-8">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="h-8 w-1/3 mb-4" />
+            <div className="flex space-x-4 overflow-hidden">
+              <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+              <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+              <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
+        ))}
+      </div>
+    );
 }
-
 
 export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -126,11 +125,12 @@ export default function PublicHomePage() {
       );
 
       if (filteredFaqs.length > 0) {
-        acc[category as keyof typeof faqData] = filteredFaqs;
+        // @ts-ignore
+        acc[category] = filteredFaqs;
       }
       return acc;
     }, {} as typeof faqData);
-  }, [faqSearchTerm, faqData]);
+  }, [faqSearchTerm]);
   
   if (loadingAuth || user) {
     return (
