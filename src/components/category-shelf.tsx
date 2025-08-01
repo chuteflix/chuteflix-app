@@ -79,7 +79,7 @@ export function CategoryShelf({ category }: CategoryShelfProps) {
           {filters.map(filter => (
             <Button
               key={filter.value}
-              variant={activeFilter === filter.value ? "premium" : "ghost"}
+              variant={activeFilter === filter.value ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setActiveFilter(filter.value)}
               className="rounded-full transition-colors duration-200"
