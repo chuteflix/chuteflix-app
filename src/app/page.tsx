@@ -252,3 +252,5 @@ export default function PublicHomePage() {
     </div>
   );
 }
+
+// Forçando a atualização do arquivo
