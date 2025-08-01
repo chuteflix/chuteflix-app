@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from "react";
@@ -139,7 +138,6 @@ export default function PublicHomePage() {
       </div>
     );
   }
-
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
@@ -212,7 +210,7 @@ export default function PublicHomePage() {
                       <div key={category}>
                         <h3 className="text-xl font-semibold mb-4 text-primary">{category}</h3>
                         <Accordion type="single" collapsible className="w-full bg-background rounded-lg shadow-sm">
-                            {(faqs as { question: string; answer: string }[]).map((faq, index) => (
+                            {(faqs as { question: string; answer: string; }[]).map((faq, index) => (
                                 <AccordionItem value={`${category}-item-${index}`} key={index} className="border-b last:border-b-0">
                                     <AccordionTrigger className="text-lg text-left hover:no-underline px-6 py-4">{faq.question}</AccordionTrigger>
                                     <AccordionContent className="text-base text-muted-foreground px-6 pb-4">{faq.answer}</AccordionContent>
