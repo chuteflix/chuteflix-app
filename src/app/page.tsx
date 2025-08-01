@@ -16,54 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context"; 
 import { useRouter } from 'next/navigation'; 
 import { Settings } from "@/types";
-import { ResultsTicker } from "@/components/results-ticker"; // Importação adicionada
-
-const features = [
-    {
-      icon: <Rocket className="h-12 w-12 text-primary" />,
-      title: "Dê o Play na Emoção",
-      description: "Navegue pelo nosso acervo de bolões como se estivesse em um streaming. Escolha o jogo, faça sua aposta e comece a torcer instantaneamente."
-    },
-    {
-      icon: <Banknote className="h-12 w-12 text-primary" />,
-      title: "Saque Seus Ganhos Via PIX",
-      description: "Acertou o palpite? O prêmio vai direto para o seu saldo. Solicite o saque e receba seu lucro de forma rápida e segura diretamente na sua conta via PIX."
-    },
-    {
-      icon: <ShieldCheck className="h-12 w-12 text-primary" />,
-      title: "Segurança Nível Streaming",
-      description: "Suas apostas e dados 100% seguros com criptografia de ponta. Fique tranquilo, nós cuidamos da proteção para você focar na emoção."
-    }
-]
-
-const faqData = {
-  "Como Começar": [
-    {
-      question: "Como funciona para apostar?",
-      answer: "É simples e instantâneo, como escolher um filme: 1) Faça um depósito rápido via PIX para adicionar saldo à sua carteira. 2) Navegue pelos bolões e escolha um jogo. 3) Insira seu palpite e confirme. O valor da aposta é debitado automaticamente do seu saldo e seu chute é validado na hora. Sem esperas, sem complicações."
-    },
-    {
-      question: "O cadastro é realmente gratuito?",
-      answer: "Sim, 100% gratuito. Você pode criar sua conta, explorar todos os bolões disponíveis e navegar pela plataforma sem nenhum custo. Você só precisa ter saldo em conta na hora de confirmar um palpite para entrar na disputa pelos prêmios."
-    }
-  ],
-  "Segurança e Pagamentos": [
-    {
-      question: "Meu dinheiro está seguro na plataforma?",
-      answer: "Totalmente. Usamos protocolos de segurança de ponta para proteger seus dados e seu saldo. As transações são processadas com a máxima segurança para garantir sua tranquilidade."
-    },
-    {
-      question: "Como os prêmios são pagos?",
-      answer: "Quando um bolão que você ganhou é finalizado, o valor do prêmio é creditado AUTOMATICAMENTE no seu saldo ChuteFlix. A partir daí, você pode usar o saldo para fazer novas apostas ou solicitar um saque para sua chave PIX cadastrada. O dinheiro é seu, o controle é seu."
-    }
-  ],
-  "Sobre o ChuteFlix": [
-    {
-      question: "O que é o 'streaming de bolões'?",
-      answer: "É a nossa grande inovação. Em vez de uma plataforma de apostas tradicional e estática, criamos uma experiência fluida e imersiva. Você navega por um 'catálogo' de jogos, os bolões são as 'produções originais' e a emoção do futebol é a 'estrela principal'. É a forma mais moderna e divertida de participar de bolões online."
-    }
-  ]
-};
+import { ResultsTicker } from "@/components/results-ticker";
 
 export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -71,6 +24,53 @@ export default function PublicHomePage() {
   const [faqSearchTerm, setFaqSearchTerm] = useState("");
   const { user, loading: loadingAuth, settings } = useAuth(); 
   const router = useRouter();
+
+  const faqData = {
+    "Como Começar": [
+      {
+        question: "Como funciona para apostar?",
+        answer: "É simples e instantâneo, como escolher um filme: 1) Faça um depósito rápido via PIX para adicionar saldo à sua carteira. 2) Navegue pelos bolões e escolha um jogo. 3) Insira seu palpite e confirme. O valor da aposta é debitado automaticamente do seu saldo e seu chute é validado na hora. Sem esperas, sem complicações."
+      },
+      {
+        question: "O cadastro é realmente gratuito?",
+        answer: "Sim, 100% gratuito. Você pode criar sua conta, explorar todos os bolões disponíveis e navegar pela plataforma sem nenhum custo. Você só precisa ter saldo em conta na hora de confirmar um palpite para entrar na disputa pelos prêmios."
+      }
+    ],
+    "Segurança e Pagamentos": [
+      {
+        question: "Meu dinheiro está seguro na plataforma?",
+        answer: "Totalmente. Usamos protocolos de segurança de ponta para proteger seus dados e seu saldo. As transações são processadas com a máxima segurança para garantir sua tranquilidade."
+      },
+      {
+        question: "Como os prêmios são pagos?",
+        answer: "Quando um bolão que você ganhou é finalizado, o valor do prêmio é creditado AUTOMATICAMENTE no seu saldo ChuteFlix. A partir daí, você pode usar o saldo para fazer novas apostas ou solicitar um saque para sua chave PIX cadastrada. O dinheiro é seu, o controle é seu."
+      }
+    ],
+    "Sobre o ChuteFlix": [
+      {
+        question: "O que é o 'streaming de bolões'?",
+        answer: "É a nossa grande inovação. Em vez de uma plataforma de apostas tradicional e estática, criamos uma experiência fluida e imersiva. Você navega por um 'catálogo' de jogos, os bolões são as 'produções originais' e a emoção do futebol é a 'estrela principal'. É a forma mais moderna e divertida de participar de bolões online."
+      }
+    ]
+  };
+
+  const features = [
+      {
+        icon: <Rocket className="h-12 w-12 text-primary" />,
+        title: "Dê o Play na Emoção",
+        description: "Navegue pelo nosso acervo de bolões como se estivesse em um streaming. Escolha o jogo, faça sua aposta e comece a torcer instantaneamente."
+      },
+      {
+        icon: <Banknote className="h-12 w-12 text-primary" />,
+        title: "Saque Seus Ganhos Via PIX",
+        description: "Acertou o palpite? O prêmio vai direto para o seu saldo. Solicite o saque e receba seu lucro de forma rápida e segura diretamente na sua conta via PIX."
+      },
+      {
+        icon: <ShieldCheck className="h-12 w-12 text-primary" />,
+        title: "Segurança Nível Streaming",
+        description: "Suas apostas e dados 100% seguros com criptografia de ponta. Fique tranquilo, nós cuidamos da proteção para você focar na emoção."
+      }
+  ]
 
   useEffect(() => {
     // Se o estado de autenticação não estiver carregando e um usuário existir, redirecione.
@@ -100,34 +100,38 @@ export default function PublicHomePage() {
 
   const filteredFaqData = useMemo(() => {
     if (!faqSearchTerm) return faqData;
-    const filtered: typeof faqData = {};
-    for (const category in faqData) {
-      // @ts-ignore
-      const questions = faqData[category].filter(faq =>
+    
+    return Object.entries(faqData).reduce((acc, [category, faqs]) => {
+      const filteredFaqs = faqs.filter(faq =>
         faq.question.toLowerCase().includes(faqSearchTerm.toLowerCase()) ||
         faq.answer.toLowerCase().includes(faqSearchTerm.toLowerCase())
       );
-      if (questions.length > 0) { // @ts-ignore
-        filtered[category] = questions;
+
+      if (filteredFaqs.length > 0) {
+        // @ts-ignore
+        acc[category] = filteredFaqs;
       }
-    }
-    return filtered;
-  }, [faqSearchTerm]);
+      
+      return acc;
+    }, {});
+  }, [faqSearchTerm, faqData]);
   
-  const renderCategorySkeletons = () => (
-    <div className="space-y-8">
-        {Array.from({ length: 3 }).map((_, i) => (
-             <div key={i}>
-                <Skeleton className="h-8 w-1/3 mb-4" />
-                <div className="flex space-x-4 overflow-hidden">
-                    <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                    <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                    <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                </div>
-            </div>
-        ))}
-    </div>
-  );
+  function renderCategorySkeletons() {
+    return (
+      <div className="space-y-8">
+          {Array.from({ length: 3 }).map((_, i) => (
+               <div key={i}>
+                  <Skeleton className="h-8 w-1/3 mb-4" />
+                  <div className="flex space-x-4 overflow-hidden">
+                      <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+                      <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+                      <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+                  </div>
+              </div>
+          ))}
+      </div>
+    );
+  }
 
   // Se o usuário estiver logado ou o auth estiver carregando, mostra um loader para evitar "piscar" a landing page.
   if (loadingAuth || user) {
@@ -142,7 +146,7 @@ export default function PublicHomePage() {
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
-      <ResultsTicker /> {/* Adicionado o componente ResultsTicker aqui */}
+      <ResultsTicker />
       <HeroSection 
         title={settings?.appName || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
         subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
@@ -255,5 +259,3 @@ export default function PublicHomePage() {
     </div>
   );
 }
-
-    
