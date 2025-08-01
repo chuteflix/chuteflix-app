@@ -52,6 +52,7 @@ function renderCategorySkeletons() {
   );
 }
 
+
 export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -89,20 +90,17 @@ export default function PublicHomePage() {
   };
 
   useEffect(() => {
-    // Se o estado de autenticação não estiver carregando e um usuário existir, redirecione.
     if (!loadingAuth && user) {
       router.replace('/inicio');
     }
   }, [user, loadingAuth, router]);
 
   useEffect(() => {
-    // Apenas busque os dados da landing page se o usuário NÃO estiver logado.
     if (!loadingAuth && !user) {
         const fetchInitialData = async () => {
           setLoadingCategories(true);
           try {
             const fetchedCategories = await getAllCategories();
-            // Filtra para pegar apenas as categorias raiz para a prateleira da home.
             setCategories(fetchedCategories.filter(c => !c.parentId)); 
           } catch (error) {
             console.error("Falha ao buscar dados iniciais:", error);
@@ -128,14 +126,12 @@ export default function PublicHomePage() {
       );
 
       if (filteredFaqs.length > 0) {
-        // @ts-ignore
-        acc[category] = filteredFaqs;
+        acc[category as keyof typeof faqData] = filteredFaqs;
       }
       return acc;
-    }, {});
+    }, {} as typeof faqData);
   }, [faqSearchTerm, faqData]);
   
-  // Se o usuário estiver logado ou o auth estiver carregando, mostra um loader para evitar "piscar" a landing page.
   if (loadingAuth || user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -144,7 +140,6 @@ export default function PublicHomePage() {
     );
   }
 
-  // Renderiza a landing page apenas se não houver usuário e o carregamento estiver concluído.
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
