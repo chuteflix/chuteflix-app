@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useMemo } from "react";
@@ -15,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context"; 
 import { useRouter } from 'next/navigation'; 
 import { Settings } from "@/types";
-// import { ResultsTicker } from "@/components/results-ticker"; // Importação removida
 
 const features = [
     {
@@ -113,20 +113,22 @@ export default function PublicHomePage() {
     return filtered;
   }, [faqSearchTerm]);
   
-  const renderCategorySkeletons = () => (
-    <div className="space-y-8">
-      {Array.from({ length: 3 }).map((_, i) => (
-           <div key={i}>
-              <Skeleton className="h-8 w-1/3 mb-4" />
-              <div className="flex space-x-4 overflow-hidden">
-                  <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                  <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                  <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-              </div>
+  function renderCategorySkeletons() {
+    return (
+      <div className="space-y-8">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="h-8 w-1/3 mb-4" />
+            <div className="flex space-x-4 overflow-hidden">
+              <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+              <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+              <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+            </div>
           </div>
-      ))}
-    </div>
-  );
+        ))}
+      </div>
+    );
+  }
 
   // Se o usuário estiver logado ou o auth estiver carregando, mostra um loader para evitar "piscar" a landing page.
   if (loadingAuth || user) {
@@ -141,7 +143,6 @@ export default function PublicHomePage() {
   return (
     <div className="bg-background text-foreground">
       <PublicHeader settings={settings} />
-      {/* <ResultsTicker /> Removido o componente ResultsTicker aqui */}
       <HeroSection 
         title={settings?.appName || "ChuteFlix: Onde o Futebol Vira Emoção. Sem Pausas."}
         subtitle={settings?.homeHeroSubtitle || "O primeiro streaming de bolões da América Latina. Escolha seu jogo, dê seu palpite e sinta a adrenalina de cada lance como nunca antes."}
