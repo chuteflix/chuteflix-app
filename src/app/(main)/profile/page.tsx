@@ -17,7 +17,7 @@ import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { uploadProfilePicture, updateUserProfile } from "@/services/users"; // CORRIGIDO: Importa a função correta
+import { uploadProfilePicture, updateUserProfile } from "@/services/users";
 import { Upload, Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -44,16 +44,14 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  // CORRIGIDO: A lógica de upload agora usa o serviço centralizado
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0] && user) {
       const file = event.target.files[0];
       
       setIsUploading(true);
       try {
-        const downloadURL = await uploadProfilePicture(user.uid, file); // Usa a função do serviço
+        const downloadURL = await uploadProfilePicture(user.uid, file);
         setPhotoURL(downloadURL);
-        // A atualização do documento do usuário já é feita dentro de 'uploadProfilePicture'
         toast({ title: "Foto de perfil atualizada!", variant: "success" });
       } catch (error) {
         toast({ title: "Erro no upload da foto", description: "Verifique o tamanho e o formato do arquivo.", variant: "destructive" });
@@ -67,7 +65,6 @@ export default function ProfilePage() {
     if (user) {
       setIsSaving(true);
       try {
-        // Usa a função de atualização do serviço para consistência
         await updateUserProfile(user.uid, {
           firstName,
           lastName,
@@ -101,7 +98,7 @@ export default function ProfilePage() {
           <div className="grid gap-6">
             <div className="flex items-center gap-6">
               <Avatar className="h-24 w-24 border-4 border-border">
-                <AvatarImage src={photoURL} />
+                <AvatarImage src={photoURL} alt={`${firstName} ${lastName}`} />
                 <AvatarFallback>{firstName?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="grid gap-2">
