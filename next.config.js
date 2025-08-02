@@ -1,13 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    // Permite o build mesmo que haja erros de tipo.
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    // Pula a verificação de ESLint durante o build.
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {
@@ -26,13 +18,8 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-        pathname: '/**',
-      },
-    ],
-  },
-  swcMinify: false,
-};
-
-module.exports = nextConfig;
+        protocol: 'https'
+      }
+    ]
+  }
+}
