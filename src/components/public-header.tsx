@@ -44,12 +44,14 @@ export function PublicHeader({ settings }: PublicHeaderProps) {
 
   const scrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
-    const element = document.getElementById(id)
-    if (element) {
-      const yOffset = -80; 
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({top: y, behavior: 'smooth'});
-      setIsSheetOpen(false);
+    if (typeof window !== 'undefined') {
+        const element = document.getElementById(id)
+        if (element) {
+          const yOffset = -80; 
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({top: y, behavior: 'smooth'});
+          setIsSheetOpen(false);
+        }
     }
   }
 
@@ -130,5 +132,3 @@ export function PublicHeader({ settings }: PublicHeaderProps) {
     </header>
   )
 }
-
-    
