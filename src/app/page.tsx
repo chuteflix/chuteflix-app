@@ -113,23 +113,6 @@ export default function PublicHomePage() {
       return acc;
     }, {});
   }, [faqSearchTerm, faqData]);
-  
-  function renderCategorySkeletons() {
-    return (
-      <div className="space-y-8">
-          {Array.from({ length: 3 }).map((_, i) => (
-               <div key={i}>
-                  <Skeleton className="h-8 w-1/3 mb-4" />
-                  <div className="flex space-x-4 overflow-hidden">
-                      <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                      <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                      <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
-                  </div>
-              </div>
-          ))}
-      </div>
-    );
-  }
 
   // Se o usuário estiver logado ou o auth estiver carregando, mostra um loader para evitar "piscar" a landing page.
   if (loadingAuth || user) {
@@ -174,7 +157,20 @@ export default function PublicHomePage() {
               <p className="text-muted-foreground mt-3 max-w-2xl mx-auto text-lg">Seu próximo grande prêmio está a um clique de distância. Escolha um jogo e dê seu palpite.</p>
             </div>
             
-             {loadingCategories ? renderCategorySkeletons() : 
+             {loadingCategories ? (
+                <div className="space-y-8">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                         <div key={i}>
+                            <Skeleton className="h-8 w-1/3 mb-4" />
+                            <div className="flex space-x-4 overflow-hidden">
+                                <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+                                <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+                                <Skeleton className="min-w-[280px] h-96 rounded-lg flex-shrink-0" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+             ) : 
                categories.length > 0 ? (
                 <div className="space-y-12">
                     {categories.map((category) => (
@@ -213,7 +209,7 @@ export default function PublicHomePage() {
                       <div key={category}>
                         <h3 className="text-xl font-semibold mb-4 text-primary">{category}</h3>
                         <Accordion type="single" collapsible className="w-full bg-background rounded-lg shadow-sm">
-                            {faqs.map((faq, index) => (
+                            {(faqs as { question: string; answer: string }[]).map((faq, index) => (
                                 <AccordionItem value={`${category}-item-${index}`} key={index} className="border-b last:border-b-0">
                                     <AccordionTrigger className="text-lg text-left hover:no-underline px-6 py-4">{faq.question}</AccordionTrigger>
                                     <AccordionContent className="text-base text-muted-foreground px-6 pb-4">{faq.answer}</AccordionContent>
