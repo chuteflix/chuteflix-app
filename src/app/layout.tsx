@@ -22,13 +22,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await getSettings();
-
   return (
     <html lang="pt-br">
       <body className={inter.className}>
