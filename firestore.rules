@@ -44,8 +44,10 @@ service cloud.firestore {
 
     // Chutes só podem ser criados por usuários autenticados.
     // Usuários podem ler seus próprios chutes, e administradores podem ler todos.
+    // Qualquer usuário autenticado pode listar a coleção para permitir agregações.
     match /chutes/{chuteId} {
-        allow read: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+        allow get: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+        allow list: if request.auth != null;
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
         allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Admins podem anular
         allow delete: if false; // Chutes não devem ser deletados.
