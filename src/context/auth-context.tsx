@@ -52,6 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserRole(null);
           }
           setLoading(false);
+        }, (error) => {
+          console.error("Error fetching user profile:", error);
+          setUserProfile(null);
+          setUserRole(null);
+          setLoading(false);
         });
         return () => unsubProfile();
       } else {

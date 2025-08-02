@@ -59,6 +59,14 @@ export default function AdminWithdrawalsPage() {
             );
             setter(requestsData);
             setLoading(false);
+        }, (error) => {
+            console.error("Error fetching requests:", error);
+            toast({
+                title: "Error fetching requests",
+                description: "Could not fetch requests. Please try again later.",
+                variant: "destructive"
+            });
+            setLoading(false);
         });
     };
 

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from "react";
@@ -16,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context"; 
 import { useRouter } from 'next/navigation'; 
 import { Settings } from "@/types";
-import { ResultsTicker } from "@/components/results-ticker";
 
 export default function PublicHomePage() {
   const [categories, setCategories] = useState<Category[]>([]);

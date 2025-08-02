@@ -49,6 +49,9 @@ export default function AdminChutesPage() {
             );
             setter(data);
             setLoading(false);
+        }, (error) => {
+            console.error("Error fetching data:", error);
+            setLoading(false);
         });
     };
 

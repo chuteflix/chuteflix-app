@@ -52,6 +52,14 @@ export default function WithdrawPage() {
       const userWithdrawals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
       setWithdrawals(userWithdrawals);
       setLoadingHistory(false);
+    }, (error) => {
+        console.error("Error fetching withdrawals:", error);
+        toast({
+            title: "Error fetching withdrawals",
+            description: "Could not fetch your withdrawals. Please try again later.",
+            variant: "destructive"
+        });
+        setLoadingHistory(false);
     });
 
     return () => unsubscribe();
