@@ -3,23 +3,27 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'api.qrserver.com',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "placehold.co",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com', // Mantido por enquanto para imagens antigas
-        pathname: '/**',
+        protocol: "https",
+        hostname: "api.qrserver.com",
+        pathname: "/**",
       },
       {
-        protocol: 'https'
-      }
-    ]
-  }
-}
+        protocol: "https",
+        hostname: "firebasestorage.googleapis.com", // Mantido por enquanto para imagens antigas
+        pathname: "/**",
+      },
+    ],
+  },
+};
+
+module.exports = nextConfig;
