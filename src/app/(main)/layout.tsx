@@ -2,9 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuth } from "@/context/auth-context";
-import { Sidebar } from "@/components/sidebar";
-import { BottomTabBar } from "@/components/bottom-tab-bar";
-import { DashboardHeader } from "@/components/dashboard-header";
 import { Loader2 } from "lucide-react";
 
 export default function MainLayout({
@@ -32,13 +29,10 @@ export default function MainLayout({
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar role={displayRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader isAdminSection={isAdminSection} /> {/* Passando isAdminSection */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-20 pb-16 md:pb-8">
           {children}
         </main>
-        <BottomTabBar />
       </div>
     </div>
   );
