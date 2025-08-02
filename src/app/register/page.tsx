@@ -34,6 +34,7 @@ import { Logo } from "@/components/icons";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   firstName: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }),
@@ -57,7 +58,7 @@ const formSchema = z.object({
 export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user, loading, settings } = useAuth(); // Usando settings do contexto
+  const { user, loading, settings } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -106,6 +107,7 @@ export default function RegisterPage() {
         title: "Conta criada com sucesso!",
         description: "Você já pode fazer seus palpites.",
       });
+      // O redirecionamento será tratado pelo useEffect
     } catch (error: any) {
       toast({
         title: "Opa! Algo deu errado.",
@@ -116,7 +118,11 @@ export default function RegisterPage() {
   };
 
   if (loading || user) {
-    return null; 
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -182,7 +188,7 @@ export default function RegisterPage() {
               </div>
 
               <Button type="submit" className="w-full mt-4" disabled={isSubmitting}>
-                {isSubmitting ? 'Finalizando Cadastro...' : 'Finalizar Cadastro'}
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Finalizar Cadastro'}
               </Button>
             </form>
           </Form>
