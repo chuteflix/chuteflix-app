@@ -1,4 +1,3 @@
-
 "use client";
 
 import { AuthProvider, useAuth } from "@/context/auth-context";
@@ -8,14 +7,33 @@ import { Loader2 } from "lucide-react";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { PublicHeader } from "@/components/public-header";
+import { UserProfile } from "@/types"; // Import UserProfile
+import { getUserProfile } from "@/services/users"; // Import getUserProfile
+import { useState, useEffect } from 'react';
 
 function AppLayoutRouter({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const { loading, user, settings } = useAuth();
+    const { loading, user } = useAuth(); // Removed 'settings' from destructuring
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (user) {
+                const profile = await getUserProfile(user.uid);
+                setUserProfile(profile);
+            }
+            setProfileLoading(false);
+        };
+
+        if (!loading) {
+            fetchProfile();
+        }
+    }, [user, loading]);
 
     const authRoutes = ['/login', '/register'];
 
-    if (loading) {
+    if (loading || profileLoading) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -36,7 +54,7 @@ function AppLayoutRouter({ children }: { children: React.ReactNode }) {
 
     // If the user is logged in, show the dashboard layout
     const isAdminSection = pathname.startsWith('/admin');
-    const displayRole = (user.role === 'admin' && isAdminSection) ? 'admin' : 'user';
+    const displayRole = (userProfile?.isAdmin && isAdminSection) ? 'admin' : 'user'; // Use userProfile.isAdmin
 
     return (
       <div className="flex h-screen bg-background">
