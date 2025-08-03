@@ -7,10 +7,11 @@ import { PalpiteGroupCard } from "@/components/palpite-group-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getBolaoById, Bolao } from "@/services/boloes";
+import { getBolaoById } from "@/services/boloes"; // Removed Bolao import
 import { getTeamById, Team } from "@/services/teams";
 import { getChampionshipById, Championship } from "@/services/championships";
 import { Separator } from "@/components/ui/separator";
+import { Bolao } from "@/types"; // Imported Bolao from @/types
 
 // Estrutura para agrupar palpites por bolão
 interface PalpitesAgrupados {
