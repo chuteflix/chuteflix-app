@@ -92,3 +92,11 @@ export interface Settings {
     text?: string | null;
   } | null;
 }
+
+export interface Championship {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  country?: string;
+  type?: 'national' | 'international';
+}
