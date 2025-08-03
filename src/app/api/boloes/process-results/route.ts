@@ -86,6 +86,17 @@ export async function POST(req: Request) {
         throw new Error('Bolão não encontrado.');
       }
       
+      const bolaoData = bolaoDoc.data();
+      if (!bolaoData) { // Added explicit check
+        console.error(`Erro: Dados do bolão ${bolaoId} estão vazios.`);
+        throw new Error('Dados do bolão ausentes.');
+      }
+
+      if (bolaoData.status === 'Finalizado') {
+        console.error(`Erro: Bolão ${bolaoId} já foi finalizado.`);
+        throw new Error('Este bolão já foi finalizado.');
+      }
+
       const palpitesQuery = db.collection(CHUTES_COLLECTION)
         .where('bolaoId', '==', bolaoId)
         .where('status', '==', 'Em Aberto');
@@ -94,11 +105,8 @@ export async function POST(req: Request) {
       console.log(`Leituras concluídas. Bolão encontrado. ${palpitesSnapshot.size} palpites encontrados.`);
 
       // 2. VERIFICAÇÕES E LÓGICA (SEM ACESSO AO BANCO)
-      const bolaoData = bolaoDoc.data();
-      if (bolaoData?.status === 'Finalizado') {
-        console.error(`Erro: Bolão ${bolaoId} já foi finalizado.`);
-        throw new Error('Este bolão já foi finalizado.');
-      }
+      // Moved bolaoData check here as it's the first usage after retrieval
+      
 
       // 3. TODAS AS ESCRITAS DEPOIS
       console.log(`Atualizando status do bolão ${bolaoId} para Finalizado.`);

@@ -8,8 +8,6 @@ const fromFirestore = (doc: DocumentData): Championship => {
     id: doc.id,
     name: data.name,
     logoUrl: data.logoUrl || '',
-    country: data.country || '',
-    type: data.type || 'national',
   };
 };
 
@@ -29,11 +27,11 @@ export const getChampionshipById = async (id: string): Promise<Championship | nu
 };
 
 export const getAllChampionships = async (): Promise<Championship[]> => {
-  try {
-    const querySnapshot = await getDocs(collection(db, "championships"));
-    return querySnapshot.docs.map(fromFirestore);
-  } catch (error) {
-    console.error("Erro ao buscar campeonatos:", error);
-    throw new Error("Não foi possível buscar os campeonatos.");
-  }
+    try {
+      const querySnapshot = await getDocs(collection(db, "championships"));
+      return querySnapshot.docs.map(fromFirestore);
+    } catch (error) {
+      console.error("Erro ao buscar todos os campeonatos:", error);
+      throw new Error("Não foi possível buscar os campeonatos.");
+    }
 };
