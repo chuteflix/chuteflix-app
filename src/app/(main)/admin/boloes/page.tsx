@@ -79,7 +79,7 @@ export default function BoloesPage() {
         toast({
             title: "Sucesso!",
             description: `Bolão ${id ? 'atualizado' : 'criado'} com sucesso.`,
-            variant: "success",
+            variant: "default",
         });
     } catch (err) {
         toast({
@@ -97,7 +97,7 @@ export default function BoloesPage() {
       toast({
         title: "Bolão Deletado",
         description: "O bolão foi removido com sucesso.",
-        variant: "success",
+        variant: "default",
       })
     } catch (err) {
       toast({
@@ -120,7 +120,7 @@ export default function BoloesPage() {
 
   const statusVariant = (status: 'Aberto' | 'Fechado' | 'Finalizado') => {
     switch (status) {
-      case 'Aberto': return 'success'
+      case 'Aberto': return 'default'
       case 'Fechado': return 'secondary'
       case 'Finalizado': return 'destructive'
       default: return 'outline'

@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
-import { UserProfile, getAllUsers } from "@/services/users"
+import { getAllUsers } from "@/services/users"
+import { UserProfile } from "@/types"; // CORRIGIDO AQUI
 import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -88,7 +89,7 @@ export default function TeamManagementPage() {
       toast({
         title: "Sucesso!",
         description: `A função do usuário foi definida como ${role}.`,
-        variant: "success",
+        variant: "default",
       })
       fetchUsers() // Atualiza a lista após a alteração
     } catch (error) {

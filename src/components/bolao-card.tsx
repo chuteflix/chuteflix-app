@@ -104,8 +104,8 @@ function HydratedBolaoCard({ bolao }: BolaoCardProps) {
 
   const displayStatus = isClosingTimePassed && bolao.status === 'Aberto' ? 'Fechado' : bolao.status;
 
-  const statusMap: { [key: string]: { variant: "success" | "secondary" | "destructive" | "outline", label: string } } = {
-    'Aberto': { variant: 'success', label: 'Aberto' },
+  const statusMap: { [key: string]: { variant: "default" | "secondary" | "destructive" | "outline", label: string } } = {
+    'Aberto': { variant: 'default', label: 'Aberto' },
     'Fechado': { variant: 'secondary', label: 'Fechado' },
     'Finalizado': { variant: 'destructive', label: 'Finalizado' },
   }

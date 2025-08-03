@@ -58,7 +58,7 @@ export function ResultFormModal({ bolao, onResultSubmitted, children }: ResultFo
       toast({
         title: "Operação Concluída!",
         description: "O resultado do bolão foi registrado e os prêmios foram processados.",
-        variant: "success",
+        variant: "default",
       });
 
       // 3. Fecha o modal e atualiza a lista de bolões

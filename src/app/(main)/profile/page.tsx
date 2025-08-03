@@ -52,7 +52,7 @@ export default function ProfilePage() {
       try {
         const downloadURL = await uploadProfilePicture(user.uid, file);
         setPhotoURL(downloadURL);
-        toast({ title: "Foto de perfil atualizada!", variant: "success" });
+        toast({ title: "Foto de perfil atualizada!", variant: "default" });
       } catch (error) {
         toast({ title: "Erro no upload da foto", description: "Verifique o tamanho e o formato do arquivo.", variant: "destructive" });
       } finally {
@@ -71,7 +71,7 @@ export default function ProfilePage() {
         });
         toast({
           title: "Perfil atualizado com sucesso!",
-          variant: "success"
+          variant: "default"
         });
       } catch (error) {
         toast({

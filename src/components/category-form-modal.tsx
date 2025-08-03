@@ -111,13 +111,13 @@ export function CategoryFormModal({
         await updateCategory(category.id, dataToSave);
         toast({
           title: "Categoria atualizada com sucesso!",
-          variant: "success",
+          variant: "default",
         });
       } else {
         await createCategory(dataToSave);
         toast({
           title: "Categoria criada com sucesso!",
-          variant: "success",
+          variant: "default",
         });
       }
       onSuccess();

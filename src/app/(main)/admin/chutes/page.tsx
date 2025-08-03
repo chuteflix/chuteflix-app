@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, QuerySnapshot } from "firebase/firestore";
 import { db } from '@/lib/firebase';
 import {
   Table,
@@ -14,14 +14,16 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
-import { getUserProfile, UserProfile } from '@/services/users';
+import { getUserProfile } from '@/services/users';
+import { UserProfile } from '@/types';
 import { Palpite } from '@/services/palpites';
-import { getBolaoById, Bolao } from '@/services/boloes';
+import { getBolaoById } from '@/services/boloes';
+import { Bolao } from '@/types';
 import { format } from 'date-fns';
 
 type PalpiteComDetalhesAdmin = Palpite & {
-    user?: UserProfile;
-    bolao?: Bolao;
+    user?: UserProfile | null;
+    bolao?: Bolao | null;
 }
 
 export default function AdminChutesPage() {
@@ -35,7 +37,7 @@ export default function AdminChutesPage() {
     const completedQuery = query(baseQuery, where("status", "in", ["Ganho", "Perdido", "Anulado"]), orderBy("createdAt", "desc"));
 
     const fetchAndSetData = (q: any, setter: React.Dispatch<React.SetStateAction<PalpiteComDetalhesAdmin[]>>) => {
-        return onSnapshot(q, async (querySnapshot) => {
+        return onSnapshot(q, async (querySnapshot: QuerySnapshot) => {
             setLoading(true);
             const data = await Promise.all(
                 querySnapshot.docs.map(async (doc) => {

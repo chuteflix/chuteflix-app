@@ -77,7 +77,7 @@ export default function RechargePage() {
     }
     // Use settings diretamente do contexto, mas garanta que ele esteja carregado
     if (loadingAuth || !settings) {
-        toast({ title: "Aguarde, carregando informações de pagamento...", variant: "info" });
+        toast({ title: "Aguarde, carregando informações de pagamento...", variant: "default" });
         return;
     }
     if (settings.minDeposit && amount < settings.minDeposit) {
@@ -117,7 +117,7 @@ export default function RechargePage() {
     toast({
         title: "Solicitação em análise",
         description: "Sua recarga está sendo processada. O saldo será atualizado em breve.",
-        variant: "success"
+        variant: "default"
     })
     setAmount(undefined);
     setCurrentTransactionId(null);
@@ -153,7 +153,7 @@ Meu ID de Transação é: ${currentTransactionId}`;
        toast({
         title: "Comprovante Enviado!",
         description: "Seu comprovante foi anexado e será analisado em breve.",
-        variant: "success",
+        variant: "default",
       })
     } catch (error) {
       console.error("Erro ao enviar comprovante:", error);

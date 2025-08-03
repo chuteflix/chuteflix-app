@@ -48,7 +48,7 @@ export default function LoginPage() {
       toast({
         title: "E-mail necessário",
         description: "Por favor, insira seu e-mail para redefinir a senha.",
-        variant: "warning",
+        variant: "destructive",
       });
       return;
     }
@@ -57,7 +57,7 @@ export default function LoginPage() {
       toast({
         title: "E-mail de redefinição enviado!",
         description: "Verifique sua caixa de entrada para redefinir sua senha.",
-        variant: "success",
+        variant: "default",
       });
     } catch (error: any) {
       toast({

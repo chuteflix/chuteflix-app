@@ -86,7 +86,7 @@ export default function WithdrawPage() {
     setIsSubmitting(true);
     try {
       await requestWithdrawal({ amount, pixKey });
-      toast({ title: "Solicitação de saque enviada com sucesso!", description: "Sua solicitação será processada em breve.", variant: "success" });
+      toast({ title: "Solicitação de saque enviada com sucesso!", description: "Sua solicitação será processada em breve.", variant: "default" });
       setAmount(undefined);
     } catch (error: any) {
       toast({ title: "Erro ao solicitar saque.", description: error.message, variant: "destructive" });

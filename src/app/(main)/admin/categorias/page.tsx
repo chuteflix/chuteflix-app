@@ -178,7 +178,7 @@ export default function CategoriasPage() {
       await deleteCategory(categoryId);
       toast({
         title: "Categoria excluída com sucesso!",
-        variant: "success",
+        variant: "default",
       });
       fetchCategories();
     } catch (error) {
@@ -232,7 +232,7 @@ export default function CategoriasPage() {
       await updateCategoryOrder(updatesForBackend);
       toast({
         title: "Ordem atualizada com sucesso!",
-        variant: "success",
+        variant: "default",
       });
       // Refetch to ensure data consistency from the server
       await fetchCategories();
@@ -300,7 +300,6 @@ export default function CategoriasPage() {
         onOpenChange={setIsModalOpen}
         onSuccess={handleSuccess}
         category={selectedCategory}
-        categories={categories}
       />
     </div>
   );

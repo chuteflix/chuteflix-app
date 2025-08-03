@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, QuerySnapshot } from "firebase/firestore";
 import { db, functions } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -16,15 +16,15 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Check, X, Loader2, Eye } from 'lucide-react';
-import { getUserProfile, UserProfile } from '@/services/users';
+import { getUserProfile } from '@/services/users';
+import { UserProfile } from '@/types';
 import { Transaction } from '@/services/transactions';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { getAuth } from "firebase/auth"; // Para obter o token do usuário
-// import { httpsCallable } from 'firebase/functions'; // Removida, pois não é mais usada nesta página
+import { getAuth } from "firebase/auth";
 
 type DepositRequest = Transaction & {
-    user?: UserProfile;
+    user?: UserProfile | null; // Corrigido para aceitar null
 }
 
 export default function AdminDepositsPage() {
@@ -41,7 +41,7 @@ export default function AdminDepositsPage() {
     const completedQuery = query(baseQuery, where("status", "in", ["completed", "failed"]), orderBy("createdAt", "desc"));
 
     const fetchAndSetData = (q: any, setter: React.Dispatch<React.SetStateAction<DepositRequest[]>>) => {
-        return onSnapshot(q, async (querySnapshot) => {
+        return onSnapshot(q, async (querySnapshot: QuerySnapshot) => {
             setLoading(true);
             const data = await Promise.all(
                 querySnapshot.docs.map(async (doc) => {
@@ -59,7 +59,7 @@ export default function AdminDepositsPage() {
     };
 
     const unsubscribePending = fetchAndSetData(pendingQuery, setPendingDeposits);
-    const unsubscribeCompleted = fetchAndSetData(completedQuery, setCompletedDeposits); // CORRIGIDO AQUI
+    const unsubscribeCompleted = fetchAndSetData(completedQuery, setCompletedDeposits);
 
     return () => {
         unsubscribePending();
@@ -91,7 +91,7 @@ export default function AdminDepositsPage() {
             throw new Error(result.message || 'Falha ao aprovar depósito.');
         }
 
-        toast({ title: "Depósito aprovado com sucesso!", variant: "success" });
+        toast({ title: "Depósito aprovado com sucesso!", variant: "default" });
     } catch (error: any) {
         toast({ title: "Erro ao aprovar depósito.", description: error.message, variant: "destructive" });
     } finally {
@@ -108,7 +108,6 @@ export default function AdminDepositsPage() {
         }
         const idToken = await user.getIdToken(); 
 
-        // CHAMA A NOVA NEXT.JS API ROUTE PARA RECUSAR
         const response = await fetch('/api/deposits/decline', {
             method: 'POST',
             headers: {
@@ -124,7 +123,7 @@ export default function AdminDepositsPage() {
             throw new Error(result.message || 'Falha ao recusar depósito.');
         }
 
-        toast({ title: "Depósito recusado.", variant: "info" });
+        toast({ title: "Depósito recusado.", variant: "default" });
     } catch(error: any) {
         toast({ title: "Erro ao recusar depósito.", description: error.message, variant: "destructive" });
     } finally {

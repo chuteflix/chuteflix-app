@@ -151,7 +151,7 @@ export default function SettingsPage() {
       toast({
         title: "Configurações Salvas",
         description: "Suas alterações foram salvas com sucesso.",
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       console.error("Erro ao salvar configurações:", error);

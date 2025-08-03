@@ -76,7 +76,7 @@ export function PalpiteModal({ isOpen, onClose, bolao }: PalpiteModalProps) {
       toast({
         title: "Palpite Enviado!",
         description: "Seu chute foi registrado com sucesso. Boa sorte!",
-        variant: "success",
+        variant: "default",
       })
       onClose()
       form.reset() // Limpa o formulário após o sucesso
