@@ -6,7 +6,7 @@ import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Transaction } from "@/services/transactions"
 import { getUserProfile } from "@/services/users"
-import { UserProfile } from "@/types"; // CORRECTED HERE
+import { UserProfile } from "@/types";
 import {
   Table,
   TableBody,
@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDownLeft, ArrowUpRight, Minus, CircleDollarSign, Send } from "lucide-react"
 import { format } from 'date-fns';
 
-type TransactionWithUser = Transaction & { user?: UserProfile };
+type TransactionWithUser = Transaction & { user?: UserProfile | null }; // MODIFIED HERE
 
 export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<TransactionWithUser[]>([])
