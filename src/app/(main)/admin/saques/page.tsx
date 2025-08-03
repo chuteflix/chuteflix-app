@@ -43,7 +43,7 @@ export default function AdminWithdrawalsPage() {
             const withdrawalRequests = await Promise.all(
                 querySnapshot.docs.map(async (doc) => {
                     const transaction = { id: doc.id, ...doc.data() } as Transaction;
-                    const user = await getUserProfile(transaction.userId);
+                    const user = await getUserProfile(transaction.uid);
                     return { ...transaction, user };
                 })
             );
