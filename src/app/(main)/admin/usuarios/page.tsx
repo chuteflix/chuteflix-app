@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getAllUsers, UserProfile } from "@/services/users";
+import { getAllUsers } from "@/services/users";
+import { UserProfile } from "@/types"; // Corrected import path
 import {
   Card,
   CardContent,
@@ -99,7 +100,7 @@ export default function UsuariosPage() {
         toast({
             title: "Usuário Rebaixado.",
             description: "As permissões de admin foram removidas.",
-            variant: "info",
+            variant: "default", // Changed from "info" to "default"
         });
       }
 
