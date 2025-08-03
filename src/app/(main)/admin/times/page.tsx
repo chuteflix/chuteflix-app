@@ -7,8 +7,8 @@ import {
   getTeams,
   updateTeam,
   deleteTeam,
-  Team,
 } from "@/services/teams"
+import { Team } from "@/types"
 
 import { Button } from "@/components/ui/button"
 import {
