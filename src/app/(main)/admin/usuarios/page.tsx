@@ -135,7 +135,7 @@ export default function UsuariosPage() {
     if (cleanPhone) {
       window.open(`https://wa.me/${cleanPhone}`, '_blank');
     } else {
-      toast({ title: "Número de telefone inválido.", variant: "warning" });
+      toast({ title: "Número de telefone inválido.", variant: "default" }); // Changed from "warning" to "default"
     }
   };
 
