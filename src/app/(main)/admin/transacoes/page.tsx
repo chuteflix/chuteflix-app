@@ -5,7 +5,8 @@ import { useEffect, useState } from "react"
 import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Transaction } from "@/services/transactions"
-import { getUserProfile, UserProfile } from "@/services/users"
+import { getUserProfile } from "@/services/users"
+import { UserProfile } from "@/types"; // CORRECTED HERE
 import {
   Table,
   TableBody,
