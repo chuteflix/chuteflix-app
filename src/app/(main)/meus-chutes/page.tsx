@@ -8,10 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getBolaoById } from "@/services/boloes"; 
-import { getTeamById } from "@/services/teams"; // Only import the function
-import { getChampionshipById, Championship } from "@/services/championships";
+import { getTeamById } from "@/services/teams"; 
+import { getChampionshipById } from "@/services/championships"; // Only import the function
 import { Separator } from "@/components/ui/separator";
-import { Bolao, Team } from "@/types"; // Imported Bolao and Team from @/types
+import { Bolao, Team, Championship } from "@/types"; // Imported Bolao, Team, and Championship from @/types
 
 // Estrutura para agrupar palpites por bolão
 interface PalpitesAgrupados {
