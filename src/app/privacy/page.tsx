@@ -1,11 +1,25 @@
 
+"use client";
+
 import { PublicHeader } from "@/components/public-header";
 import Link from "next/link";
+import { useAuth } from "@/context/auth-context"; // Import useAuth
+import { Loader2 } from "lucide-react";
 
 export default function PrivacyPolicyPage() {
+  const { settings, loading } = useAuth(); // Destructure settings and loading
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background text-foreground">
-      <PublicHeader />
+      <PublicHeader settings={settings} /> {/* Pass settings prop */}
       <main className="container mx-auto px-4 py-24 sm:py-32">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold tracking-tight mb-4">Política de Privacidade</h1>
