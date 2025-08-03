@@ -98,7 +98,7 @@ export default function LoginPage() {
                 placeholder="seu@email.com"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -112,7 +112,7 @@ export default function LoginPage() {
                 id="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               />
             </div>
             <Button type="submit" className="w-full">
