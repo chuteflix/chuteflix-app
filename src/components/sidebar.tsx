@@ -4,13 +4,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { Logo } from "@/components/icons"
-import { Button } from "@/components/ui/button"
 import {
-  Bell,
   Home,
   Users,
   Trophy,
-  BarChart3,
   Settings,
   Shield,
   Palette,
@@ -19,11 +16,14 @@ import {
   Wallet,
   Send,
   User as UserIcon,
-  LogOut,
   ArrowLeftRight,
   HandCoins,
-  DollarSign
+  DollarSign,
+  LogOut
 } from "lucide-react"
+import { auth } from "@/lib/firebase"
+import { useRouter } from "next/navigation"
+import { Button } from "./ui/button"
 
 const adminMenu = [
   { href: "/admin", icon: Home, label: "Dashboard" },
@@ -35,7 +35,7 @@ const adminMenu = [
   { href: "/admin/times", icon: Shield, label: "Times" },
   { href: "/admin/categorias", icon: Palette, label: "Categorias" },
   { href: "/admin/transacoes", icon: ArrowLeftRight, label: "Transações" },
-  { href: "/admin/configuracoes", icon: Settings, label: "Configurações do App" },
+  { href: "/admin/configuracoes", icon: Settings, label: "Configurações" },
 ];
 
 const userMenu = [
@@ -43,7 +43,6 @@ const userMenu = [
   { href: "/meus-chutes", icon: Ticket, label: "Meus Chutes" },
   { href: "/recarga", icon: Wallet, label: "Recarga" },
   { href: "/saque", icon: Send, label: "Saque" },
-  { href: "/transacoes", icon: BarChart3, label: "Minhas Transações" },
 ];
 
 function MenuLink({ href, icon: Icon, label, currentPath }: { href: string, icon: React.ElementType, label: string, currentPath: string }) {
@@ -66,12 +65,20 @@ function MenuLink({ href, icon: Icon, label, currentPath }: { href: string, icon
 export function Sidebar({ role }: { role: 'admin' | 'user' }) {
   const pathname = usePathname();
   const { userProfile, settings } = useAuth();
-  const menuItems = role === 'admin' ? adminMenu : userMenu;
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
+  
+  const isAdminPage = pathname.startsWith('/admin');
+  const menuItems = role === 'admin' && isAdminPage ? adminMenu : userMenu;
 
   return (
-    <aside className="hidden md:flex flex-col h-full w-64 border-r bg-background">
+    <aside className="hidden md:flex flex-col h-screen w-64 border-r bg-background">
       <div className="flex items-center justify-center h-16 border-b px-4">
-        <Link href={role === 'admin' ? '/admin' : '/inicio'} className="flex items-center gap-2 font-semibold">
+        <Link href={role === 'admin' && isAdminPage ? '/admin' : '/inicio'} className="flex items-center gap-2 font-semibold">
           <Logo logoUrl={settings?.logoUrl} />
           <span className="text-lg">{settings?.appName || 'ChuteFlix'}</span>
         </Link>
@@ -91,12 +98,17 @@ export function Sidebar({ role }: { role: 'admin' | 'user' }) {
       </nav>
       {userProfile && (
         <div className="border-t p-4">
-          <div className="flex items-center gap-3">
-            <UserIcon className="h-8 w-8 rounded-full bg-muted text-muted-foreground p-1.5" />
-            <div>
-              <p className="text-sm font-semibold">{userProfile.name}</p>
-              <p className="text-xs text-muted-foreground">{userProfile.email}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <UserIcon className="h-8 w-8 rounded-full bg-muted text-muted-foreground p-1.5" />
+              <div>
+                <p className="text-sm font-semibold">{userProfile.displayName}</p>
+                <p className="text-xs text-muted-foreground">{userProfile.email}</p>
+              </div>
             </div>
+            <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sair">
+              <LogOut className="h-5 w-5 text-red-500" />
+            </Button>
           </div>
         </div>
       )}

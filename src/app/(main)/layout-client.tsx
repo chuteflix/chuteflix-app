@@ -1,79 +1,53 @@
-"use client";
 
-import { AuthProvider, useAuth } from "@/context/auth-context";
-import { Sidebar } from "@/components/sidebar";
-import { usePathname } from 'next/navigation';
-import { Loader2 } from "lucide-react";
-import { BottomTabBar } from "@/components/bottom-tab-bar";
-import { DashboardHeader } from "@/components/dashboard-header";
-import { PublicHeader } from "@/components/public-header";
-import { UserProfile } from "@/types"; // Import UserProfile
-import { getUserProfile } from "@/services/users"; // Import getUserProfile
-import { useState, useEffect } from 'react';
+"use client"
 
-function AppLayoutRouter({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
-    const { loading, user } = useAuth(); // Removed 'settings' from destructuring
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [profileLoading, setProfileLoading] = useState(true);
+import { usePathname } from "next/navigation"
+import { Sidebar } from "@/components/sidebar"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { useAuth } from "@/context/auth-context"
+import { Skeleton } from "@/components/ui/skeleton"
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            if (user) {
-                const profile = await getUserProfile(user.uid);
-                setUserProfile(profile);
-            }
-            setProfileLoading(false);
-        };
+export function MainLayoutClient({ children }: { children: React.ReactNode }) {
+  const { userProfile, loading } = useAuth()
+  const pathname = usePathname()
 
-        if (!loading) {
-            fetchProfile();
-        }
-    }, [user, loading]);
-
-    const authRoutes = ['/login', '/register'];
-
-    if (loading || profileLoading) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        );
-    }
-    
-    // Auth routes have their own layout (no header/sidebar)
-    if (authRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-    
-    // If there is no user, it must be a public page.
-    // The public header is handled by the root layout.
-    if (!user) {
-        return <>{children}</>;
-    }
-
-    // If the user is logged in, show the dashboard layout
-    const isAdminSection = pathname.startsWith('/admin');
-    const displayRole = (userProfile?.isAdmin && isAdminSection) ? 'admin' : 'user'; // Use userProfile.isAdmin
-
+  if (loading) {
     return (
-      <div className="flex h-screen bg-background">
-        <Sidebar role={displayRole} />
-        <div className="flex flex-1 flex-col overflow-hidden"> 
-          <DashboardHeader isAdminSection={isAdminSection} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-20 md:pt-24 pb-16 md:pb-8"> 
-            {children}
+      <div className="flex flex-col min-h-screen">
+        <header className="flex items-center justify-between h-16 px-6 border-b">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-10 w-10 rounded-full" />
+        </header>
+        <div className="flex flex-1">
+          <aside className="hidden md:flex flex-col w-64 p-4 border-r">
+            <Skeleton className="h-8 w-full mb-4" />
+            <Skeleton className="h-8 w-full mb-4" />
+            <Skeleton className="h-8 w-full mb-4" />
+          </aside>
+          <main className="flex-1 p-8">
+            <Skeleton className="h-full w-full" />
           </main>
-          <BottomTabBar />
         </div>
       </div>
-    );
-}
+    )
+  }
 
-export function LayoutClient({ children }: { children: React.ReactNode }) {
+  const userRole = userProfile?.role || "user"
+  const isAdminPath = pathname.startsWith("/admin")
+
+  // Se for uma rota de admin, deixa o AdminLayout cuidar da renderização
+  if (isAdminPath) {
+    return <>{children}</>
+  }
+
+  // Caso contrário, renderiza o layout do usuário
   return (
-    <AuthProvider>
-      <AppLayoutRouter>{children}</AppLayoutRouter>
-    </AuthProvider>
-  );
+    <div className="flex min-h-screen">
+      <Sidebar role={userRole} />
+      <main className="flex-1 flex flex-col">
+        <DashboardHeader isAdminSection={false} />
+        <div className="flex-1 p-4 md:p-8 pt-20">{children}</div>
+      </main>
+    </div>
+  )
 }

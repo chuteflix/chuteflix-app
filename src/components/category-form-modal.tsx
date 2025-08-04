@@ -1,17 +1,20 @@
-"use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+"use client"
+
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog";
+  DialogClose,
+} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -19,148 +22,159 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
+} from "@/components/ui/form"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-  } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Category, createCategory, updateCategory, getAllCategories } from "@/services/categories";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
+import { Category, addCategory, updateCategory } from "@/services/categories"
+import { useCategories } from "@/hooks/use-categories"
 
 const formSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   description: z.string().optional(),
-  order: z.coerce.number().min(1, "A ordem deve ser no mínimo 1."),
+  active: z.boolean().default(true),
   parentId: z.string().nullable().optional(),
-});
+})
 
-type CategoryFormValues = z.infer<typeof formSchema>;
+type CategoryFormValues = z.infer<typeof formSchema>
 
 interface CategoryFormModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onSuccess: () => void;
-  category: Category | null;
+  children: React.ReactNode
+  category?: Category
+  onSave: () => void
 }
 
 export function CategoryFormModal({
-  isOpen,
-  onOpenChange,
-  onSuccess,
+  children,
   category,
+  onSave,
 }: CategoryFormModalProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableParents, setAvailableParents] = useState<Category[]>([]);
-  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false)
+  const { toast } = useToast()
+  const { categories } = useCategories(true) // Fetch all for parent selection
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      order: 1,
-      parentId: null,
+      name: category?.name || "",
+      description: category?.description || "",
+      active: category?.active ?? true,
+      parentId: category?.parentId || null,
     },
-  });
+  })
 
-  useEffect(() => {
-    const fetchParentCategories = async () => {
-        const allCategories = await getAllCategories();
-        setAvailableParents(allCategories.filter(c => c.id !== category?.id));
-    }
-    if (isOpen) {
-        fetchParentCategories();
-    }
-  }, [isOpen, category]);
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { isSubmitting },
+  } = form
 
-  useEffect(() => {
-    if (isOpen) {
-        if (category) {
-        form.reset({
-            name: category.name,
-            description: category.description || "",
-            order: category.order,
-            parentId: category.parentId || null,
-        });
-        } else {
-        form.reset({
-            name: "",
-            description: "",
-            order: 1,
-            parentId: null,
-        });
-        }
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      reset({
+        name: category?.name || "",
+        description: category?.description || "",
+        active: category?.active ?? true,
+        parentId: category?.parentId || null,
+      })
     }
-  }, [category, form, isOpen]);
+    setIsOpen(open)
+  }
 
-  const onSubmit = async (values: CategoryFormValues) => {
-    setIsSubmitting(true);
-    // Garantir que parentId seja null se for uma string vazia
-    const dataToSave = {
-        ...values,
-        parentId: values.parentId || null,
-    };
+  const onSubmit = async (data: CategoryFormValues) => {
     try {
+      const payload = { ...data, parentId: data.parentId === 'null' ? null : data.parentId, order: category?.order ?? categories.length }
       if (category) {
-        await updateCategory(category.id, dataToSave);
+        await updateCategory(category.id, payload)
         toast({
-          title: "Categoria atualizada com sucesso!",
-          variant: "default",
-        });
+          title: "Sucesso!",
+          description: "Categoria atualizada com sucesso.",
+        })
       } else {
-        await createCategory(dataToSave);
+        await addCategory(payload)
         toast({
-          title: "Categoria criada com sucesso!",
-          variant: "default",
-        });
+          title: "Sucesso!",
+          description: "Nova categoria adicionada.",
+        })
       }
-      onSuccess();
+      onSave()
+      handleOpenChange(false)
     } catch (error) {
       toast({
-        title: "Erro ao salvar categoria.",
-        description: "Tente novamente mais tarde.",
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro. Por favor, tente novamente.",
         variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      })
     }
-  };
+  }
+
+  // Helper para achatar a hierarquia para o select
+  const flattenCategories = (categories: Category[], level = 0): { label: string; value: string }[] => {
+    let flatList: { label: string; value: string }[] = []
+    for (const cat of categories) {
+      flatList.push({ label: `${'—'.repeat(level)} ${cat.name}`, value: cat.id })
+      if (cat.children && cat.children.length > 0) {
+        flatList = flatList.concat(flattenCategories(cat.children, level + 1))
+      }
+    }
+    return flatList
+  }
+  
+  const availableParents = flattenCategories(categories.filter(c => c.id !== category?.id));
+
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {category ? "Editar Categoria" : "Adicionar Nova Categoria"}
           </DialogTitle>
-          <DialogDescription>
-            Preencha os detalhes da categoria. A ordem define a posição na home.
-          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <FormField
-              control={form.control}
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome da Categoria</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Campeonatos Nacionais" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={control}
               name="parentId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria Pai (Opcional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || "null"}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Nenhuma (Categoria Principal)" />
+                        <SelectValue placeholder="Selecione a categoria pai" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {/* Removido o item com valor vazio para corrigir o erro */}
+                      <SelectItem value="null">Nenhuma</SelectItem>
                       {availableParents.map(parent => (
-                        <SelectItem key={parent.id} value={parent.id}>{parent.name}</SelectItem>
+                        <SelectItem key={parent.value} value={parent.value}>
+                          {parent.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -169,63 +183,54 @@ export function CategoryFormModal({
               )}
             />
             <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Categoria</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Brasileirão Série A" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
+              control={control}
               name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Uma breve descrição para controle" {...field} />
+                    <Textarea
+                      placeholder="Uma breve descrição sobre a categoria."
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <FormField
-              control={form.control}
-              name="order"
+              control={control}
+              name="active"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ordem de Exibição</FormLabel>
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Ativa</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Categorias inativas não são exibidas para os usuários.
+                    </p>
+                  </div>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
+              <DialogClose asChild>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {category ? "Salvar Alterações" : "Criar Categoria"}
+                {isSubmitting ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
+
+    

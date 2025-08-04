@@ -2,48 +2,40 @@
 "use client"
 
 import { useAuth } from "@/context/auth-context"
+import { Sidebar } from "@/components/sidebar"
+import { DashboardHeader } from "@/components/dashboard-header"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { useEffect } from "react"
 
-// Este componente é um HOC (Higher-Order Component) para proteger as rotas do admin
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading, userRole } = useAuth()
+  const { userProfile, loading } = useAuth()
   const router = useRouter()
-  const [isVerified, setIsVerified] = useState(false)
 
   useEffect(() => {
-    // Se não estiver carregando e não houver usuário, redireciona para o login
-    if (!loading && !user) {
-      router.replace("/login")
-      return
+    if (!loading && userProfile?.role !== "admin") {
+      router.push("/login")
     }
+  }, [userProfile, loading, router])
 
-    // Se não estiver carregando e o usuário não for admin, redireciona para a home
-    if (!loading && user && userRole !== "admin") {
-      router.replace("/inicio")
-      return
-    }
-
-    // Se passou por todas as verificações, permite o acesso
-    if (!loading && user && userRole === "admin") {
-      setIsVerified(true)
-    }
-  }, [user, loading, userRole, router])
-
-  // Enquanto verifica, exibe um loader
-  if (!isVerified) {
+  if (loading || userProfile?.role !== "admin") {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center h-screen">
+        <p>Carregando ou redirecionando...</p>
       </div>
     )
   }
 
-  // Se verificado, renderiza o conteúdo da página do admin
-  return <>{children}</>
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar role="admin" />
+      <main className="flex-1 flex flex-col">
+        <DashboardHeader isAdminSection={true} />
+        <div className="flex-1 p-8 pt-20 bg-muted/20">{children}</div>
+      </main>
+    </div>
+  )
 }

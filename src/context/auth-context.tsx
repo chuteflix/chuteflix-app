@@ -1,84 +1,92 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { UserProfile, Settings } from '@/types';
-import { getSettings } from '@/services/settings';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { doc, onSnapshot, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { User } from "@/types";
 
-interface AuthContextType {
-  user: User | null;
-  userProfile: UserProfile | null;
-  userRole: 'admin' | 'user' | null;
-  loading: boolean;
-  settings: Settings | null; // Adicionando settings ao contexto
+// Define a interface para as configurações do aplicativo
+interface AppSettings {
+  appName: string;
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  cardColor: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextType {
+  user: FirebaseUser | null;
+  userProfile: User | null;
+  settings: AppSettings | null;
+  loading: boolean;
+}
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
-  const [settings, setSettings] = useState<Settings | null>(null);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userProfile: null,
+  settings: null,
+  loading: true,
+});
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Carrega as configurações do aplicativo uma vez
-    const fetchAppSettings = async () => {
-        try {
-            const appSettings = await getSettings();
-            setSettings(appSettings);
-        } catch (error) {
-            console.error("Erro ao buscar configurações globais do app:", error);
-        }
-    };
-
-    fetchAppSettings();
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        // Se o usuário estiver logado, ouve as atualizações do perfil em tempo real
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubProfile = onSnapshot(userDocRef, (doc) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        // Listener para o perfil do usuário
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
-            const data = doc.data() as UserProfile;
-            setUserProfile(data);
-            setUserRole(data.role || 'user');
+            setUserProfile({ uid: doc.id, ...doc.data() } as User);
           } else {
             setUserProfile(null);
-            setUserRole(null);
           }
-          setLoading(false);
-        }, (error) => {
-          console.error("Error fetching user profile:", error);
-          setUserProfile(null);
-          setUserRole(null);
-          setLoading(false);
         });
-        return () => unsubProfile();
+
+        // Fetch de configurações
+        try {
+          const settingsDocRef = doc(db, "settings", "app");
+          const settingsDoc = await getDoc(settingsDocRef);
+          if (settingsDoc.exists()) {
+            setSettings(settingsDoc.data() as AppSettings);
+          }
+        } catch (error) {
+          console.error("Erro ao carregar configurações:", error);
+        } finally {
+          setLoading(false);
+        }
+
+        return () => {
+          unsubscribeProfile();
+        };
       } else {
-        // Se não houver usuário, para de carregar
         setUserProfile(null);
-        setUserRole(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
-  const value = { user, userProfile, userRole, settings, loading };
+  return (
+    <AuthContext.Provider value={{ user, userProfile, settings, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
-}
+export const useAuth = () => useContext(AuthContext);

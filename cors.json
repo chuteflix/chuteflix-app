@@ -1,6 +1,9 @@
 [
   {
-    "origin": ["https://chute--chuteflix-bolo-app.us-central1.hosted.app"],
+    "origin": [
+      "https://chute--chuteflix-bolo-app.us-central1.hosted.app",
+      "http://localhost:3000"
+    ],
     "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "responseHeader": [
       "Content-Type",

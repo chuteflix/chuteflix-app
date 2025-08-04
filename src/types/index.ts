@@ -1,101 +1,74 @@
-
-export interface Team {
-  id: string;
-  name: string;
-  shieldUrl?: string; 
-  level: 'Profissional' | 'Amador/Várzea';
-  location: string;
-  scope: 'Nacional' | 'Estadual' | 'Municipal';
-  state?: string;
-  city?: string;
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  balance?: number;
+  role?: "admin" | "user";
+  cpf?: string;
+  phone?: string;
 }
 
 export interface Bolao {
   id: string;
-  homeTeam: Team;
-  awayTeam: Team;
-  matchStartDate: Date | null; 
-  matchEndDate: Date | null;   
-  closingTime: Date | null;    
-  betAmount: number;
-  initialPrize?: number;
-  maxParticipants?: number; // Propriedade adicionada
-  status: 'Aberto' | 'Fechado' | 'Finalizado';
-  categoryIds?: string[];
-  categoryNames?: string[];
-  userGuess?: {
-    homeTeam: number;
-    awayTeam: number;
-  };
-  finalScoreTeam1?: number; 
-  finalScoreTeam2?: number; 
-  // Adicionado para filtragem na prateleira
-  type?: 'national' | 'international';
-  championship?: string;
-  homeScore?: number;
-  awayScore?: number;
+  name: string;
+  description: string;
+  category: string;
+  championship: string;
+  options: Record<string, number>;
+  result?: string;
+  status: "open" | "closed" | "finished";
+  createdAt: any;
+  updatedAt: any;
+  maxParticipants?: number;
+  minParticipants?: number;
+  value: number;
+  createdBy: string;
+  ganhadores?: Ganhador[];
 }
 
-export interface UserProfile {
-    uid: string;
-    email: string;
-    name?: string;
-    firstName?: string;
-    lastName?: string;
-    displayName?: string;
-    photoURL?: string;
-    balance: number;
-    isAdmin?: boolean;
-    createdAt?: any;
-    phone?: string;
-    cpf?: string;
-    pixKey?: string;
-    pixKeyType?: string;
-    role?: 'admin' | 'editor' | 'support' | 'user';
+export interface Palpite {
+  id: string;
+  userId: string;
+  bolaoId: string;
+  option: string;
+  createdAt: any;
+  updatedAt: any;
 }
-  
-export type TransactionType = "deposit" | "withdrawal" | "bet_placement" | "prize_winning" | "bet_refund";
-
-export type TransactionStatus = "pending" | "completed" | "failed";
 
 export interface Transaction {
   id: string;
-  uid: string; // userId para manter consistência
-  type: TransactionType;
+  userId: string;
+  type: "deposit" | "withdrawal" | "bet" | "prize";
   amount: number;
-  description: string;
-  status: TransactionStatus;
-  createdAt: any; // Firestore Timestamp
-  processedAt?: any; // Firestore Timestamp
-  processedBy?: string; // UID do admin que processou
-  metadata?: {
-    [key: string]: any;
-  };
+  status: "pending" | "approved" | "declined";
+  createdAt: any;
+  updatedAt: any;
+  transactionId?: string;
+  proofOfPayment?: string;
 }
 
-export interface Settings {
-  appName: string;
-  logoUrl?: string;
-  faviconUrl?: string;
-  metaDescription?: string;
-  metaKeywords?: string;
-  pixKey?: string;
-  qrCodeUrl?: string;
-  whatsappNumber?: string;
-  minDeposit?: number;
-  minWithdrawal?: number;
-  homeHeroSubtitle?: string;
-  colors?: {
-    primary?: string | null;
-    secondary?: string | null;
-    accent?: string | null;
-    background?: string | null;
-    text?: string | null;
-  } | null;
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
 }
 
 export interface Championship {
   id: string;
   name: string;
-  logoUrl?: string;
+  country: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  championship: string;
+  country: string;
+}
+
+export interface Ganhador {
+  userId: string;
+  option: string;
+  premio: number;
 }

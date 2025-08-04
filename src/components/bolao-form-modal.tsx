@@ -1,32 +1,47 @@
-"use client";
 
-import { useState, useEffect } from "react";
-import { format, isValid } from "date-fns";
-import { Calendar as CalendarIcon, Clock, ChevronsUpDown, Check } from "lucide-react";
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { format, isValid, parse } from "date-fns"
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  ChevronsUpDown,
+  Check,
+} from "lucide-react"
+
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/dialog"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+} from "@/components/ui/popover"
 import {
   Command,
   CommandEmpty,
@@ -34,322 +49,443 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Bolao, Team } from "@/types";
-import { getTeams } from "@/services/teams";
-import { getAllCategories, Category } from "@/services/categories";
-import { PatternFormat, NumericFormat } from 'react-number-format';
-import { cn } from "@/lib/utils";
+} from "@/components/ui/command"
+import { Calendar } from "@/components/ui/calendar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { Bolao, Team } from "@/types"
+import { getTeams } from "@/services/teams"
+import { Category } from "@/services/categories"
+import { useCategories } from "@/hooks/use-categories"
+import { NumericFormat, PatternFormat } from "react-number-format"
+import { cn } from "@/lib/utils"
 
-const toDateSafe = (date: any): Date | undefined => {
-    if (!date) return undefined;
-    // @ts-ignore
-    if (typeof date.toDate === 'function') return date.toDate();
-    const d = new Date(date);
-    return isValid(d) ? d : undefined;
-};
+const formSchema = z.object({
+  category: z.string().min(1, "A categoria é obrigatória."),
+  homeTeamId: z.string().min(1, "O time da casa é obrigatório."),
+  awayTeamId: z.string().min(1, "O time visitante é obrigatório."),
+  betAmount: z.number().min(0.01, "O valor da aposta deve ser positivo."),
+  initialPrize: z.number().min(0, "O prêmio não pode ser negativo."),
+  matchDate: z.date({ required_error: "A data da partida é obrigatória." }),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
+  closingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
+})
+
+type BolaoFormValues = z.infer<typeof formSchema>
 
 interface BolaoFormModalProps {
-  bolao?: Bolao | null;
-  onSave: (data: Omit<Bolao, "id" | "status">, id?: string) => void;
-  children: React.ReactNode;
+  bolao?: Bolao | null
+  onSave: (data: any, id?: string) => void
+  children: React.ReactNode
 }
-
-const initialFormData = {
-  homeTeamId: "",
-  awayTeamId: "",
-  matchDate: undefined,
-  startTime: "",
-  endTime: "",
-  closingTime: "",
-  betAmount: 0,
-  initialPrize: 0,
-};
 
 export function BolaoFormModal({
   bolao,
   onSave,
   children,
 }: BolaoFormModalProps) {
-  const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState<any>(initialFormData);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [categoryPath, setCategoryPath] = useState<string[]>([]);
-  const [homeTeamPopoverOpen, setHomeTeamPopoverOpen] = useState(false);
-  const [awayTeamPopoverOpen, setAwayTeamPopoverOpen] = useState(false);
+  const [open, setOpen] = useState(false)
+  const [teams, setTeams] = useState<Team[]>([])
+  const { categories, loading: categoriesLoading } = useCategories(true)
+  const { toast } = useToast()
 
-  const isEditing = !!bolao;
+  const form = useForm<BolaoFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      category: bolao?.category || "",
+      homeTeamId: bolao?.homeTeamId || "",
+      awayTeamId: bolao?.awayTeamId || "",
+      betAmount: bolao?.value || 0,
+      initialPrize: bolao?.initialPrize || 0,
+      matchDate: bolao?.matchDate ? new Date(bolao.matchDate) : undefined,
+      startTime: bolao?.matchDate ? format(new Date(bolao.matchDate), "HH:mm") : "",
+      endTime: bolao?.endDate ? format(new Date(bolao.endDate), "HH:mm") : "",
+      closingTime: bolao?.closingTime ? format(new Date(bolao.closingTime), "HH:mm") : "",
+    },
+  })
+
+  // Destructure reset from form to use in dependency array
+  const { reset } = form;
 
   useEffect(() => {
-    if (open) {
-      const fetchData = async () => {
-        try {
-          const [allTeams, fetchedCategories] = await Promise.all([
-            getTeams(),
-            getAllCategories(),
-          ]);
-          setTeams(allTeams);
-          setAllCategories(fetchedCategories);
-
-          setFormData(initialFormData);
-          setCategoryPath([]);
-
-          if (isEditing && bolao) {
-            const matchStartDate = toDateSafe(bolao.matchStartDate);
-            const matchEndDate = toDateSafe(bolao.matchEndDate);
-        
-            let formattedClosingTime = "";
-            if (bolao.closingTime) {
-                const parsedClosingTime = toDateSafe(bolao.closingTime);
-                if (parsedClosingTime) {
-                    formattedClosingTime = format(parsedClosingTime, "HH:mm");
-                }
-            }
-
-            setFormData({
-              homeTeamId: bolao.homeTeam.id,
-              awayTeamId: bolao.awayTeam.id,
-              matchDate: matchStartDate,
-              startTime: matchStartDate ? format(matchStartDate, "HH:mm") : "",
-              endTime: matchEndDate ? format(matchEndDate, "HH:mm") : "",
-              closingTime: formattedClosingTime,
-              betAmount: parseFloat(String(bolao.betAmount)) || 0,
-              initialPrize: parseFloat(String(bolao.initialPrize)) || 0,
-            });
-            
-            if (bolao.categoryIds && bolao.categoryIds.length > 0) {
-                const path: string[] = [];
-                const buildPath = (id: string | null) => {
-                    if(!id) return;
-                    const cat = fetchedCategories.find(c => c.id === id);
-                    if (cat) {
-                        buildPath(cat.parentId);
-                        path.push(cat.id);
-                    }
-                }
-                const leafId = bolao.categoryIds.find(id => !fetchedCategories.some(c => c.parentId === id));
-                if (leafId) {
-                    buildPath(leafId);
-                }
-                setCategoryPath(path);
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching data in BolaoFormModal:", err);
-          setError("Erro ao carregar dados. Tente novamente.");
-        }
-      };
-      
-      fetchData();
-    }
-  }, [open, isEditing, bolao]);
-  
-  const handleCategoryChange = (index: number, value: string) => {
-    const newPath = categoryPath.slice(0, index);
-    newPath.push(value);
-    setCategoryPath(newPath);
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    
-    const { matchDate, startTime, endTime, closingTime, ...rest } = formData;
-    
-    if (!matchDate || !startTime || !endTime || !closingTime || categoryPath.length === 0) {
-        setError("Todos os campos são obrigatórios, incluindo a seleção completa da categoria.");
-        return;
-    }
-
-    const [startHours, startMinutes] = startTime.split(':').map(Number);
-    const [endHours, endMinutes] = endTime.split(':').map(Number);
-    const matchStartDate = new Date(matchDate);
-    matchStartDate.setHours(startHours, startMinutes);
-    const matchEndDate = new Date(matchDate);
-    matchEndDate.setHours(endHours, endMinutes);
-
-    const [closingHours, closingMinutes] = closingTime.split(':').map(Number);
-    const finalClosingTime = new Date(matchDate); 
-    finalClosingTime.setHours(closingHours, closingMinutes, 0, 0); 
-    
-    const finalData = {
-        ...rest,
-        matchStartDate,
-        matchEndDate,
-        closingTime: finalClosingTime, 
-        homeTeam: teams.find(t => t.id === formData.homeTeamId)!,
-        awayTeam: teams.find(t => t.id === formData.awayTeamId)!,
-        categoryIds: categoryPath,
-    };
-    
-    onSave(finalData, isEditing ? bolao!.id : undefined);
-    setOpen(false);
-  };
-
-  const renderCategorySelectors = () => {
-    const selectors = [];
-    selectors.push(
-      <Select
-        key="category-level-0"
-        value={categoryPath[0] || ""}
-        onValueChange={(value) => handleCategoryChange(0, value)}
-      >
-        <SelectTrigger><SelectValue placeholder="Categoria Principal" /></SelectTrigger>
-        <SelectContent>
-          {allCategories.filter(c => c.parentId === null).map(c => (
-            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-
-    for (let i = 0; i < categoryPath.length; i++) {
-      const parentId = categoryPath[i];
-      const children = allCategories.filter(c => c.parentId === parentId);
-      
-      if (children.length > 0) {
-        selectors.push(
-          <Select
-            key={`category-level-${i + 1}`}
-            value={categoryPath[i + 1] || ""}
-            onValueChange={(value) => handleCategoryChange(i + 1, value)}
-          >
-            <SelectTrigger><SelectValue placeholder={`Subcategoria`} /></SelectTrigger>
-            <SelectContent>
-              {children.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
+    const fetchInitialData = async () => {
+      try {
+        const allTeams = await getTeams()
+        setTeams(allTeams)
+      } catch (err) {
+        toast({
+          title: "Erro ao buscar times",
+          variant: "destructive",
+        })
       }
     }
-    return selectors;
-  };
-
-  const TeamSelector = ({ value, onSelect, otherTeamId, placeholder, open, onOpenChange }: any) => (
-    <Popover open={open} onOpenChange={onOpenChange}>
-        <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
-                {value ? teams.find(t => t.id === value)?.name : placeholder}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0 z-[100]">
-            <Command>
-                <CommandInput placeholder="Pesquisar time..." />
-                <CommandList>
-                    <CommandEmpty>Nenhum time encontrado.</CommandEmpty>
-                    <CommandGroup>
-                        {teams.filter(t => t.id !== otherTeamId).map((team) => (
-                            <CommandItem
-                                key={team.id}
-                                value={team.name} // Use name for search, but select with id
-                                onSelect={() => {
-                                    onSelect(team.id)
-                                    onOpenChange(false)
-                                }}
-                            >
-                                <Check className={cn("mr-2 h-4 w-4", value === team.id ? "opacity-100" : "opacity-0")} />
-                                {team.name}
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
-                </CommandList>
-            </Command>
-        </PopoverContent>
-    </Popover>
-  );
+    fetchInitialData()
+  }, [toast])
   
+  useEffect(() => {
+    if(bolao) {
+      reset({
+        category: bolao.category || "",
+        homeTeamId: bolao.homeTeamId || "",
+        awayTeamId: bolao.awayTeamId || "",
+        betAmount: bolao.value || 0,
+        initialPrize: bolao.initialPrize || 0,
+        matchDate: bolao.matchDate ? new Date(bolao.matchDate) : undefined,
+        startTime: bolao.matchDate ? format(new Date(bolao.matchDate), "HH:mm") : "",
+        endTime: bolao.endDate ? format(new Date(bolao.endDate), "HH:mm") : "",
+        closingTime: bolao.closingTime ? format(new Date(bolao.closingTime), "HH:mm") : "",
+      })
+    } else {
+      reset({
+        category: "",
+        homeTeamId: "",
+        awayTeamId: "",
+        betAmount: 0,
+        initialPrize: 0,
+        matchDate: undefined,
+        startTime: "",
+        endTime: "",
+        closingTime: "",
+      })
+    }
+  }, [bolao, reset])
+
+
+  const onSubmit = (data: BolaoFormValues) => {
+    const { matchDate, startTime, endTime, closingTime, ...rest } = data
+
+    const parseTime = (timeStr: string) => parse(timeStr, "HH:mm", new Date())
+    const startDateTime = new Date(matchDate)
+    const endDateTime = new Date(matchDate)
+    const closingDateTime = new Date(matchDate)
+
+    const startTimeDate = parseTime(startTime)
+    startDateTime.setHours(startTimeDate.getHours(), startTimeDate.getMinutes())
+
+    const endTimeDate = parseTime(endTime)
+    endDateTime.setHours(endTimeDate.getHours(), endTimeDate.getMinutes())
+
+    const closingTimeDate = parseTime(closingTime)
+    closingDateTime.setHours(closingTimeDate.getHours(), closingTimeDate.getMinutes())
+
+    const finalData = {
+      ...rest,
+      matchDate: startDateTime,
+      endDate: endDateTime,
+      closingTime: closingDateTime,
+      value: rest.betAmount,
+    }
+
+    onSave(finalData, bolao?.id)
+    setOpen(false)
+  }
+
+  const flattenCategories = useMemo(() => {
+    const flatList: { label: string; value: string }[] = []
+    const traverse = (cats: Category[], level = 0) => {
+        for (const cat of cats) {
+            flatList.push({
+                label: `${"—".repeat(level)} ${cat.name}`,
+                value: cat.id,
+            })
+            if (cat.children && cat.children.length > 0) {
+                traverse(cat.children, level + 1)
+            }
+        }
+    }
+    traverse(categories);
+    return flatList;
+  }, [categories]);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar Bolão" : "Criar Novo Bolão"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+        <DialogHeader>
+          <DialogTitle>{bolao ? "Editar Bolão" : "Criar Novo Bolão"}</DialogTitle>
+          <DialogDescription>
+            Preencha os detalhes abaixo para criar ou editar um bolão.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={categoriesLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a categoria..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="null">Nenhuma</SelectItem>
+                      {flattenCategories.map(cat => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="col-span-2 space-y-2 p-3 border rounded-md bg-muted/20">
-                <Label>Categorias</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {renderCategorySelectors()}
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="homeTeamId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time da Casa</FormLabel>
+                    <TeamSelector teams={teams} field={field} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="awayTeamId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time Visitante</FormLabel>
+                    <TeamSelector teams={teams} field={field} otherTeamId={form.getValues("homeTeamId")} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-
-            <div>
-                <Label>Time da Casa</Label>
-                <TeamSelector 
-                    value={formData.homeTeamId}
-                    onSelect={(value: string) => setFormData({...formData, homeTeamId: value})}
-                    otherTeamId={formData.awayTeamId}
-                    placeholder="Selecione o Time da Casa"
-                    open={homeTeamPopoverOpen}
-                    onOpenChange={setHomeTeamPopoverOpen}
-                />
-            </div>
-            <div>
-                <Label>Time Visitante</Label>
-                <TeamSelector 
-                    value={formData.awayTeamId}
-                    onSelect={(value: string) => setFormData({...formData, awayTeamId: value})}
-                    otherTeamId={formData.homeTeamId}
-                    placeholder="Selecione o Time Visitante"
-                    open={awayTeamPopoverOpen}
-                    onOpenChange={setAwayTeamPopoverOpen}
-                />
-            </div>
-            <div><Label>Valor da Aposta (R$)</Label><NumericFormat customInput={Input} thousandSeparator="." decimalSeparator="," prefix="R$ " value={formData.betAmount} onValueChange={(values) => setFormData({...formData, betAmount: values.floatValue || 0})}/></div>
-            <div><Label>Prêmio Inicial (R$)</Label><NumericFormat customInput={Input} thousandSeparator="." decimalSeparator="," prefix="R$ " value={formData.initialPrize} onValueChange={(values) => setFormData({...formData, initialPrize: values.floatValue || 0})}/></div>
-            <div><Label>Data da Partida</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!formData.matchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.matchDate ? format(formData.matchDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.matchDate} onSelect={(date) => setFormData({...formData, matchDate: date})} initialFocus/></PopoverContent></Popover></div>
             
-            <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                <div>
-                    <Label>Início da Partida</Label>
-                    <PatternFormat 
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="betAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor da Aposta (R$)</FormLabel>
+                    <FormControl>
+                       <NumericFormat 
                         customInput={Input} 
-                        format="##:##" 
-                        placeholder="HH:MM" 
-                        value={formData.startTime}
-                        onValueChange={(values) => setFormData({...formData, startTime: values.formattedValue})}
-                    />
-                </div>
-                <div>
-                    <Label>Fim da Partida</Label>
-                    <PatternFormat 
+                        thousandSeparator="." 
+                        decimalSeparator="," 
+                        prefix="R$ " 
+                        value={field.value} 
+                        onValueChange={(values) => field.onChange(values.floatValue || 0)}
+                        onBlur={field.onBlur}
+                        getInputRef={field.ref}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="initialPrize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prêmio Inicial (R$)</FormLabel>
+                     <FormControl>
+                       <NumericFormat 
                         customInput={Input} 
-                        format="##:##" 
-                        placeholder="HH:MM" 
-                        value={formData.endTime} 
-                        onValueChange={(values) => setFormData({...formData, endTime: values.formattedValue})}
-                    />
-                </div>
-                <div>
-                    <Label className="flex items-center gap-1 text-primary font-semibold">
-                        <Clock className="h-4 w-4" />
-                        Limite para Apostas
-                    </Label>
-                    <PatternFormat 
-                        customInput={Input} 
-                        format="##:##" 
-                        placeholder="HH:MM" 
-                        value={formData.closingTime}
-                        onValueChange={(values) => setFormData({...formData, closingTime: values.formattedValue})}
-                    />
-                </div>
+                        thousandSeparator="." 
+                        decimalSeparator="," 
+                        prefix="R$ " 
+                        value={field.value} 
+                        onValueChange={(values) => field.onChange(values.floatValue || 0)}
+                        onBlur={field.onBlur}
+                        getInputRef={field.ref}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            {error && <p className="col-span-2 text-red-500 text-sm text-center">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit">{isEditing ? "Salvar Alterações" : "Criar Bolão"}</Button>
-          </DialogFooter>
-        </form>
+             <FormField
+                control={form.control}
+                name="matchDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data da Partida</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="startTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Início</FormLabel>
+                    <FormControl>
+                      <PatternFormat 
+                        format="##:##" 
+                        placeholder="HH:MM" 
+                        customInput={Input} 
+                        value={field.value}
+                        onValueChange={(values) => field.onChange(values.formattedValue)}
+                        onBlur={field.onBlur}
+                        getInputRef={field.ref}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="endTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fim</FormLabel>
+                    <FormControl>
+                      <PatternFormat 
+                        format="##:##" 
+                        placeholder="HH:MM" 
+                        customInput={Input} 
+                        value={field.value}
+                        onValueChange={(values) => field.onChange(values.formattedValue)}
+                        onBlur={field.onBlur}
+                        getInputRef={field.ref}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="closingTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-primary">Limite de Apostas</FormLabel>
+                    <FormControl>
+                      <PatternFormat 
+                        format="##:##" 
+                        placeholder="HH:MM" 
+                        customInput={Input} 
+                        value={field.value}
+                        onValueChange={(values) => field.onChange(values.formattedValue)}
+                        onBlur={field.onBlur}
+                        getInputRef={field.ref}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <DialogFooter>
+               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+               <Button type="submit">{form.formState.isSubmitting ? "Salvando..." : "Salvar"}</Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
+
+
+const TeamSelector = ({ teams, field, otherTeamId }: { teams: Team[], field: any, otherTeamId?: string }) => {
+  const [open, setOpen] = useState(false)
+  const filteredTeams = teams.filter(team => team.id !== otherTeamId);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <FormControl>
+          <Button
+            variant="outline"
+            role="combobox"
+            className={cn(
+              "w-full justify-between",
+              !field.value && "text-muted-foreground"
+            )}
+          >
+            {field.value
+              ? teams.find(team => team.id === field.value)?.name
+              : "Selecione o time"}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </FormControl>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
+        <Command>
+          <CommandInput placeholder="Pesquisar time..." />
+          <CommandList>
+            <CommandEmpty>Nenhum time encontrado.</CommandEmpty>
+            <CommandGroup>
+              {filteredTeams.map(team => (
+                <CommandItem
+                  value={team.name}
+                  key={team.id}
+                  onSelect={() => {
+                    field.onChange(team.id)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      team.id === field.value
+                        ? "opacity-100"
+                        : "opacity-0"
+                    )}
+                  />
+                  {team.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+    

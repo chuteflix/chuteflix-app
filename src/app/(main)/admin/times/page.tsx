@@ -48,24 +48,51 @@ export default function TimesPage() {
   const { toast } = useToast()
 
   const fetchData = async () => {
-    setLoading(true)
     try {
       const teamsData = await getTeams()
       setTeams(teamsData)
     } catch (err) {
-      toast({
-        title: "Erro ao buscar times",
-        description: (err as Error).message,
-        variant: "destructive",
-      })
+        toast({
+            title: "Erro ao buscar times",
+            description: (err as Error).message,
+            variant: "destructive",
+        })
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    let isMounted = true;
+    setLoading(true);
+
+    const loadTeams = async () => {
+        try {
+            const teamsData = await getTeams()
+            if (isMounted) {
+                setTeams(teamsData)
+            }
+        } catch (err) {
+            if (isMounted && (err as Error).name !== 'AbortError') {
+                toast({
+                    title: "Erro ao buscar times",
+                    description: (err as Error).message,
+                    variant: "destructive",
+                })
+            }
+        } finally {
+            if (isMounted) {
+                setLoading(false)
+            }
+        }
+    }
+
+    loadTeams();
+
+    return () => {
+        isMounted = false;
+    }
+  }, [toast])
 
   const handleSaveTeam = async (data: Omit<Team, 'id'>, id?: string) => {
     try {
@@ -76,7 +103,7 @@ export default function TimesPage() {
         await addTeam(data)
         toast({ title: "Sucesso", description: "Time adicionado com sucesso." })
       }
-      fetchData()
+      await fetchData()
     } catch (err) {
       toast({
         title: "Erro ao salvar time",
@@ -90,7 +117,7 @@ export default function TimesPage() {
     try {
       await deleteTeam(id)
       toast({ title: "Sucesso", description: "Time deletado com sucesso." })
-      fetchData()
+      await fetchData()
     } catch (err) {
       toast({
         title: "Erro ao deletar time",

@@ -1,82 +1,60 @@
-
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import { Button } from "@/components/ui/button";
-import { Wallet, DollarSign, Send } from "lucide-react";
+import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
+import { Coins, Send } from "lucide-react";
 
 export function WelcomeBanner() {
-  const { userProfile, loading } = useAuth();
+  const { user, loading } = useAuth();
 
-  // Programação defensiva final
-  if (loading || !userProfile) {
+  if (loading) {
     return (
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-                <Skeleton className="h-8 w-48 mb-2" />
-                <Skeleton className="h-4 w-64" />
-            </div>
-            <div className="flex items-center gap-2">
-                <Skeleton className="h-10 w-24" />
-                <Skeleton className="h-10 w-28" />
-            </div>
+      <div className="bg-muted/20 border-2 border-dashed border-border/30 rounded-lg p-8 flex justify-between items-center">
+        <div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
         </div>
-        <div className="p-6 rounded-lg bg-card border border-border">
-            <div className="flex items-center gap-4">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <div>
-                    <Skeleton className="h-4 w-24 mb-2" />
-                    <Skeleton className="h-8 w-32" />
-                </div>
-            </div>
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-24" />
+          <Skeleton className="h-12 w-24" />
         </div>
       </div>
     );
   }
-  
-  // Acessa o nome de forma segura
-  const firstName = userProfile.name ? userProfile.name.split(" ")[0] : "Usuário";
-  const balance = userProfile.balance ?? 0;
 
   return (
-    <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                    Olá, {firstName}!
-                </h1>
-                <p className="text-muted-foreground">Bem-vindo(a) de volta ao seu painel.</p>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button asChild variant="outline">
-                    <Link href="/saque">
-                        <Send className="mr-2 h-4 w-4" />
-                        Sacar
-                    </Link>
-                </Button>
-                <Button asChild>
-                    <Link href="/recarga">
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Depositar
-                    </Link>
-                </Button>
-            </div>
+    <div className="bg-muted/20 border-2 border-dashed border-border/30 rounded-lg p-8 flex justify-between items-center">
+      <div>
+        <h2 className="text-2xl font-bold">Olá, {user?.displayName}!</h2>
+        <p className="text-muted-foreground">
+          Bem-vindo(a) de volta ao seu painel.
+        </p>
+        <div className="mt-4">
+          <span className="text-sm text-muted-foreground">
+            Saldo disponível
+          </span>
+          <p className="text-3xl font-bold text-primary">
+            {formatCurrency(user?.balance || 0)}
+          </p>
         </div>
-        
-        <div className="p-6 rounded-lg bg-card border border-border">
-            <div className="flex items-center gap-4">
-                <Wallet className="h-8 w-8 text-primary" />
-                <div>
-                    <p className="text-sm text-muted-foreground">Saldo disponível</p>
-                    <p className="text-3xl font-bold text-foreground">
-                        {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </p>
-                </div>
-            </div>
-        </div>
+      </div>
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" asChild>
+          <Link href="/saque">
+            <Send className="mr-2 h-4 w-4" />
+            Sacar
+          </Link>
+        </Button>
+        <Button asChild>
+          <Link href="/recarga">
+            <Coins className="mr-2 h-4 w-4" />
+            Depositar
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
