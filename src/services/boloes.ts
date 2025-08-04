@@ -20,6 +20,9 @@ import { Bolao, Team } from "@/types";
 import { isValid, isPast } from "date-fns"; 
 import { getAllCategories, Category } from "./categories";
 
+// Re-exportando os tipos para que possam ser importados de "@/services/boloes"
+export type { Bolao, Team };
+
 const safeParseDate = (dateInput: any): Date | null => {
     if (!dateInput) return null;
     // @ts-ignore
@@ -218,10 +221,8 @@ export const updateBolao = async (
 export const deleteBolao = async (id: string): Promise<void> => {
     try {
       await deleteDoc(doc(db, "boloes", id));
-    } catch (error) {
+    } catch (error)
       console.error("Erro ao deletar bolão: ", error);
       throw new Error("Não foi possível deletar o bolão.");
     }
 };
-
-    
