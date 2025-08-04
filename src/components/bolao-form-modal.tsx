@@ -70,6 +70,9 @@ const formSchema = z.object({
   matchDate: z.date({ required_error: "A data da partida é obrigatória." }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
   closingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
+}).refine(data => data.homeTeamId !== data.awayTeamId, {
+  message: "O time da casa não pode ser igual ao visitante.",
+  path: ["awayTeamId"],
 });
 
 
@@ -100,13 +103,14 @@ export function BolaoFormModal({
       awayTeamId: bolao?.awayTeam?.id || "",
       betAmount: bolao?.betAmount || 0,
       initialPrize: bolao?.initialPrize || 0,
-      matchStartDate: bolao?.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? new Date(bolao.matchStartDate) : undefined,
+      matchDate: bolao?.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? new Date(bolao.matchStartDate) : undefined,
       startTime: bolao?.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? format(new Date(bolao.matchStartDate), "HH:mm") : "",
       closingTime: bolao?.closingTime && isValid(new Date(bolao.closingTime)) ? format(new Date(bolao.closingTime), "HH:mm") : "",
     },
   })
 
-  const { reset } = form;
+  const { reset, watch } = form;
+  const homeTeamId = watch("homeTeamId");
 
   useEffect(() => {
     if (!open) return;
@@ -188,7 +192,7 @@ export function BolaoFormModal({
     const traverse = (cats: Category[], level = 0) => {
         for (const cat of cats) {
             flatList.push({
-                label: `${"—".repeat(level)} ${cat.name}`,
+                label: `${'—'.repeat(level)} ${cat.name}`.trim(),
                 value: cat.id,
             })
             if (cat.children && cat.children.length > 0) {
@@ -259,7 +263,7 @@ export function BolaoFormModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Time Visitante</FormLabel>
-                    <TeamSelector teams={teams} field={field} otherTeamId={form.getValues("homeTeamId")} />
+                    <TeamSelector teams={teams} field={field} otherTeamId={homeTeamId} />
                     <FormMessage />
                   </FormItem>
                 )}
