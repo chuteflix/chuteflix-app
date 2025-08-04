@@ -221,7 +221,7 @@ export const updateBolao = async (
 export const deleteBolao = async (id: string): Promise<void> => {
     try {
       await deleteDoc(doc(db, "boloes", id));
-    } catch (error)
+    } catch (error) {
       console.error("Erro ao deletar bolão: ", error);
       throw new Error("Não foi possível deletar o bolão.");
     }
