@@ -165,27 +165,43 @@ export function BolaoFormModal({
 
 
   const onSubmit = (data: BolaoFormValues) => {
-    const { matchDate, startTime, closingTime, ...rest } = data
-
-    const parseTime = (timeStr: string) => parse(timeStr, "HH:mm", new Date())
-    
-    const startDateTime = new Date(matchDate)
-    const startTimeDate = parseTime(startTime)
-    startDateTime.setHours(startTimeDate.getHours(), startTimeDate.getMinutes())
-
-    const closingDateTime = new Date(matchDate)
-    const closingTimeDate = parseTime(closingTime)
-    closingDateTime.setHours(closingTimeDate.getHours(), closingTimeDate.getMinutes())
-
+    const { matchDate, startTime, closingTime, ...rest } = data;
+  
+    // Função auxiliar para combinar data e hora
+    const combineDateAndTime = (date: Date, timeStr: string): Date => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const newDate = new Date(date);
+      newDate.setHours(hours, minutes, 0, 0); // Zera segundos e milissegundos
+      return newDate;
+    };
+  
+    const matchStartDate = combineDateAndTime(matchDate, startTime);
+    const finalClosingTime = combineDateAndTime(matchDate, closingTime);
+  
+    // Busca os objetos completos dos times selecionados
+    const homeTeam = teams.find(t => t.id === data.homeTeamId);
+    const awayTeam = teams.find(t => t.id === data.awayTeamId);
+  
+    if (!homeTeam || !awayTeam) {
+      toast({
+        title: "Erro",
+        description: "Time da casa ou visitante não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+  
     const finalData = {
       ...rest,
-      matchStartDate: startDateTime,
-      closingTime: closingDateTime,
-    }
-
-    onSave(finalData, bolao?.id)
-    setOpen(false)
-  }
+      matchStartDate,
+      closingTime: finalClosingTime,
+      homeTeam, // Passa o objeto completo do time
+      awayTeam, // Passa o objeto completo do time
+    };
+  
+    onSave(finalData, bolao?.id);
+    setOpen(false);
+  };
 
   const flattenCategories = useMemo(() => {
     const flatList: { label: string; value: string }[] = []
