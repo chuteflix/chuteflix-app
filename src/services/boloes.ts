@@ -149,9 +149,12 @@ export const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]
 export const getBolaoById = async (id: string): Promise<Bolao | null> => {
     if (!id) return null;
     try {
-      const docSnap = await getDoc(doc(db, 'boloes', id));
+      const [docSnap, allCategories] = await Promise.all([
+        getDoc(doc(db, 'boloes', id)),
+        getAllCategories()
+      ]);
+
       if (docSnap.exists()) {
-        const allCategories = await getAllCategories();
         const bolao = fromFirestore(docSnap, allCategories);
         const [homeTeam, awayTeam] = await Promise.all([
           getTeamById(bolao.homeTeam.id),
