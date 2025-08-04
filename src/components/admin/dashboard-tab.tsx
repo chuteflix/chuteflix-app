@@ -162,7 +162,7 @@ export function DashboardTab() {
             <CardDescription>
               As últimas 5 movimentações na plataforma.
             </CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
