@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import {
   getDashboardData,
   DashboardKPIs,
@@ -46,7 +46,15 @@ const formatCurrency = (value: number) => {
     });
 };
 
-const KpiCard = ({ title, value, percentage, icon, description }) => (
+interface KpiCardProps {
+  title: string;
+  value: string | number;
+  icon: ReactNode;
+  percentage?: string;
+  description?: string;
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentage, icon, description }) => (
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
