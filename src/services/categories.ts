@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Bolao, Category } from "@/types"
+import { getBoloes } from "./boloes" // Importar a função de buscar bolões
 
 // Re-exporting the type
 export type { Category };
@@ -29,33 +30,53 @@ const fromFirestore = (doc: DocumentData): Category => {
     active: data.active ?? true,
     order: data.order ?? 0,
     parentId: data.parentId || null,
+    // Inicializa as propriedades que serão preenchidas depois
+    boloes: [], 
+    children: [],
   }
 }
 
-// Otimizado: Busca as categorias e depois monta a árvore em memória.
+// Versão otimizada que busca tudo e monta a árvore em memória
 export const getAllCategories = async (
   includeInactive = false
 ): Promise<Category[]> => {
+  
+  // 1. Criar as queries em paralelo
   const categoriesCollection = collection(db, "categories")
-  let q = query(categoriesCollection, orderBy("order"))
-
+  let categoriesQuery = query(categoriesCollection, orderBy("order"))
   if (!includeInactive) {
-    q = query(q, where("active", "==", true))
+    categoriesQuery = query(categoriesQuery, where("active", "==", true))
   }
-  
-  const querySnapshot = await getDocs(q)
-  const allCategories: Category[] = querySnapshot.docs.map(fromFirestore)
-  
-  const categoryMap = new Map(allCategories.map(c => [c.id, {...c, children: []}]))
-  const rootCategories: Category[] = []
 
+  // Busca categorias e bolões ao mesmo tempo
+  const [categoriesSnapshot, allBoloes] = await Promise.all([
+    getDocs(categoriesQuery),
+    // Apenas busca bolões se for para exibir na home (não inativos)
+    includeInactive ? Promise.resolve([]) : getBoloes() 
+  ]);
+
+  const allCategories: Category[] = categoriesSnapshot.docs.map(fromFirestore)
+  const categoryMap = new Map(allCategories.map(c => [c.id, c]))
+
+  // 2. Associar bolões às suas categorias
+  if (!includeInactive) {
+      allBoloes.forEach(bolao => {
+        bolao.categoryIds.forEach(catId => {
+            if (categoryMap.has(catId)) {
+                categoryMap.get(catId)!.boloes!.push(bolao);
+            }
+        });
+      });
+  }
+
+  // 3. Montar a árvore hierárquica
+  const rootCategories: Category[] = []
   allCategories.forEach(category => {
-    const categoryNode = categoryMap.get(category.id)!
     if (category.parentId && categoryMap.has(category.parentId)) {
       const parent = categoryMap.get(category.parentId)!
-      parent.children!.push(categoryNode)
+      parent.children!.push(category)
     } else {
-      rootCategories.push(categoryNode)
+      rootCategories.push(category)
     }
   })
 
@@ -67,7 +88,16 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
   if (!id) return null;
   const docRef = doc(db, "categories", id);
   const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? fromFirestore(docSnap) : null;
+  
+  if (!docSnap.exists()) {
+      return null;
+  }
+
+  const category = fromFirestore(docSnap);
+  const boloes = await getBoloesByCategoryId(id);
+  category.boloes = boloes;
+
+  return category;
 };
 
 
@@ -103,3 +133,16 @@ export const updateCategoryOrder = async (categoryIds: string[]) => {
   })
   await batch.commit()
 }
+
+// Função auxiliar para buscar bolões por categoria, usada no getCategoryById
+const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]> => {
+    try {
+        const allBoloes = await getBoloes();
+        // Filtra os bolões que contêm o ID da categoria
+        return allBoloes.filter(bolao => bolao.categoryIds && bolao.categoryIds.includes(categoryId));
+    } catch (error) {
+        console.error("Erro ao buscar bolões por categoria:", error);
+        return []; // Retorna array vazio em caso de erro
+    }
+};
+
