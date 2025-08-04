@@ -19,6 +19,7 @@ export interface Bolao {
   closingTime: Date | null;    
   betAmount: number;
   initialPrize?: number;
+  maxParticipants?: number; // Propriedade adicionada
   status: 'Aberto' | 'Fechado' | 'Finalizado';
   categoryIds?: string[];
   categoryNames?: string[];
