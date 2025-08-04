@@ -131,27 +131,27 @@ export function DashboardTab() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           title="Receita Total (Depósitos)"
-          value={formatCurrency(kpis?.totalRevenue)}
+          value={formatCurrency(kpis?.totalRevenue || 0)}
           icon={<ArrowUpRight className="h-4 w-4 text-green-500" />}
           description="Total de depósitos concluídos."
         />
         <KpiCard
           title="Pagamentos (Saques)"
-          value={formatCurrency(kpis?.totalWithdrawals)}
+          value={formatCurrency(kpis?.totalWithdrawals || 0)}
           icon={<ArrowDownLeft className="h-4 w-4 text-red-500" />}
           description="Total de saques concluídos."
         />
         <KpiCard
           title="Total de Usuários"
-          value={kpis?.totalUsersCount.toLocaleString('pt-BR')}
+          value={(kpis?.totalUsersCount || 0).toLocaleString('pt-BR')}
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          percentage={`${kpis?.newUsersLast30Days} novos nos últimos 30 dias`}
+          percentage={`${kpis?.newUsersLast30Days || 0} novos nos últimos 30 dias`}
         />
         <KpiCard
           title="Total de Apostas"
-          value={kpis?.totalBetsCount.toLocaleString('pt-BR')}
+          value={(kpis?.totalBetsCount || 0).toLocaleString('pt-BR')}
           icon={<Ticket className="h-4 w-4 text-muted-foreground" />}
-          description={`Ticket Médio: ${formatCurrency(kpis?.averageBetValue)}`}
+          description={`Ticket Médio: ${formatCurrency(kpis?.averageBetValue || 0)}`}
         />
       </div>
       
@@ -162,7 +162,7 @@ export function DashboardTab() {
             <CardDescription>
               As últimas 5 movimentações na plataforma.
             </CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent>
             <Table>
               <TableHeader>
