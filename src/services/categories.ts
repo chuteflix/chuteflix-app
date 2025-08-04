@@ -12,20 +12,13 @@ import {
   serverTimestamp,
   writeBatch,
   DocumentData,
+  getDoc,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { Bolao } from "@/types"
+import { Bolao, Category } from "@/types"
 
-export interface Category {
-  id: string
-  name: string
-  description: string
-  active: boolean
-  order: number
-  parentId?: string | null
-  boloes: Bolao[]
-  children?: Category[]
-}
+// Re-exporting the type
+export type { Category };
 
 const fromFirestore = (doc: DocumentData): Category => {
   const data = doc.data()
@@ -36,11 +29,10 @@ const fromFirestore = (doc: DocumentData): Category => {
     active: data.active ?? true,
     order: data.order ?? 0,
     parentId: data.parentId || null,
-    boloes: [],
-    children: [],
   }
 }
 
+// Otimizado: Busca as categorias e depois monta a árvore em memória.
 export const getAllCategories = async (
   includeInactive = false
 ): Promise<Category[]> => {
@@ -54,39 +46,30 @@ export const getAllCategories = async (
   const querySnapshot = await getDocs(q)
   const allCategories: Category[] = querySnapshot.docs.map(fromFirestore)
   
-  const categoryMap = new Map(allCategories.map(c => [c.id, c]))
+  const categoryMap = new Map(allCategories.map(c => [c.id, {...c, children: []}]))
   const rootCategories: Category[] = []
 
   allCategories.forEach(category => {
+    const categoryNode = categoryMap.get(category.id)!
     if (category.parentId && categoryMap.has(category.parentId)) {
       const parent = categoryMap.get(category.parentId)!
-      if (!parent.children) {
-        parent.children = []
-      }
-      parent.children.push(category)
+      parent.children!.push(categoryNode)
     } else {
-      rootCategories.push(category)
+      rootCategories.push(categoryNode)
     }
   })
 
-  // Fetch boloes for all relevant categories
-  for (const category of allCategories) {
-    if (category.active || includeInactive) {
-      const boloesCollection = collection(db, "boloes")
-      const boloesQuery = query(
-        boloesCollection,
-        where("category", "==", category.id),
-        where("status", "==", "open")
-      )
-      const boloesSnapshot = await getDocs(boloesQuery)
-      category.boloes = boloesSnapshot.docs.map(
-        bolaoDoc => ({ ...bolaoDoc.data(), id: bolaoDoc.id } as Bolao)
-      )
-    }
-  }
-
   return rootCategories
 }
+
+
+export const getCategoryById = async (id: string): Promise<Category | null> => {
+  if (!id) return null;
+  const docRef = doc(db, "categories", id);
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists() ? fromFirestore(docSnap) : null;
+};
+
 
 export const addCategory = async (
   data: Omit<Category, "id" | "boloes" | "children">

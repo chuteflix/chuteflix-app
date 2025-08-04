@@ -42,18 +42,12 @@ const fromFirestore = (docSnap: DocumentData, allCategories: Category[]): Bolao 
     id: data.homeTeamId || 'unknown_home_team',
     name: data.homeTeam?.name || 'Time A',
     shieldUrl: data.homeTeam?.shieldUrl || '',
-    level: 'Profissional', 
-    location: '', 
-    scope: 'Nacional'
   };
 
   const awayTeam: Team = {
       id: data.awayTeamId || 'unknown_away_team',
       name: data.awayTeam?.name || 'Time B',
       shieldUrl: data.awayTeam?.shieldUrl || '',
-      level: 'Profissional',
-      location: '',
-      scope: 'Nacional'
   };
 
   return {
@@ -176,15 +170,27 @@ export const getBolaoById = async (id: string): Promise<Bolao | null> => {
     }
 };
 
-export const addBolao = async (data: Omit<Bolao, "id" | "status" | "categoryNames" | "homeScore" | "awayScore">): Promise<string> => {
+export const addBolao = async (data: Partial<Omit<Bolao, "id" | "status" | "categoryNames">>): Promise<string> => {
   try {
     const { homeTeam, awayTeam, ...rest } = data;
+    
+    if (!homeTeam?.id || !awayTeam?.id) {
+        throw new Error("IDs dos times são obrigatórios.");
+    }
+    
+    const homeTeamData = await getTeamById(homeTeam.id);
+    const awayTeamData = await getTeamById(awayTeam.id);
+
+    if (!homeTeamData || !awayTeamData) {
+        throw new Error("Um ou ambos os times não foram encontrados.");
+    }
+
     const docRef = await addDoc(collection(db, "boloes"), {
       ...rest,
       homeTeamId: homeTeam.id,
       awayTeamId: awayTeam.id,
-      homeTeam: { name: homeTeam.name, shieldUrl: homeTeam.shieldUrl },
-      awayTeam: { name: awayTeam.name, shieldUrl: awayTeam.shieldUrl },
+      homeTeam: { name: homeTeamData.name, shieldUrl: homeTeamData.shieldUrl },
+      awayTeam: { name: awayTeamData.name, shieldUrl: awayTeamData.shieldUrl },
       status: "Aberto",
       createdAt: serverTimestamp(),
     });
@@ -195,6 +201,7 @@ export const addBolao = async (data: Omit<Bolao, "id" | "status" | "categoryName
   }
 };
 
+
 export const updateBolao = async (
   id: string,
   data: Partial<Omit<Bolao, "id" | "createdAt" | "status" | "categoryNames">>
@@ -203,13 +210,20 @@ export const updateBolao = async (
     const { homeTeam, awayTeam, ...rest } = data;
     const bolaoRef = doc(db, "boloes", id);
     const dataToUpdate: any = { ...rest };
-    if (homeTeam) {
-        dataToUpdate.homeTeamId = homeTeam.id;
-        dataToUpdate.homeTeam = { name: homeTeam.name, shieldUrl: homeTeam.shieldUrl };
+    
+    if (homeTeam?.id) {
+        const homeTeamData = await getTeamById(homeTeam.id);
+        if(homeTeamData) {
+          dataToUpdate.homeTeamId = homeTeam.id;
+          dataToUpdate.homeTeam = { name: homeTeamData.name, shieldUrl: homeTeamData.shieldUrl };
+        }
     }
-    if (awayTeam) {
-        dataToUpdate.awayTeamId = awayTeam.id;
-        dataToUpdate.awayTeam = { name: awayTeam.name, shieldUrl: awayTeam.shieldUrl };
+    if (awayTeam?.id) {
+        const awayTeamData = await getTeamById(awayTeam.id);
+        if(awayTeamData) {
+            dataToUpdate.awayTeamId = awayTeam.id;
+            dataToUpdate.awayTeam = { name: awayTeamData.name, shieldUrl: awayTeamData.shieldUrl };
+        }
     }
     await updateDoc(bolaoRef, dataToUpdate);
   } catch (error) {
@@ -217,6 +231,7 @@ export const updateBolao = async (
     throw new Error("Não foi possível atualizar o bolão.");
   }
 };
+
 
 export const deleteBolao = async (id: string): Promise<void> => {
     try {

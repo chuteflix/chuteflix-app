@@ -2,13 +2,12 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format, isValid, parse } from "date-fns"
 import {
   Calendar as CalendarIcon,
-  Clock,
   ChevronsUpDown,
   Check,
 } from "lucide-react"
@@ -56,22 +55,23 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Bolao, Team } from "@/types"
 import { getTeams } from "@/services/teams"
-import { Category } from "@/services/categories"
-import { useCategories } from "@/hooks/use-categories"
+import { Category, getAllCategories } from "@/services/categories"
 import { NumericFormat, PatternFormat } from "react-number-format"
 import { cn } from "@/lib/utils"
 
 const formSchema = z.object({
-  category: z.string().min(1, "A categoria é obrigatória."),
+  categoryIds: z.array(z.string()).refine(value => value.length > 0, {
+    message: "Pelo menos uma categoria é obrigatória.",
+  }),
   homeTeamId: z.string().min(1, "O time da casa é obrigatório."),
   awayTeamId: z.string().min(1, "O time visitante é obrigatório."),
   betAmount: z.number().min(0.01, "O valor da aposta deve ser positivo."),
   initialPrize: z.number().min(0, "O prêmio não pode ser negativo."),
   matchDate: z.date({ required_error: "A data da partida é obrigatória." }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
   closingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)."),
-})
+});
+
 
 type BolaoFormValues = z.infer<typeof formSchema>
 
@@ -88,65 +88,72 @@ export function BolaoFormModal({
 }: BolaoFormModalProps) {
   const [open, setOpen] = useState(false)
   const [teams, setTeams] = useState<Team[]>([])
-  const { categories, loading: categoriesLoading } = useCategories(true)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const { toast } = useToast()
 
   const form = useForm<BolaoFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      category: bolao?.category || "",
-      homeTeamId: bolao?.homeTeamId || "",
-      awayTeamId: bolao?.awayTeamId || "",
-      betAmount: bolao?.value || 0,
+      categoryIds: bolao?.categoryIds || [],
+      homeTeamId: bolao?.homeTeam?.id || "",
+      awayTeamId: bolao?.awayTeam?.id || "",
+      betAmount: bolao?.betAmount || 0,
       initialPrize: bolao?.initialPrize || 0,
-      matchDate: bolao?.matchDate ? new Date(bolao.matchDate) : undefined,
-      startTime: bolao?.matchDate ? format(new Date(bolao.matchDate), "HH:mm") : "",
-      endTime: bolao?.endDate ? format(new Date(bolao.endDate), "HH:mm") : "",
-      closingTime: bolao?.closingTime ? format(new Date(bolao.closingTime), "HH:mm") : "",
+      matchStartDate: bolao?.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? new Date(bolao.matchStartDate) : undefined,
+      startTime: bolao?.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? format(new Date(bolao.matchStartDate), "HH:mm") : "",
+      closingTime: bolao?.closingTime && isValid(new Date(bolao.closingTime)) ? format(new Date(bolao.closingTime), "HH:mm") : "",
     },
   })
 
-  // Destructure reset from form to use in dependency array
   const { reset } = form;
 
   useEffect(() => {
+    if (!open) return;
+
     const fetchInitialData = async () => {
       try {
-        const allTeams = await getTeams()
-        setTeams(allTeams)
+        setCategoriesLoading(true);
+        const [allTeams, allCategories] = await Promise.all([
+          getTeams(),
+          getAllCategories(true) // Fetch all, including inactive
+        ]);
+        setTeams(allTeams);
+        setCategories(allCategories);
       } catch (err) {
         toast({
-          title: "Erro ao buscar times",
+          title: "Erro ao carregar dados",
+          description: "Não foi possível buscar times e categorias.",
           variant: "destructive",
         })
+      } finally {
+        setCategoriesLoading(false);
       }
     }
     fetchInitialData()
-  }, [toast])
+  }, [open, toast])
   
   useEffect(() => {
     if(bolao) {
       reset({
-        category: bolao.category || "",
-        homeTeamId: bolao.homeTeamId || "",
-        awayTeamId: bolao.awayTeamId || "",
-        betAmount: bolao.value || 0,
+        categoryIds: bolao.categoryIds || [],
+        homeTeamId: bolao.homeTeam?.id || "",
+        awayTeamId: bolao.awayTeam?.id || "",
+        betAmount: bolao.betAmount || 0,
         initialPrize: bolao.initialPrize || 0,
-        matchDate: bolao.matchDate ? new Date(bolao.matchDate) : undefined,
-        startTime: bolao.matchDate ? format(new Date(bolao.matchDate), "HH:mm") : "",
-        endTime: bolao.endDate ? format(new Date(bolao.endDate), "HH:mm") : "",
-        closingTime: bolao.closingTime ? format(new Date(bolao.closingTime), "HH:mm") : "",
+        matchDate: bolao.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? new Date(bolao.matchStartDate) : undefined,
+        startTime: bolao.matchStartDate && isValid(new Date(bolao.matchStartDate)) ? format(new Date(bolao.matchStartDate), "HH:mm") : "",
+        closingTime: bolao.closingTime && isValid(new Date(bolao.closingTime)) ? format(new Date(bolao.closingTime), "HH:mm") : "",
       })
     } else {
       reset({
-        category: "",
+        categoryIds: [],
         homeTeamId: "",
         awayTeamId: "",
         betAmount: 0,
         initialPrize: 0,
         matchDate: undefined,
         startTime: "",
-        endTime: "",
         closingTime: "",
       })
     }
@@ -154,28 +161,22 @@ export function BolaoFormModal({
 
 
   const onSubmit = (data: BolaoFormValues) => {
-    const { matchDate, startTime, endTime, closingTime, ...rest } = data
+    const { matchDate, startTime, closingTime, ...rest } = data
 
     const parseTime = (timeStr: string) => parse(timeStr, "HH:mm", new Date())
+    
     const startDateTime = new Date(matchDate)
-    const endDateTime = new Date(matchDate)
-    const closingDateTime = new Date(matchDate)
-
     const startTimeDate = parseTime(startTime)
     startDateTime.setHours(startTimeDate.getHours(), startTimeDate.getMinutes())
 
-    const endTimeDate = parseTime(endTime)
-    endDateTime.setHours(endTimeDate.getHours(), endTimeDate.getMinutes())
-
+    const closingDateTime = new Date(matchDate)
     const closingTimeDate = parseTime(closingTime)
     closingDateTime.setHours(closingTimeDate.getHours(), closingTimeDate.getMinutes())
 
     const finalData = {
       ...rest,
-      matchDate: startDateTime,
-      endDate: endDateTime,
+      matchStartDate: startDateTime,
       closingTime: closingDateTime,
-      value: rest.betAmount,
     }
 
     onSave(finalData, bolao?.id)
@@ -211,15 +212,15 @@ export function BolaoFormModal({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
+             <FormField
               control={form.control}
-              name="category"
+              name="categoryIds"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
+                   <Select
+                    onValueChange={(value) => field.onChange(value ? [value] : [])} // Assuming single category selection for now
+                    value={field.value?.[0] || ""}
                     disabled={categoriesLoading}
                   >
                     <FormControl>
@@ -228,7 +229,6 @@ export function BolaoFormModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="null">Nenhuma</SelectItem>
                       {flattenCategories.map(cat => (
                         <SelectItem key={cat.value} value={cat.value}>
                           {cat.label}
@@ -282,7 +282,8 @@ export function BolaoFormModal({
                         value={field.value} 
                         onValueChange={(values) => field.onChange(values.floatValue || 0)}
                         onBlur={field.onBlur}
-                        getInputRef={field.ref}
+                        name={field.name}
+                        ref={field.ref}
                         />
                     </FormControl>
                     <FormMessage />
@@ -304,7 +305,8 @@ export function BolaoFormModal({
                         value={field.value} 
                         onValueChange={(values) => field.onChange(values.floatValue || 0)}
                         onBlur={field.onBlur}
-                        getInputRef={field.ref}
+                        name={field.name}
+                        ref={field.ref}
                         />
                     </FormControl>
                     <FormMessage />
@@ -329,7 +331,7 @@ export function BolaoFormModal({
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            {field.value ? (
+                            {field.value && isValid(field.value) ? (
                               format(field.value, "PPP")
                             ) : (
                               <span>Selecione uma data</span>
@@ -353,13 +355,13 @@ export function BolaoFormModal({
                 )}
               />
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="startTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Início</FormLabel>
+                    <FormLabel>Início da Partida</FormLabel>
                     <FormControl>
                       <PatternFormat 
                         format="##:##" 
@@ -368,27 +370,7 @@ export function BolaoFormModal({
                         value={field.value}
                         onValueChange={(values) => field.onChange(values.formattedValue)}
                         onBlur={field.onBlur}
-                        getInputRef={field.ref}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fim</FormLabel>
-                    <FormControl>
-                      <PatternFormat 
-                        format="##:##" 
-                        placeholder="HH:MM" 
-                        customInput={Input} 
-                        value={field.value}
-                        onValueChange={(values) => field.onChange(values.formattedValue)}
-                        onBlur={field.onBlur}
+                        name={field.name}
                         getInputRef={field.ref}
                         />
                     </FormControl>
@@ -401,7 +383,7 @@ export function BolaoFormModal({
                 name="closingTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-primary">Limite de Apostas</FormLabel>
+                    <FormLabel className="text-primary">Encerramento das Apostas</FormLabel>
                     <FormControl>
                       <PatternFormat 
                         format="##:##" 
@@ -410,6 +392,7 @@ export function BolaoFormModal({
                         value={field.value}
                         onValueChange={(values) => field.onChange(values.formattedValue)}
                         onBlur={field.onBlur}
+                        name={field.name}
                         getInputRef={field.ref}
                         />
                     </FormControl>
@@ -487,5 +470,3 @@ const TeamSelector = ({ teams, field, otherTeamId }: { teams: Team[], field: any
     </Popover>
   )
 }
-
-    
