@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getAllUsers } from "@/services/users";
-import { UserProfile } from "@/types"; // Corrected import path
+import { User } from "@/types"; 
 import {
   Card,
   CardContent,
@@ -43,11 +43,11 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -73,8 +73,8 @@ export default function UsuariosPage() {
       return users;
     }
     return users.filter(user => {
-      const name = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
-      const email = user.email.toLowerCase();
+      const name = `${user.displayName || ''}`.toLowerCase();
+      const email = user.email?.toLowerCase() || '';
       const term = searchTerm.toLowerCase();
       return name.includes(term) || email.includes(term);
     });
@@ -87,7 +87,7 @@ export default function UsuariosPage() {
       await setUserRole({ targetUserId: uid, isAdmin: isAdmin });
 
       setUsers(prevUsers =>
-        prevUsers.map(u => (u.uid === uid ? { ...u, isAdmin } : u))
+        prevUsers.map(u => (u.uid === uid ? { ...u, role: isAdmin ? 'admin' : 'user' } : u))
       );
       
       if (isAdmin) {
@@ -100,7 +100,7 @@ export default function UsuariosPage() {
         toast({
             title: "Usuário Rebaixado.",
             description: "As permissões de admin foram removidas.",
-            variant: "default", // Changed from "info" to "default"
+            variant: "default",
         });
       }
 
@@ -111,22 +111,19 @@ export default function UsuariosPage() {
     }
   };
 
-  const handleEditUser = (user: UserProfile) => {
+  const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
 
-  const handleUserUpdate = (updatedUser: UserProfile) => {
+  const handleUserUpdate = (updatedUser: User) => {
     setUsers(prevUsers =>
       prevUsers.map(u => (u.uid === updatedUser.uid ? updatedUser : u))
     );
     fetchUsers();
   };
 
-  const getFullName = (user: UserProfile) => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
+  const getFullName = (user: User) => {
     return user.displayName || "N/A";
   };
   
@@ -135,7 +132,7 @@ export default function UsuariosPage() {
     if (cleanPhone) {
       window.open(`https://wa.me/${cleanPhone}`, '_blank');
     } else {
-      toast({ title: "Número de telefone inválido.", variant: "default" }); // Changed from "warning" to "default"
+      toast({ title: "Número de telefone inválido.", variant: "default" });
     }
   };
 
@@ -213,8 +210,8 @@ export default function UsuariosPage() {
                         {isSubmitting === user.uid ? (
                           <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                         ) : (
-                          <Badge variant={user.isAdmin ? "success" : "outline"}>
-                            {user.isAdmin ? "Admin" : "Usuário"}
+                          <Badge variant={user.role === 'admin' ? "default" : "outline"}>
+                            {user.role === 'admin' ? "Admin" : "Usuário"}
                           </Badge>
                         )}
                       </TableCell>
@@ -264,7 +261,7 @@ export default function UsuariosPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            {user.isAdmin ? (
+                            {user.role === 'admin' ? (
                               <DropdownMenuItem
                                 onClick={() =>
                                   handleAdminStatusChange(user.uid, false)

@@ -6,7 +6,7 @@ import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Transaction } from "@/services/transactions"
 import { getUserProfile } from "@/services/users"
-import { UserProfile } from "@/types";
+import { User } from "@/types";
 import {
   Table,
   TableBody,
@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDownLeft, ArrowUpRight, Minus, CircleDollarSign, Send } from "lucide-react"
 import { format } from 'date-fns';
 
-type TransactionWithUser = Transaction & { user?: UserProfile | null }; // MODIFIED HERE
+type TransactionWithUser = Transaction & { user?: User | null };
 
 export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<TransactionWithUser[]>([])
@@ -105,7 +105,7 @@ export default function AdminTransactionsPage() {
                   return (
                     <TableRow key={tx.id}>
                       <TableCell>{tx.createdAt ? format(new Date(tx.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
-                      <TableCell>{tx.user?.name || tx.user?.email || tx.uid}</TableCell>
+                      <TableCell>{tx.user?.displayName || tx.user?.email || tx.uid}</TableCell>
                       <TableCell className="flex items-center gap-2">{typeDetails.icon} {typeDetails.label}</TableCell>
                       <TableCell>{tx.description}</TableCell>
                       <TableCell><Badge variant={getStatusVariant(tx.status)}>{tx.status}</Badge></TableCell>

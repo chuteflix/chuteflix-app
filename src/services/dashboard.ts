@@ -13,11 +13,8 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Transaction } from "@/types";
+import { Transaction, User } from "@/types";
 import { getUserProfile } from "./users"; 
-import { UserProfile } from "@/types";
-
-// --- Tipos Específicos do Dashboard ---
 
 export interface DashboardKPIs {
   totalRevenue: number;
@@ -31,10 +28,8 @@ export interface DashboardKPIs {
 }
 
 export interface RecentTransaction extends Transaction {
-  user?: UserProfile;
+  user?: User;
 }
-
-// --- Funções de Leitura e Cálculo ---
 
 const getSumFromTransactions = async (
   type: Transaction["type"],
@@ -76,15 +71,12 @@ const getCountFromCollection = async (
   return snapshot.data().count;
 };
 
-// --- Função Principal de Orquestração ---
-
 export const getDashboardData = async (): Promise<{
   kpis: DashboardKPIs;
-  recentUsers: UserProfile[];
+  recentUsers: User[];
   recentTransactions: RecentTransaction[];
 }> => {
   try {
-    // 1. Cálculos dos KPIs em paralelo
     const [
       totalRevenue,
       totalWithdrawals,
@@ -114,7 +106,6 @@ export const getDashboardData = async (): Promise<{
       totalPrizesPaid
     };
 
-    // 2. Busca de Dados Recentes
     const usersQuery = query(
       collection(db, "users"),
       orderBy("createdAt", "desc"),
@@ -131,7 +122,7 @@ export const getDashboardData = async (): Promise<{
       getDocs(transactionsQuery),
     ]);
 
-    const recentUsers: UserProfile[] = (await Promise.all(usersSnapshot.docs.map(doc => getUserProfile(doc.id)))).filter(Boolean) as UserProfile[];
+    const recentUsers: User[] = (await Promise.all(usersSnapshot.docs.map(doc => getUserProfile(doc.id)))).filter(Boolean) as User[];
 
     const recentTransactions: RecentTransaction[] = await Promise.all(
       transactionsSnapshot.docs.map(async (doc) => {
@@ -148,7 +139,6 @@ export const getDashboardData = async (): Promise<{
     return { kpis, recentUsers, recentTransactions };
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
-    // Retorna um estado zerado em caso de erro para não quebrar a UI
     return {
       kpis: {
         totalRevenue: 0,

@@ -12,16 +12,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { UserProfile, updateUserProfile } from "@/services/users"
+import { User } from "@/types"
+import { updateUserProfile, uploadProfilePicture } from "@/services/users"
 import { useToast } from "@/hooks/use-toast"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar" // 1. Importar Avatar
-import { uploadProfilePicture } from "@/services/users" // 2. Importar função de upload
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 
 interface UserEditModalProps {
-  user: UserProfile | null
+  user: User | null
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
-  onUserUpdate: (updatedUser: UserProfile) => void
+  onUserUpdate: (updatedUser: User) => void
 }
 
 export function UserEditModal({
@@ -30,8 +30,8 @@ export function UserEditModal({
   onOpenChange,
   onUserUpdate,
 }: UserEditModalProps) {
-  const [formData, setFormData] = useState<Partial<UserProfile>>({})
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null) // 3. Estado para a imagem
+  const [formData, setFormData] = useState<Partial<User>>({})
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
@@ -42,7 +42,7 @@ export function UserEditModal({
         displayName: user.displayName || "",
         cpf: user.cpf || "",
         phone: user.phone || "",
-        photoURL: user.photoURL, // 4. Adicionar photoURL
+        photoURL: user.photoURL,
       })
     }
   }, [user])
@@ -52,7 +52,6 @@ export function UserEditModal({
     setFormData(prev => ({ ...prev, [id]: value }))
   }
 
-  // 5. Funções para lidar com a imagem
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -74,9 +73,8 @@ export function UserEditModal({
 
     setIsUploading(true)
     try {
-      let photoURL = user.photoURL // Manter a URL existente por padrão
+      let photoURL = user.photoURL
 
-      // Se uma nova imagem foi selecionada, faz o upload
       if (profileImageFile) {
         photoURL = await uploadProfilePicture(user.uid, profileImageFile)
       }
@@ -84,7 +82,7 @@ export function UserEditModal({
       const finalData = { ...formData, photoURL }
       await updateUserProfile(user.uid, finalData)
       const updatedUser = { ...user, ...finalData }
-      onUserUpdate(updatedUser as UserProfile)
+      onUserUpdate(updatedUser as User)
 
       toast({
         title: "Sucesso!",
@@ -113,10 +111,9 @@ export function UserEditModal({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {/* Avatar e Input de Arquivo */}
           <div className="flex flex-col items-center gap-4">
             <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
-              <AvatarImage src={formData.photoURL} alt={user?.displayName} />
+              <AvatarImage src={formData.photoURL ?? undefined} alt={user?.displayName ?? undefined} />
               <AvatarFallback>
                 {user?.displayName?.charAt(0).toUpperCase()}
               </AvatarFallback>

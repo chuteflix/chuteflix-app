@@ -35,7 +35,7 @@ import {
   Ticket,
   TrendingUp
 } from "lucide-react";
-import { UserProfile } from "@/types";
+import { User } from "@/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -83,7 +83,7 @@ const SkeletonKpiCard = () => (
 
 export function DashboardTab() {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
-  const [recentUsers, setRecentUsers] = useState<UserProfile[]>([]);
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -176,7 +176,7 @@ export function DashboardTab() {
                 {recentTransactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell>
-                      <div className="font-medium">{tx.user?.name || 'Usuário do Sistema'}</div>
+                      <div className="font-medium">{tx.user?.displayName || 'Usuário do Sistema'}</div>
                       <div className="text-sm text-muted-foreground hidden md:block">
                         {tx.user?.email}
                       </div>
@@ -206,14 +206,14 @@ export function DashboardTab() {
               {recentUsers.map((user) => (
                 <div className="flex items-center" key={user.uid}>
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={user.photoURL} alt="Avatar" />
+                    <AvatarImage src={user.photoURL ?? undefined} alt="Avatar" />
                     <AvatarFallback>
-                      {user.name?.charAt(0).toUpperCase()}
+                      {user.displayName?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-4 space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user.name}
+                      {user.displayName}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {user.createdAt ? `Cadastrado em ${format(user.createdAt.toDate(), "dd 'de' MMMM", { locale: ptBR })}` : user.email}

@@ -7,7 +7,8 @@ import {
 import { getAuth } from "firebase/auth";
 import { getBolaoById, Bolao } from "./boloes";
 import { getTeamById, Team } from "./teams";
-import { getUserProfile, UserProfile } from "./users";
+import { getUserProfile } from "./users";
+import { User } from "@/types";
 
 export type PalpiteStatus = "Em Aberto" | "Ganho" | "Perdido" | "Anulado";
 
@@ -24,7 +25,7 @@ export interface Palpite {
 }
 
 export interface PalpiteComDetalhes extends Palpite {
-  user?: UserProfile;
+  user?: User;
   bolaoDetails?: Bolao & {
     teamADetails?: Team;
     teamBDetails?: Team;

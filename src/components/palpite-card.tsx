@@ -4,28 +4,28 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Palpite } from "@/services/palpites"
-import { UserProfile } from "@/services/users"
+import { User } from "@/types"
 
 interface PalpiteCardProps {
-  palpite: Palpite & { user?: UserProfile }
+  palpite: Palpite & { user?: User }
 }
 
 export function PalpiteCard({ palpite }: PalpiteCardProps) {
-  const getFullName = (user: UserProfile) => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`
+  const getFullName = (user: User) => {
+    if (user.displayName) {
+      return user.displayName
     }
-    return user.displayName || "N/A"
+    return user.email || "N/A"
   }
 
   return (
     <Card>
       <CardContent className="p-4 flex items-start space-x-4">
         <Avatar>
-          <AvatarImage src={palpite.user?.photoURL} />
+          <AvatarImage src={palpite.user?.photoURL ?? undefined} />
           <AvatarFallback>
-            {palpite.user?.firstName
-              ? palpite.user.firstName.charAt(0)
+            {palpite.user?.displayName
+              ? palpite.user.displayName.charAt(0)
               : "U"}
           </AvatarFallback>
         </Avatar>

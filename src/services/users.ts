@@ -11,28 +11,23 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { uploadFileToApi } from "./upload";
-import { UserProfile } from "@/types"; // Importação do tipo centralizado
+import { User } from "@/types";
 
-// Helper para converter dados do Firestore para UserProfile de forma segura
-export const fromFirestore = (doc: DocumentData): UserProfile => {
+export const fromFirestore = (doc: DocumentData): User => {
   const data = doc.data();
   const name = data.name || data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim();
   return {
     uid: doc.id,
     email: data.email || "",
-    name: name,
-    firstName: data.firstName || "",
-    lastName: data.lastName || "",
     displayName: name,
     photoURL: data.photoURL || "",
     balance: data.balance || 0,
-    isAdmin: data.isAdmin || false,
-    createdAt: data.createdAt, // Mantém o timestamp
-    phone: data.phone || "",
+    role: data.role || "user",
     cpf: data.cpf || "",
+    phone: data.phone || "",
     pixKey: data.pixKey || "",
     pixKeyType: data.pixKeyType || "",
-    role: data.role || "user",
+    createdAt: data.createdAt,
   };
 };
 
@@ -52,7 +47,7 @@ export const uploadProfilePicture = async (uid: string, file: File): Promise<str
   }
 };
 
-export const getAllUsers = async (): Promise<UserProfile[]> => {
+export const getAllUsers = async (): Promise<User[]> => {
   try {
     const usersCollectionRef = collection(db, "users");
     const querySnapshot = await getDocs(usersCollectionRef);
@@ -65,14 +60,13 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
 
 export const getUserProfile = async (
   uid: string
-): Promise<UserProfile | null> => {
+): Promise<User | null> => {
   try {
     if(!uid) return null;
     const userDocRef = doc(db, "users", uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
-      // Usa a função fromFirestore para consistência
       return fromFirestore(userDocSnap);
     } else {
       console.log("No such document for user:", uid);
@@ -86,7 +80,7 @@ export const getUserProfile = async (
 
 export const updateUserProfile = async (
   uid: string,
-  data: Partial<UserProfile>
+  data: Partial<User>
 ): Promise<void> => {
   try {
     const userDocRef = doc(db, "users", uid);
@@ -97,7 +91,7 @@ export const updateUserProfile = async (
   }
 };
 
-export const createUserProfile = async (user: UserProfile): Promise<void> => {
+export const createUserProfile = async (user: User): Promise<void> => {
   try {
     const userDocRef = doc(db, "users", user.uid);
     await setDoc(userDocRef, user);
