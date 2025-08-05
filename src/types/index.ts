@@ -110,10 +110,10 @@ export interface Settings {
   minDeposit?: number;
   minWithdrawal?: number;
   colors?: {
-    primary?: string;
-    secondary?: string;
-    accent?: string;
-    background?: string;
-    text?: string;
-  }
+    primary?: string | null;
+    secondary?: string | null;
+    accent?: string | null;
+    background?: string | null;
+    text?: string | null;
+  } | null; // Added | null here
 }

@@ -62,8 +62,13 @@ export const getAllCategories = async (
   if (!includeInactive) {
       allBoloes.forEach(bolao => {
         bolao.categoryIds.forEach(catId => {
-            if (categoryMap.has(catId)) {
-                categoryMap.get(catId)!.boloes!.push(bolao);
+            const category = categoryMap.get(catId);
+            if (category) {
+                // Certifique-se de que a propriedade 'boloes' existe
+                if (!category.boloes) {
+                    category.boloes = [];
+                }
+                category.boloes.push(bolao);
             }
         });
       });
@@ -74,6 +79,9 @@ export const getAllCategories = async (
   allCategories.forEach(category => {
     if (category.parentId && categoryMap.has(category.parentId)) {
       const parent = categoryMap.get(category.parentId)!
+      if (!parent.children) {
+        parent.children = [];
+      }
       parent.children!.push(category)
     } else {
       rootCategories.push(category)
@@ -145,4 +153,5 @@ const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]> => {
         return []; // Retorna array vazio em caso de erro
     }
 };
+
 

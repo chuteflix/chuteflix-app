@@ -15,14 +15,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
 import { getUserProfile } from '@/services/users';
-import { UserProfile } from '@/types';
+import { User } from '@/types'; // Changed from UserProfile to User
 import { Palpite } from '@/services/palpites';
 import { getBolaoById } from '@/services/boloes';
 import { Bolao } from '@/types';
 import { format } from 'date-fns';
 
 type PalpiteComDetalhesAdmin = Palpite & {
-    user?: UserProfile | null;
+    user?: User | null; // Changed from UserProfile to User
     bolao?: Bolao | null;
 }
 
@@ -102,7 +102,7 @@ export default function AdminChutesPage() {
                 ongoingChutes.map((chute) => (
                   <TableRow key={chute.id}>
                      <TableCell>{chute.createdAt ? format(new Date(chute.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
-                    <TableCell>{chute.user?.name || chute.user?.email}</TableCell>
+                    <TableCell>{chute.user?.displayName || chute.user?.email}</TableCell> {/* Changed .name to .displayName */}
                     <TableCell>{chute.bolao?.categoryNames?.join(', ')}</TableCell>
                     <TableCell className="font-medium">
                         {chute.bolao?.homeTeam?.name} {chute.scoreTeam1} x {chute.scoreTeam2} {chute.bolao?.awayTeam?.name}
@@ -142,7 +142,7 @@ export default function AdminChutesPage() {
                     completedChutes.map((chute) => (
                     <TableRow key={chute.id}>
                         <TableCell>{chute.createdAt ? format(new Date(chute.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}</TableCell>
-                        <TableCell>{chute.user?.name || chute.user?.email}</TableCell>
+                        <TableCell>{chute.user?.displayName || chute.user?.email}</TableCell> {/* Changed .name to .displayName */}
                         <TableCell>{chute.bolao?.categoryNames?.join(', ')}</TableCell>
                         <TableCell className="font-medium">
                             {chute.bolao?.homeTeam?.name} {chute.scoreTeam1} x {chute.scoreTeam2} {chute.bolao?.awayTeam?.name}

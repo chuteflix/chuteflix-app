@@ -17,7 +17,7 @@ import {
 import { db } from "@/lib/firebase";
 import { getTeamById } from "@/services/teams"; 
 import { Bolao, Team } from "@/types"; 
-import { isValid, isPast } from "date-fns"; 
+import { isValid } from "date-fns"; 
 import { getAllCategories, Category } from "./categories";
 
 // Re-exportando os tipos para que possam ser importados de "@/services/boloes"
@@ -69,14 +69,6 @@ const fromFirestore = (docSnap: DocumentData, allCategories: Category[]): Bolao 
     finalScoreTeam2: data.finalScoreTeam2, 
     championship: categoryNames[0] || 'Campeonato',
   };
-};
-
-const filterAvailableBoloes = (boloes: Bolao[]): Bolao[] => {
-  const now = new Date();
-  return boloes.filter(bolao => {
-    const closingTime = bolao.closingTime; 
-    return bolao.status === 'Aberto' && closingTime && isValid(closingTime) && !isPast(closingTime);
-  });
 };
 
 export const getBoloes = async (): Promise<Bolao[]> => {
@@ -136,7 +128,7 @@ export const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]
         homeTeam: await getTeamById(bolao.homeTeam.id) || bolao.homeTeam,
         awayTeam: await getTeamById(bolao.awayTeam.id) || bolao.awayTeam
       })));
-      return filterAvailableBoloes(boloesWithTeams);
+      return boloesWithTeams;
     } catch (error) {
       console.error("Erro ao buscar bolões por categoria: ", error);
       throw new Error("Não foi possível buscar os bolões para esta categoria.");
@@ -229,3 +221,4 @@ export const deleteBolao = async (id: string): Promise<void> => {
       throw new Error("Não foi possível deletar o bolão.");
     }
 };
+
