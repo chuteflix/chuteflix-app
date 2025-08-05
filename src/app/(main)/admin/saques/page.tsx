@@ -16,13 +16,13 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, X, Loader2, Eye, Wallet } from 'lucide-react';
 import { getUserProfile } from '@/services/users';
-import { UserProfile } from '@/types';
+import { User } from '@/types';
 import { Transaction, approveWithdrawal, declineTransaction } from '@/services/transactions';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
 type WithdrawalRequest = Transaction & {
-    user?: UserProfile | null;
+    user?: User | null;
 }
 
 export default function AdminWithdrawalsPage() {
@@ -124,7 +124,7 @@ export default function AdminWithdrawalsPage() {
                         <TableBody>
                             {withdrawals.map((w) => (
                                 <TableRow key={w.id}>
-                                    <TableCell>{w.user?.name || 'Usuário não encontrado'}</TableCell>
+                                    <TableCell>{w.user?.displayName || 'Usuário não encontrado'}</TableCell>
                                     <TableCell>R$ {w.amount.toFixed(2)}</TableCell>
                                     <TableCell>{w.createdAt ? format(w.createdAt.toDate(), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                                     <TableCell>
