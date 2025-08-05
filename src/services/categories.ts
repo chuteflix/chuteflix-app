@@ -16,9 +16,8 @@ import {
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Bolao, Category } from "@/types"
-import { getBoloes } from "./boloes" // Importar a função de buscar bolões
+import { getBoloes } from "./boloes" 
 
-// Re-exporting the type
 export type { Category };
 
 const fromFirestore = (doc: DocumentData): Category => {
@@ -30,67 +29,55 @@ const fromFirestore = (doc: DocumentData): Category => {
     active: data.active ?? true,
     order: data.order ?? 0,
     parentId: data.parentId || null,
-    // Inicializa as propriedades que serão preenchidas depois
     boloes: [], 
     children: [],
   }
 }
 
-// Versão otimizada que busca tudo e monta a árvore em memória
+export const getBaseCategories = async (includeInactive = false): Promise<Category[]> => {
+  const categoriesCollection = collection(db, "categories");
+  let categoriesQuery = query(categoriesCollection, orderBy("order"));
+  if (!includeInactive) {
+    categoriesQuery = query(categoriesQuery, where("active", "==", true));
+  }
+  const categoriesSnapshot = await getDocs(categoriesQuery);
+  return categoriesSnapshot.docs.map(fromFirestore);
+};
+
 export const getAllCategories = async (
   includeInactive = false
 ): Promise<Category[]> => {
   
-  // 1. Criar as queries em paralelo
-  const categoriesCollection = collection(db, "categories")
-  let categoriesQuery = query(categoriesCollection, orderBy("order"))
-  if (!includeInactive) {
-    categoriesQuery = query(categoriesQuery, where("active", "==", true))
-  }
-
-  // Busca categorias e bolões ao mesmo tempo
-  const [categoriesSnapshot, allBoloes] = await Promise.all([
-    getDocs(categoriesQuery),
-    // Apenas busca bolões se for para exibir na home (não inativos)
-    includeInactive ? Promise.resolve([]) : getBoloes() 
+  const [allCategories, allBoloes] = await Promise.all([
+    getBaseCategories(includeInactive),
+    includeInactive ? Promise.resolve([]) : getBoloes("Aberto") 
   ]);
 
-  const allCategories: Category[] = categoriesSnapshot.docs.map(fromFirestore)
-  const categoryMap = new Map(allCategories.map(c => [c.id, c]))
+  const categoryMap = new Map(allCategories.map(c => [c.id, { ...c, boloes: [], children: [] }]));
 
-  // 2. Associar bolões às suas categorias
   if (!includeInactive) {
       allBoloes.forEach(bolao => {
         bolao.categoryIds.forEach(catId => {
             const category = categoryMap.get(catId);
             if (category) {
-                // Certifique-se de que a propriedade 'boloes' existe
-                if (!category.boloes) {
-                    category.boloes = [];
-                }
                 category.boloes.push(bolao);
             }
         });
       });
   }
 
-  // 3. Montar a árvore hierárquica
   const rootCategories: Category[] = []
-  allCategories.forEach(category => {
+  categoryMap.forEach(category => {
     if (category.parentId && categoryMap.has(category.parentId)) {
       const parent = categoryMap.get(category.parentId)!
-      if (!parent.children) {
-        parent.children = [];
-      }
       parent.children!.push(category)
     } else {
       rootCategories.push(category)
     }
-  })
+  });
 
-  return rootCategories
+  return rootCategories.map(c => ({ ...c, boloes: c.boloes || [] }));
 }
-
 
 export const getCategoryById = async (id: string): Promise<Category | null> => {
   if (!id) return null;
@@ -107,7 +94,6 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
 
   return category;
 };
-
 
 export const addCategory = async (
   data: Omit<Category, "id" | "boloes" | "children">
@@ -142,16 +128,12 @@ export const updateCategoryOrder = async (categoryIds: string[]) => {
   await batch.commit()
 }
 
-// Função auxiliar para buscar bolões por categoria, usada no getCategoryById
 const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]> => {
     try {
-        const allBoloes = await getBoloes();
-        // Filtra os bolões que contêm o ID da categoria
+        const allBoloes = await getBoloes("Aberto");
         return allBoloes.filter(bolao => bolao.categoryIds && bolao.categoryIds.includes(categoryId));
     } catch (error) {
         console.error("Erro ao buscar bolões por categoria:", error);
-        return []; // Retorna array vazio em caso de erro
+        return [];
     }
 };
-
-

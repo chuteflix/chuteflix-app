@@ -18,7 +18,7 @@ import { db } from "@/lib/firebase";
 import { getTeamById } from "@/services/teams"; 
 import { Bolao, Team } from "@/types"; 
 import { isValid } from "date-fns"; 
-import { getAllCategories, Category } from "./categories";
+import { getBaseCategories, Category } from "./categories";
 
 // Re-exportando os tipos para que possam ser importados de "@/services/boloes"
 export type { Bolao, Team };
@@ -71,24 +71,29 @@ const fromFirestore = (docSnap: DocumentData, allCategories: Category[]): Bolao 
   };
 };
 
-export const getBoloes = async (): Promise<Bolao[]> => {
+export const getBoloes = async (status: "Aberto" | "Finalizado" | "Cancelado" = "Aberto"): Promise<Bolao[]> => {
   try {
+    const q = query(collection(db, "boloes"), where("status", "==", status));
     const [boloesSnapshot, allCategories] = await Promise.all([
-      getDocs(collection(db, "boloes")),
-      getAllCategories()
+      getDocs(q),
+      getBaseCategories()
     ]);
+    
     const boloes = boloesSnapshot.docs.map(doc => fromFirestore(doc, allCategories));
+
     const boloesWithTeams = await Promise.all(boloes.map(async (bolao) => ({
       ...bolao,
       homeTeam: await getTeamById(bolao.homeTeam.id) || bolao.homeTeam,
       awayTeam: await getTeamById(bolao.awayTeam.id) || bolao.awayTeam
     })));
+
     return boloesWithTeams;
   } catch (error) {
     console.error("Erro ao buscar bolões: ", error);
     throw new Error("Não foi possível buscar os bolões.");
   }
 };
+
 
 export const getFinishedBoloes = async (): Promise<Bolao[]> => {
   try {
@@ -100,7 +105,7 @@ export const getFinishedBoloes = async (): Promise<Bolao[]> => {
     );
     const [querySnapshot, allCategories] = await Promise.all([
         getDocs(q),
-        getAllCategories()
+        getBaseCategories()
     ]);
     const boloes = querySnapshot.docs.map(doc => fromFirestore(doc, allCategories));
     const boloesWithTeams = await Promise.all(boloes.map(async (bolao) => ({
@@ -120,7 +125,7 @@ export const getBoloesByCategoryId = async (categoryId: string): Promise<Bolao[]
       const q = query(collection(db, "boloes"), where("categoryIds", "array-contains", categoryId));
       const [querySnapshot, allCategories] = await Promise.all([
           getDocs(q),
-          getAllCategories()
+          getBaseCategories()
       ]);
       const boloes = querySnapshot.docs.map(doc => fromFirestore(doc, allCategories));
       const boloesWithTeams = await Promise.all(boloes.map(async (bolao) => ({
@@ -140,7 +145,7 @@ export const getBolaoById = async (id: string): Promise<Bolao | null> => {
     try {
       const [docSnap, allCategories] = await Promise.all([
         getDoc(doc(db, 'boloes', id)),
-        getAllCategories()
+        getBaseCategories()
       ]);
 
       if (docSnap.exists()) {
