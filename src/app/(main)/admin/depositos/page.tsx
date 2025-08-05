@@ -17,14 +17,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Check, X, Loader2, Eye } from 'lucide-react';
 import { getUserProfile } from '@/services/users';
-import { UserProfile } from '@/types';
+import { User } from '@/types';
 import { Transaction } from '@/services/transactions';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { getAuth } from "firebase/auth";
 
 type DepositRequest = Transaction & {
-    user?: UserProfile | null; // Corrigido para aceitar null
+    user?: User | null; 
 }
 
 export default function AdminDepositsPage() {
@@ -176,7 +176,7 @@ export default function AdminDepositsPage() {
                      <TableCell>
                         {req.createdAt ? format(new Date(req.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}
                     </TableCell>
-                    <TableCell>{req.user?.name || req.user?.email || req.uid}</TableCell>
+                    <TableCell>{req.user?.displayName || req.user?.email || req.uid}</TableCell>
                     <TableCell>{req.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                     <TableCell>
                       {req.metadata?.receiptUrl ? (
@@ -232,7 +232,7 @@ export default function AdminDepositsPage() {
                         <TableCell>
                             {req.createdAt ? format(new Date(req.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm") : 'N/A'}
                         </TableCell>
-                        <TableCell>{req.user?.name || req.user?.email || req.uid}</TableCell>
+                        <TableCell>{req.user?.displayName || req.user?.email || req.uid}</TableCell>
                         <TableCell>{req.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                         <TableCell>
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusVariant(req.status)}`}>
