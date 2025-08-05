@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { getAllUsers } from "@/services/users"
-import { UserProfile } from "@/types"; // CORRIGIDO AQUI
+import { User } from "@/types";
 import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -51,8 +51,8 @@ import { Loader2 } from "lucide-react"
 const ROLES = ["admin", "editor", "support"]
 
 export default function TeamManagementPage() {
-  const [users, setUsers] = useState<UserProfile[]>([])
-  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [teamMembers, setTeamMembers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [newMemberUid, setNewMemberUid] = useState("")
   const [newMemberRole, setNewMemberRole] = useState("support")
