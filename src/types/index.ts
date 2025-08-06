@@ -29,6 +29,7 @@ export interface Bolao {
   categoryIds: string[];
   categoryNames?: string[];
   championship: string;
+  maxParticipants?: number;
   // Client-side specific
   userGuess?: { teamA: number, teamB: number };
   homeScore?: number;
