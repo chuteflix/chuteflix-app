@@ -303,7 +303,7 @@ export function BolaoFormModal({
                         onValueChange={(values) => field.onChange(values.floatValue || 0)}
                         onBlur={field.onBlur}
                         name={field.name}
-                        ref={field.ref}
+                        getInputRef={field.ref}
                         />
                     </FormControl>
                     <FormMessage />
@@ -326,7 +326,7 @@ export function BolaoFormModal({
                         onValueChange={(values) => field.onChange(values.floatValue || 0)}
                         onBlur={field.onBlur}
                         name={field.name}
-                        ref={field.ref}
+                        getInputRef={field.ref}
                         />
                     </FormControl>
                     <FormMessage />
