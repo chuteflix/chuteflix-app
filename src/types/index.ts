@@ -9,6 +9,9 @@ export interface User {
   phone?: string;
   pixKey?: string;
   pixKeyType?: string;
+  createdAt?: any;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Bolao {

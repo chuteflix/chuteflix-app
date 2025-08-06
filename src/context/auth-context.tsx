@@ -1,32 +1,15 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { doc, onSnapshot, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { User } from "@/types";
-
-// Define a interface para as configurações do aplicativo
-interface AppSettings {
-  appName: string;
-  logoUrl: string;
-  primaryColor: string;
-  secondaryColor: string;
-  backgroundColor: string;
-  textColor: string;
-  cardColor: string;
-}
+import { User, Settings } from "@/types";
 
 interface AuthContextType {
   user: FirebaseUser | null;
   userProfile: User | null;
-  settings: AppSettings | null;
+  settings: Settings | null; // Usar a interface Settings do types/index.ts
   loading: boolean;
 }
 
@@ -40,7 +23,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null); // Usar a interface Settings
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const settingsDocRef = doc(db, "settings", "app");
           const settingsDoc = await getDoc(settingsDocRef);
           if (settingsDoc.exists()) {
-            setSettings(settingsDoc.data() as AppSettings);
+            setSettings(settingsDoc.data() as Settings); // Usar a interface Settings
           }
         } catch (error) {
           console.error("Erro ao carregar configurações:", error);
