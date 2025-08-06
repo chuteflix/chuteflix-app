@@ -14,6 +14,9 @@ import {
 } from "firebase/firestore";
 import { Team } from "@/types";
 
+// Re-export the Team type
+export type { Team };
+
 // Tipagem simplificada, pois o upload é tratado no componente
 export type TeamData = {
   name: string;

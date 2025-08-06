@@ -2,6 +2,9 @@ import { doc, getDoc, collection, getDocs, DocumentData } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { Championship } from "@/types";
 
+// Re-export the Championship type
+export type { Championship };
+
 const fromFirestore = (doc: DocumentData): Championship => {
   const data = doc.data();
   return {
