@@ -71,8 +71,7 @@ export function GanhadoresPageClient({ id }: GanhadoresPageClientProps) {
     return <div className="container mx-auto p-4"><Alert variant="destructive"><AlertTitle>Erro</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>;
   }
   
-  // @ts-ignore
-  const totalPrize = (bolao?.initialPrize || 0) + (winners.length * (bolao?.fee || 0) * 0.9);
+  const totalPrize = (bolao?.initialPrize || 0) + (winners.length * (bolao?.betAmount || 0) * 0.9);
   const prizePerWinner = winners.length > 0 ? totalPrize / winners.length : 0;
 
   return (
@@ -84,8 +83,7 @@ export function GanhadoresPageClient({ id }: GanhadoresPageClientProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Trophy /> Ganhadores do Bolão</CardTitle>
           <CardDescription>
-            {/* @ts-ignore */}
-            Relação de todos os usuários que acertaram o placar de {bolao?.finalScoreTeam1} x {bolao?.finalScoreTeam2} no bolão "{bolao?.name}".
+            Relação de todos os usuários que acertaram o placar de {bolao?.finalScoreTeam1} x {bolao?.finalScoreTeam2} no bolão "{bolao?.homeTeam?.name} vs {bolao?.awayTeam?.name}".
           </CardDescription>
           <div className="pt-4">
             <p><strong>Prêmio Total:</strong> {totalPrize.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
@@ -106,7 +104,7 @@ export function GanhadoresPageClient({ id }: GanhadoresPageClientProps) {
               {winners.length > 0 ? (
                 winners.map((palpite) => (
                   <TableRow key={palpite.id}>
-                    <TableCell>{palpite.user?.name}</TableCell>
+                    <TableCell>{palpite.user?.displayName || `${palpite.user?.firstName} ${palpite.user?.lastName}`}</TableCell>
                     <TableCell>{palpite.user?.email}</TableCell>
                     <TableCell>{palpite.user?.pixKey || "Não cadastrada"}</TableCell>
                     <TableCell>{`${palpite.scoreTeam1} x ${palpite.scoreTeam2}`}</TableCell>
